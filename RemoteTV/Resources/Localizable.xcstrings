@@ -1,0 +1,435 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "%@ • %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ • %2$@"
+          }
+        }
+      }
+    },
+    "192.168.1.100" : {
+
+    },
+    "2019+ TVs use wss://<ip>:8002 with a self-signed certificate." : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "2019+ TVs use wss://<ip>:8002 with a self-signed certificate."
+          }
+        }
+      }
+    },
+    "Accept on TV" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Accept on TV"
+          }
+        }
+      }
+    },
+    "Available" : {
+
+    },
+    "Back" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Back"
+          }
+        }
+      }
+    },
+    "Check that the TV is powered on and on the same Wi-Fi network." : {
+
+    },
+    "Clear" : {
+
+    },
+    "Connect" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Connect"
+          }
+        }
+      }
+    },
+    "Connect by IP" : {
+
+    },
+    "Connect once while the TV is on to enable Wake." : {
+
+    },
+    "Connect to the TV at least once while it's on. The app captures its MAC address on that first connect, which is what the magic packet needs." : {
+
+    },
+    "Connected" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Connected"
+          }
+        }
+      }
+    },
+    "Connecting…" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Connecting…"
+          }
+        }
+      }
+    },
+    "Disconnect & switch mode" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Disconnect & switch mode"
+          }
+        }
+      }
+    },
+    "Disconnected" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Disconnected"
+          }
+        }
+      }
+    },
+    "Discovered" : {
+
+    },
+    "Done" : {
+
+    },
+    "Down" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Down"
+          }
+        }
+      }
+    },
+    "Failed" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Failed"
+          }
+        }
+      }
+    },
+    "First-time setup" : {
+
+    },
+    "Forget this TV" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Forget this TV"
+          }
+        }
+      }
+    },
+    "Home" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Home"
+          }
+        }
+      }
+    },
+    "If Power On isn't working" : {
+
+    },
+    "IP address" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "IP address"
+          }
+        }
+      }
+    },
+    "Kill the commercial break" : {
+
+    },
+    "Launch %@" : {
+
+    },
+    "Left" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Left"
+          }
+        }
+      }
+    },
+    "Live TV" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Live TV"
+          }
+        }
+      }
+    },
+    "Load Installed Apps" : {
+
+    },
+    "Mode" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mode"
+          }
+        }
+      }
+    },
+    "More" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "More"
+          }
+        }
+      }
+    },
+    "Mute" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mute"
+          }
+        }
+      }
+    },
+    "Mute 2 Min" : {
+
+    },
+    "Mute the TV for two minutes." : {
+
+    },
+    "Name (optional)" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Name (optional)"
+          }
+        }
+      }
+    },
+    "Next channel" : {
+
+    },
+    "No apps reported by the TV." : {
+
+    },
+    "No messages yet. Launch an app on the TV with the physical remote and watch here." : {
+
+    },
+    "No TVs found" : {
+
+    },
+    "Off" : {
+
+    },
+    "OK" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "OK"
+          }
+        }
+      }
+    },
+    "Older TVs (~2016–2018) accept ws://<ip>:8001." : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Older TVs (~2016–2018) accept ws://<ip>:8001."
+          }
+        }
+      }
+    },
+    "Plain (8001)" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Plain (8001)"
+          }
+        }
+      }
+    },
+    "Power off" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Power off"
+          }
+        }
+      }
+    },
+    "Power On Help" : {
+
+    },
+    "Power On not working?" : {
+
+    },
+    "Previous channel" : {
+
+    },
+    "Refresh Installed Apps" : {
+
+    },
+    "RemoteTV" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "RemoteTV"
+          }
+        }
+      }
+    },
+    "Right" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Right"
+          }
+        }
+      }
+    },
+    "Samsung TVs only listen for Wake-on-LAN packets when Network Standby is enabled." : {
+
+    },
+    "Search" : {
+
+    },
+    "Searching for TVs…" : {
+
+    },
+    "Secure (8002)" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Secure (8002)"
+          }
+        }
+      }
+    },
+    "Stop" : {
+
+    },
+    "Tap Search to find TVs on your network." : {
+
+    },
+    "Tap to Unmute" : {
+
+    },
+    "Try Again" : {
+
+    },
+    "Turn the TV on and go to Settings → General → Network → Expert Settings → Power On with Mobile, then enable it." : {
+
+    },
+    "TV" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "TV"
+          }
+        }
+      }
+    },
+    "Unmute now. Otherwise auto-unmutes in %@." : {
+
+    },
+    "Unmutes in %@" : {
+
+    },
+    "Up" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Up"
+          }
+        }
+      }
+    },
+    "Volume down" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Volume down"
+          }
+        }
+      }
+    },
+    "Volume up" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Volume up"
+          }
+        }
+      }
+    },
+    "Wake" : {
+
+    },
+    "WebSocket Sniffer" : {
+
+    },
+    "You may also need to enable IP Remote in the same menu." : {
+
+    }
+  },
+  "version" : "1.0"
+}

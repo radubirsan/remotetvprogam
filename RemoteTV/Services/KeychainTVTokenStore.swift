@@ -1,0 +1,73 @@
+import Foundation
+import Security
+
+/// Keychain-backed implementation of ``TVTokenStore``.
+///
+/// Wrapped in an `actor` so the synchronous `SecItem*` C APIs never block the main thread and
+/// the non-`Sendable` CFDictionary arguments stay contained to this isolation domain.
+actor KeychainTVTokenStore: TVTokenStore {
+    static let service = "com.remotetv.samsung.token"
+
+    func token(for ip: String) -> String? {
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: Self.service,
+            kSecAttrAccount as String: ip,
+            kSecMatchLimit as String: kSecMatchLimitOne,
+            kSecReturnData as String: true
+        ]
+
+        var result: CFTypeRef?
+        let status = SecItemCopyMatching(query as CFDictionary, &result)
+        guard
+            status == errSecSuccess,
+            let data = result as? Data,
+            let token = String(data: data, encoding: .utf8)
+        else {
+            return nil
+        }
+        return token
+    }
+
+    func save(_ token: String, for ip: String) throws {
+        let data = Data(token.utf8)
+
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: Self.service,
+            kSecAttrAccount as String: ip
+        ]
+
+        let attributes: [String: Any] = [
+            kSecValueData as String: data,
+            kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlock
+        ]
+
+        let updateStatus = SecItemUpdate(query as CFDictionary, attributes as CFDictionary)
+
+        if updateStatus == errSecItemNotFound {
+            var addQuery = query
+            for (key, value) in attributes {
+                addQuery[key] = value
+            }
+            let addStatus = SecItemAdd(addQuery as CFDictionary, nil)
+            guard addStatus == errSecSuccess else {
+                throw TVServiceError.keychainFailure(addStatus)
+            }
+        } else if updateStatus != errSecSuccess {
+            throw TVServiceError.keychainFailure(updateStatus)
+        }
+    }
+
+    func delete(for ip: String) throws {
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: Self.service,
+            kSecAttrAccount as String: ip
+        ]
+        let status = SecItemDelete(query as CFDictionary)
+        guard status == errSecSuccess || status == errSecItemNotFound else {
+            throw TVServiceError.keychainFailure(status)
+        }
+    }
+}

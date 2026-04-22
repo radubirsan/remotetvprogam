@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(xcodebuild -version)",
+      "Bash(xcrun --find xcodebuild)",
+      "Read(//Applications/**)",
+      "Bash(xcode-select -p)",
+      "Bash(xcodebuild -list -project RemoteTV.xcodeproj)",
+      "Bash(xcrun simctl *)",
+      "Bash(xcodebuild -project RemoteTV.xcodeproj -scheme RemoteTV -destination 'platform=iOS Simulator,name=iPhone 15' -configuration Debug build CODE_SIGNING_ALLOWED=NO)",
+      "Bash(xcodebuild -project RemoteTV.xcodeproj -scheme RemoteTV -destination 'platform=iOS Simulator,name=iPhone 15' -configuration Debug build-for-testing CODE_SIGNING_ALLOWED=NO)",
+      "Bash(xcodebuild -project RemoteTV.xcodeproj -scheme RemoteTV -destination 'generic/platform=iOS Simulator' -configuration Debug build)",
+      "Bash(awk NR>=70 && NR<=100 *)",
+      "Bash(xcodebuild -project RemoteTV.xcodeproj -scheme RemoteTV -destination 'platform=iOS Simulator,id=D6E46C10-99A4-4751-9016-0190C6889E38' test)",
+      "Bash(xcodebuild -project RemoteTV.xcodeproj -scheme RemoteTV -destination 'platform=iOS Simulator,id=2DCD1D76-230F-42B9-8148-D66A672385D3' test)"
+    ]
+  }
+}

@@ -1,0 +1,78 @@
+import Foundation
+
+/// One-shot `GET http://<ip>:8001/api/v2/` probe that surfaces the fields we need for Wake-on-LAN
+/// and persistence: `device.wifiMac`, `device.name`, `device.modelName`.
+///
+/// The TV exposes this over plain HTTP on port 8001 regardless of whether the remote-control
+/// channel runs on `ws://8001` or `wss://8002`, so the service doesn't depend on
+/// ``TVConnectionMode``.
+struct SamsungDeviceInfoService: Sendable {
+    struct Info: Sendable, Equatable {
+        let name: String
+        let modelName: String
+        let wifiMac: String?
+    }
+
+    private let session: URLSession
+    private let timeout: TimeInterval
+
+    init(session: URLSession = .shared, timeout: TimeInterval = 3) {
+        self.session = session
+        self.timeout = timeout
+    }
+
+    func fetch(ip: String) async throws -> Info {
+        guard var components = URLComponents(string: "http://\(ip):8001/api/v2/") else {
+            throw TVServiceError.deviceInfoFailure("Bad URL for \(ip)")
+        }
+        components.scheme = "http"
+        guard let url = components.url else {
+            throw TVServiceError.deviceInfoFailure("Bad URL for \(ip)")
+        }
+
+        var request = URLRequest(url: url)
+        request.timeoutInterval = timeout
+        request.httpMethod = "GET"
+
+        let (data, response): (Data, URLResponse)
+        do {
+            (data, response) = try await session.data(for: request)
+        } catch {
+            throw TVServiceError.deviceInfoFailure(String(describing: error))
+        }
+
+        if let http = response as? HTTPURLResponse, !(200..<300).contains(http.statusCode) {
+            throw TVServiceError.deviceInfoFailure("HTTP \(http.statusCode)")
+        }
+
+        do {
+            let payload = try JSONDecoder().decode(RawPayload.self, from: data)
+            return Info(
+                name: payload.device.name ?? "Samsung TV",
+                modelName: payload.device.modelName ?? "",
+                wifiMac: Self.normalizeMAC(payload.device.wifiMac)
+            )
+        } catch {
+            throw TVServiceError.deviceInfoFailure("Malformed JSON: \(error)")
+        }
+    }
+
+    /// Samsung returns MACs as `aa:bb:cc:dd:ee:ff` but has been seen to return empty strings
+    /// on models where Wi-Fi is off — treat those as "no MAC".
+    static func normalizeMAC(_ raw: String?) -> String? {
+        guard let trimmed = raw?.trimmingCharacters(in: .whitespacesAndNewlines), !trimmed.isEmpty else {
+            return nil
+        }
+        return trimmed
+    }
+
+    private struct RawPayload: Decodable {
+        let device: Device
+
+        struct Device: Decodable {
+            let name: String?
+            let modelName: String?
+            let wifiMac: String?
+        }
+    }
+}
