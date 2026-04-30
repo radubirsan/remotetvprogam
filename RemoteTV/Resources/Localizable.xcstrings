@@ -11,6 +11,9 @@
         }
       }
     },
+    "123" : {
+
+    },
     "192.168.1.100" : {
 
     },
@@ -35,6 +38,9 @@
         }
       }
     },
+    "ANOTHER REMOTE" : {
+
+    },
     "Available" : {
 
     },
@@ -48,10 +54,16 @@
         }
       }
     },
+    "CC/AD" : {
+
+    },
     "Check that the TV is powered on and on the same Wi-Fi network." : {
 
     },
     "Clear" : {
+
+    },
+    "Closed captions" : {
 
     },
     "Connect" : {
@@ -155,6 +167,9 @@
         }
       }
     },
+    "Hidden" : {
+
+    },
     "Home" : {
       "localizations" : {
         "en" : {
@@ -169,6 +184,9 @@
 
     },
     "Input mode" : {
+
+    },
+    "Installed Apps" : {
 
     },
     "IP address" : {
@@ -208,7 +226,13 @@
         }
       }
     },
+    "Load Apps" : {
+
+    },
     "Load Installed Apps" : {
+
+    },
+    "MIC" : {
 
     },
     "Mode" : {
@@ -323,6 +347,9 @@
     "Previous channel" : {
 
     },
+    "Refresh" : {
+
+    },
     "Refresh Installed Apps" : {
 
     },
@@ -365,13 +392,28 @@
         }
       }
     },
+    "Settings" : {
+
+    },
+    "Shortcuts" : {
+
+    },
+    "Side panel" : {
+
+    },
+    "Sniff Log" : {
+
+    },
     "Stop" : {
 
     },
-    "Swipe or tap" : {
+    "SWIPE / TAP" : {
 
     },
     "Swipe to navigate, tap to select" : {
+
+    },
+    "Tap Load to fetch the apps installed on the TV." : {
 
     },
     "Tap Search to find TVs on your network." : {

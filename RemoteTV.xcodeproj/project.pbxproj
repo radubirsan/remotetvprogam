@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		1729BA562FA32FBF0032FA73 /* RemoteSamsungStyle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1729BA552FA32FBF0032FA73 /* RemoteSamsungStyle.swift */; };
+		1729BA582FA34DB10032FA73 /* RemoteSamsungStyleB.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1729BA572FA34DB10032FA73 /* RemoteSamsungStyleB.swift */; };
 		B2000000000000000000F001 /* RemoteTVApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F001 /* RemoteTVApp.swift */; };
 		B2000000000000000000F002 /* TVCommand.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F002 /* TVCommand.swift */; };
 		B2000000000000000000F003 /* TVConnectionMode.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F003 /* TVConnectionMode.swift */; };
@@ -53,6 +55,13 @@
 		B2000000000000000000F045 /* TrackpadGestureMapper.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F045 /* TrackpadGestureMapper.swift */; };
 		B2000000000000000000F046 /* TrackpadSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F046 /* TrackpadSection.swift */; };
 		B2000000000000000000F047 /* RemoteInputMode.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F047 /* RemoteInputMode.swift */; };
+		B2000000000000000000F049 /* RemoteStatusLED.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F049 /* RemoteStatusLED.swift */; };
+		B2000000000000000000F04A /* CompactCommercialMute.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F04A /* CompactCommercialMute.swift */; };
+		B2000000000000000000F04B /* RemoteSamsungBody.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F04B /* RemoteSamsungBody.swift */; };
+		B2000000000000000000F04C /* SidePanelMode.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F04C /* SidePanelMode.swift */; };
+		B2000000000000000000F04D /* RemoteSidePanelInstalledApps.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F04D /* RemoteSidePanelInstalledApps.swift */; };
+		B2000000000000000000F04E /* RemoteSidePanelSniffLog.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F04E /* RemoteSidePanelSniffLog.swift */; };
+		B2000000000000000000F04F /* RemoteSidePanelShortcuts.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F04F /* RemoteSidePanelShortcuts.swift */; };
 		C2000000000000000000F018 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F018 /* Assets.xcassets */; };
 		C2000000000000000000F019 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F019 /* Localizable.xcstrings */; };
 		D2000000000000000000F01B /* TVCommandEncoderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F01B /* TVCommandEncoderTests.swift */; };
@@ -76,6 +85,8 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		1729BA552FA32FBF0032FA73 /* RemoteSamsungStyle.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = RemoteSamsungStyle.swift; sourceTree = SOURCE_ROOT; };
+		1729BA572FA34DB10032FA73 /* RemoteSamsungStyleB.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = RemoteSamsungStyleB.swift; sourceTree = "<group>"; };
 		A2000000000000000000F001 /* RemoteTVApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteTVApp.swift; sourceTree = "<group>"; };
 		A2000000000000000000F002 /* TVCommand.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TVCommand.swift; sourceTree = "<group>"; };
 		A2000000000000000000F003 /* TVConnectionMode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TVConnectionMode.swift; sourceTree = "<group>"; };
@@ -134,6 +145,13 @@
 		A2000000000000000000F046 /* TrackpadSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrackpadSection.swift; sourceTree = "<group>"; };
 		A2000000000000000000F047 /* RemoteInputMode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteInputMode.swift; sourceTree = "<group>"; };
 		A2000000000000000000F048 /* TrackpadGestureMapperTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrackpadGestureMapperTests.swift; sourceTree = "<group>"; };
+		A2000000000000000000F049 /* RemoteStatusLED.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteStatusLED.swift; sourceTree = "<group>"; };
+		A2000000000000000000F04A /* CompactCommercialMute.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompactCommercialMute.swift; sourceTree = "<group>"; };
+		A2000000000000000000F04B /* RemoteSamsungBody.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteSamsungBody.swift; sourceTree = "<group>"; };
+		A2000000000000000000F04C /* SidePanelMode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SidePanelMode.swift; sourceTree = "<group>"; };
+		A2000000000000000000F04D /* RemoteSidePanelInstalledApps.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteSidePanelInstalledApps.swift; sourceTree = "<group>"; };
+		A2000000000000000000F04E /* RemoteSidePanelSniffLog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteSidePanelSniffLog.swift; sourceTree = "<group>"; };
+		A2000000000000000000F04F /* RemoteSidePanelShortcuts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteSidePanelShortcuts.swift; sourceTree = "<group>"; };
 		C1000000000000000000F001 /* RemoteTV.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = RemoteTV.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		C1000000000000000000F002 /* RemoteTVTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = RemoteTVTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -260,6 +278,8 @@
 		B1000000000000000000F00A /* Remote */ = {
 			isa = PBXGroup;
 			children = (
+				1729BA572FA34DB10032FA73 /* RemoteSamsungStyleB.swift */,
+				1729BA552FA32FBF0032FA73 /* RemoteSamsungStyle.swift */,
 				A2000000000000000000F010 /* RemoteView.swift */,
 				A2000000000000000000F011 /* RemoteViewModel.swift */,
 				A2000000000000000000F012 /* RemoteButton.swift */,
@@ -276,6 +296,13 @@
 				A2000000000000000000F045 /* TrackpadGestureMapper.swift */,
 				A2000000000000000000F046 /* TrackpadSection.swift */,
 				A2000000000000000000F047 /* RemoteInputMode.swift */,
+				A2000000000000000000F049 /* RemoteStatusLED.swift */,
+				A2000000000000000000F04A /* CompactCommercialMute.swift */,
+				A2000000000000000000F04B /* RemoteSamsungBody.swift */,
+				A2000000000000000000F04C /* SidePanelMode.swift */,
+				A2000000000000000000F04D /* RemoteSidePanelInstalledApps.swift */,
+				A2000000000000000000F04E /* RemoteSidePanelSniffLog.swift */,
+				A2000000000000000000F04F /* RemoteSidePanelShortcuts.swift */,
 			);
 			path = Remote;
 			sourceTree = "<group>";
@@ -442,9 +469,18 @@
 				B2000000000000000000F03F /* KnownTVApps.swift in Sources */,
 				B2000000000000000000F043 /* SniffLogEntry.swift in Sources */,
 				B2000000000000000000F044 /* SniffLogSection.swift in Sources */,
+				1729BA562FA32FBF0032FA73 /* RemoteSamsungStyle.swift in Sources */,
 				B2000000000000000000F045 /* TrackpadGestureMapper.swift in Sources */,
 				B2000000000000000000F046 /* TrackpadSection.swift in Sources */,
 				B2000000000000000000F047 /* RemoteInputMode.swift in Sources */,
+				B2000000000000000000F049 /* RemoteStatusLED.swift in Sources */,
+				B2000000000000000000F04A /* CompactCommercialMute.swift in Sources */,
+				B2000000000000000000F04B /* RemoteSamsungBody.swift in Sources */,
+				B2000000000000000000F04C /* SidePanelMode.swift in Sources */,
+				B2000000000000000000F04D /* RemoteSidePanelInstalledApps.swift in Sources */,
+				B2000000000000000000F04E /* RemoteSidePanelSniffLog.swift in Sources */,
+				B2000000000000000000F04F /* RemoteSidePanelShortcuts.swift in Sources */,
+				1729BA582FA34DB10032FA73 /* RemoteSamsungStyleB.swift in Sources */,
 				B2000000000000000000F02F /* DiscoveryView.swift in Sources */,
 				B2000000000000000000F030 /* DiscoveryViewModel.swift in Sources */,
 				B2000000000000000000F031 /* TVListRow.swift in Sources */,

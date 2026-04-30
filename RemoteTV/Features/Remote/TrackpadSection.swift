@@ -5,11 +5,14 @@ import SwiftUI
 /// registered swipe also triggers a medium impact haptic so the user gets a physical
 /// confirmation without having to look down from the TV.
 ///
-/// Uses `DragGesture(minimumDistance: 0)` rather than separate tap+drag gestures so the
-/// classification happens in a single recognizer — avoiding the conflict-resolution
-/// flakiness you get from layering `onTapGesture` over a drag.
+/// Styled as a circular dark surface that matches the design's `DPad` wheel — same
+/// diameter, same `RemoteTheme.dpadOuter` fill — so toggling between D-Pad and
+/// Trackpad modes never shifts the surrounding layout.
 @MainActor
 struct TrackpadSection: View {
+    /// Diameter of the trackpad surface. Matches the design's D-Pad outer ring so the
+    /// two modes occupy identical screen real estate.
+    var diameter: CGFloat = 150
     let onCommand: (TVCommand) async -> Void
 
     /// Monotonically increasing counter used purely as a `.sensoryFeedback` trigger —
@@ -18,32 +21,33 @@ struct TrackpadSection: View {
     @State private var swipeFeedbackTrigger: Int = 0
 
     var body: some View {
-        VStack {
-            Image(systemName: "hand.draw")
-                .font(.largeTitle)
-                .foregroundStyle(.tint)
-            Text("Swipe or tap")
-                .font(.callout)
-                .foregroundStyle(.secondary)
-        }
-        .frame(maxWidth: .infinity)
-        .frame(height: 240)
-        .background(Color.accentColor.opacity(0.18), in: .rect(cornerRadius: 24))
-        .overlay {
-            RoundedRectangle(cornerRadius: 24)
-                .stroke(Color.accentColor.opacity(0.45), lineWidth: 1)
-        }
-        .contentShape(.rect(cornerRadius: 24))
-        .gesture(
-            DragGesture(minimumDistance: 0)
-                .onEnded { value in
-                    handle(translation: value.translation)
+        Circle()
+            .fill(RemoteTheme.dpadOuter)
+            .frame(width: diameter, height: diameter)
+            .overlay(Circle().stroke(Color.white.opacity(0.06), lineWidth: 0.5))
+            .shadow(color: .black.opacity(0.6), radius: 4, y: 3)
+            .overlay {
+                VStack(spacing: 4) {
+                    Image(systemName: "hand.draw")
+                        .font(.system(size: 22, weight: .regular))
+                        .foregroundStyle(RemoteTheme.iconColor)
+                    Text("SWIPE / TAP")
+                        .font(.system(size: 9, weight: .bold))
+                        .tracking(1)
+                        .foregroundStyle(RemoteTheme.labelDim)
                 }
-        )
-        .sensoryFeedback(.impact(weight: .medium), trigger: swipeFeedbackTrigger)
-        .accessibilityElement()
-        .accessibilityLabel("Trackpad")
-        .accessibilityHint("Swipe to navigate, tap to select")
+            }
+            .contentShape(.circle)
+            .gesture(
+                DragGesture(minimumDistance: 0)
+                    .onEnded { value in
+                        handle(translation: value.translation)
+                    }
+            )
+            .sensoryFeedback(.impact(weight: .medium), trigger: swipeFeedbackTrigger)
+            .accessibilityElement()
+            .accessibilityLabel("Trackpad")
+            .accessibilityHint("Swipe to navigate, tap to select")
     }
 
     private func handle(translation: CGSize) {

@@ -19,6 +19,13 @@ enum TVCommand: String, CaseIterable, Sendable, Identifiable {
     case exit = "KEY_EXIT"
     case liveTV = "KEY_TV"
     case powerOff = "KEY_POWER"
+    /// Single play/pause toggle on most Tizen builds — `KEY_PLAY` is the universally
+    /// accepted code; some recent firmwares also accept `KEY_PAUSE` separately, but
+    /// `KEY_PLAY` is the safer single-button mapping.
+    case playPause = "KEY_PLAY"
+    /// Closed-captions / audio-description toggle. Backs the "CC/AD" hint label in the
+    /// remote UI.
+    case captions = "KEY_CAPTION"
 
     var id: String { rawValue }
 }
