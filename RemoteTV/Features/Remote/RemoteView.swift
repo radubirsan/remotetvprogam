@@ -24,12 +24,11 @@ struct RemoteView: View {
     @AppStorage("remoteSidePanel") private var sidePanel: SidePanelMode = .none
     @Environment(\.dismiss) private var dismiss
 
-    /// Virtual canvas dimensions. Matches `RemoteSamsungStyleView`'s 393×852 — the
-    /// extras strip from the previous iteration is gone now that the picker lives
-    /// in the gear menu and the installed-apps loader lives in its own side panel.
-    private let canvasWidth: CGFloat = 393*0.8
-    private let canvasHeight: CGFloat = 852*0.8
-    private let bodyTop: CGFloat = 80
+    /// Virtual canvas dimensions. Matches `RemoteSamsungStyleView`'s 393×852 with
+    /// the body offset by 60pt from the top — same numbers the design ships with.
+    private let canvasWidth: CGFloat = 393
+    private let canvasHeight: CGFloat = 852
+    private let bodyTop: CGFloat = 60
     private let bodyHeight: CGFloat = RemoteSamsungBody.height
     private let bodyWidth: CGFloat = RemoteSamsungBody.width
     private var bodyLeading: CGFloat { (canvasWidth - bodyWidth) / 2 }
@@ -63,13 +62,6 @@ struct RemoteView: View {
                 GeometryReader { geo in
                     let scale = min(geo.size.width / canvasWidth, geo.size.height / canvasHeight)
                     ZStack(alignment: .topLeading) {
-                        CompactCommercialMute(
-                            remaining: viewModel.commercialMuteRemaining,
-                            onToggle: viewModel.toggleCommercialMute
-                        )
-                        .frame(width: 100)
-                        .position(x: 16 + 50, y: 82)
-
                         RemoteSamsungBody(
                             state: viewModel.state,
                             hasError: viewModel.lastError != nil,
@@ -107,6 +99,12 @@ struct RemoteView: View {
         .toolbarColorScheme(.dark, for: .navigationBar)
         .preferredColorScheme(.dark)
         .toolbar {
+            ToolbarItem(placement: .topBarLeading) {
+                CompactCommercialMute(
+                    remaining: viewModel.commercialMuteRemaining,
+                    onToggle: viewModel.toggleCommercialMute
+                )
+            }
             ToolbarItem(placement: .topBarTrailing) {
                 Menu {
                     Picker("Input mode", selection: $inputMode) {

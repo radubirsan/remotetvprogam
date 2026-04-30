@@ -8,7 +8,6 @@
 
 /* Begin PBXBuildFile section */
 		1729BA562FA32FBF0032FA73 /* RemoteSamsungStyle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1729BA552FA32FBF0032FA73 /* RemoteSamsungStyle.swift */; };
-		1729BA582FA34DB10032FA73 /* RemoteSamsungStyleB.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1729BA572FA34DB10032FA73 /* RemoteSamsungStyleB.swift */; };
 		B2000000000000000000F001 /* RemoteTVApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F001 /* RemoteTVApp.swift */; };
 		B2000000000000000000F002 /* TVCommand.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F002 /* TVCommand.swift */; };
 		B2000000000000000000F003 /* TVConnectionMode.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F003 /* TVConnectionMode.swift */; };
@@ -86,7 +85,6 @@
 
 /* Begin PBXFileReference section */
 		1729BA552FA32FBF0032FA73 /* RemoteSamsungStyle.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = RemoteSamsungStyle.swift; sourceTree = SOURCE_ROOT; };
-		1729BA572FA34DB10032FA73 /* RemoteSamsungStyleB.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = RemoteSamsungStyleB.swift; sourceTree = "<group>"; };
 		A2000000000000000000F001 /* RemoteTVApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteTVApp.swift; sourceTree = "<group>"; };
 		A2000000000000000000F002 /* TVCommand.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TVCommand.swift; sourceTree = "<group>"; };
 		A2000000000000000000F003 /* TVConnectionMode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TVConnectionMode.swift; sourceTree = "<group>"; };
@@ -278,7 +276,6 @@
 		B1000000000000000000F00A /* Remote */ = {
 			isa = PBXGroup;
 			children = (
-				1729BA572FA34DB10032FA73 /* RemoteSamsungStyleB.swift */,
 				1729BA552FA32FBF0032FA73 /* RemoteSamsungStyle.swift */,
 				A2000000000000000000F010 /* RemoteView.swift */,
 				A2000000000000000000F011 /* RemoteViewModel.swift */,
@@ -480,7 +477,6 @@
 				B2000000000000000000F04D /* RemoteSidePanelInstalledApps.swift in Sources */,
 				B2000000000000000000F04E /* RemoteSidePanelSniffLog.swift in Sources */,
 				B2000000000000000000F04F /* RemoteSidePanelShortcuts.swift in Sources */,
-				1729BA582FA34DB10032FA73 /* RemoteSamsungStyleB.swift in Sources */,
 				B2000000000000000000F02F /* DiscoveryView.swift in Sources */,
 				B2000000000000000000F030 /* DiscoveryViewModel.swift in Sources */,
 				B2000000000000000000F031 /* TVListRow.swift in Sources */,

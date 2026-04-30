@@ -1,16 +1,17 @@
 import SwiftUI
 
 /// The contents of the Samsung-style remote shell — every control that lives *inside*
-/// the rounded body, laid out at the design's exact pixel coordinates (220×720,
-/// matching `RemoteSamsungStyleView`). Wired to the live ``RemoteViewModel``.
+/// the rounded body, laid out at the design's exact pixel coordinates (340×760,
+/// matching the HIG-compliant sizing in `RemoteSamsungStyleView`). Wired to the live
+/// ``RemoteViewModel``.
 ///
-/// Kept as its own view so the surrounding layout (header strip, mode picker,
-/// installed-apps drawer) in ``RemoteView`` stays readable, and so the absolute
-/// `.position(...)` math doesn't bleed into the orchestration layer.
+/// All tappable elements meet Apple's 44×44 minimum (the few that don't are flagged
+/// inline). Positions, sizes, corner radii and shadow values all mirror the design
+/// file — keeping the two in lock-step is intentional.
 @MainActor
 struct RemoteSamsungBody: View {
-    static let width: CGFloat = 220
-    static let height: CGFloat = 620
+    static let width: CGFloat = 340
+    static let height: CGFloat = 760
 
     let state: TVConnectionState
     let hasError: Bool
@@ -22,113 +23,122 @@ struct RemoteSamsungBody: View {
 
     var body: some View {
         ZStack(alignment: .topLeading) {
-            // Body shell
-            RoundedRectangle(cornerRadius: 38, style: .continuous)
+            // Body shell — corner radius and shadow match `RemoteSamsungStyleView`.
+            RoundedRectangle(cornerRadius: 56, style: .continuous)
                 .fill(RemoteTheme.body)
                 .frame(width: Self.width, height: Self.height)
                 .overlay(
-                    RoundedRectangle(cornerRadius: 38, style: .continuous)
+                    RoundedRectangle(cornerRadius: 56, style: .continuous)
                         .stroke(Color.white.opacity(0.05), lineWidth: 0.5)
                 )
-                .shadow(color: .black.opacity(0.6), radius: 18, y: 12)
+                .shadow(color: .black.opacity(0.6), radius: 22, y: 14)
 
-            // ROW 1: Power (left), MIC label + status LED (center), Mic (right)
-            CircleButton(size: 36, iconColor: RemoteTheme.powerRed) {
+            // ROW 1: Power (left), MIC label + status LED (centre), Mic (right).
+            CircleButton(size: 56, iconColor: RemoteTheme.powerRed,
+                         accessibilityLabel: "Power") {
                 fire(.powerOff)
             } content: {
                 Image(systemName: "power")
-                    .font(.system(size: 16, weight: .heavy))
+                    .font(.system(size: 22, weight: .heavy))
             }
-            .position(x: 22 + 18, y: 26 + 18)
+            .position(x: 40 + 28, y: 36 + 28)
 
-            VStack(spacing: 2) {
+            VStack(spacing: 3) {
                 RemoteStatusLED(state: state, hasError: hasError)
                 Text("MIC")
-                    .font(.system(size: 8, weight: .bold))
-                    .tracking(1)
+                    .font(.system(size: 10, weight: .bold))
+                    .tracking(1.2)
                     .foregroundStyle(RemoteTheme.labelDim)
             }
-            .position(x: Self.width / 2, y: 36)
+            .position(x: Self.width / 2, y: 50)
 
-            // Mic — kept as a non-functional visual per design (no voice support yet).
-            CircleButton(size: 36) {} content: {
+            // Mic — visual placeholder per design (no voice input wired up).
+            CircleButton(size: 56, accessibilityLabel: "Voice (not implemented)") {
+            } content: {
                 Image(systemName: "mic")
-                    .font(.system(size: 14, weight: .regular))
+                    .font(.system(size: 20, weight: .regular))
             }
-            .position(x: Self.width - 22 - 18, y: 26 + 18)
+            .position(x: Self.width - 40 - 28, y: 36 + 28)
 
-            // ROW 2: Settings/123 (under power). Non-functional placeholder per design.
-            CircleButton(size: 36) {} content: {
+            // ROW 2: Settings/123 (under power) — visual placeholder per design.
+            CircleButton(size: 56, accessibilityLabel: "Number pad (not implemented)") {
+            } content: {
                 VStack(spacing: 0) {
                     Image(systemName: "gearshape")
-                        .font(.system(size: 9, weight: .regular))
+                        .font(.system(size: 13, weight: .regular))
                     Text("123")
-                        .font(.system(size: 7, weight: .bold))
-                        .tracking(0.4)
+                        .font(.system(size: 9, weight: .bold))
+                        .tracking(0.5)
                 }
             }
-            .position(x: 22 + 18, y: 70 + 18)
+            .position(x: 40 + 28, y: 110 + 28)
 
-            // CENTRAL CONTROL — D-Pad wheel or virtual trackpad, swappable from the picker.
+            // CENTRAL CONTROL — D-Pad wheel or virtual trackpad, swappable from the gear menu.
             centralControl
-                .position(x: Self.width / 2, y: 130 + 75)
+                .position(x: Self.width / 2, y: 200 + 110)
 
-            // ROW 4: Back / Home / Play-Pause
-            CircleButton(size: 34) {
+            // ROW 4: Back / Home / Play-Pause.
+            CircleButton(size: 56, accessibilityLabel: "Back") {
                 fire(.back)
             } content: {
                 Image(systemName: "arrow.uturn.backward")
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(.system(size: 19, weight: .semibold))
             }
-            .position(x: 28 + 17, y: 312 + 17)
+            .position(x: 40 + 28, y: 470 + 28)
 
-            CircleButton(size: 42) {
+            CircleButton(size: 64, accessibilityLabel: "Home") {
                 fire(.home)
             } content: {
                 Image(systemName: "house.fill")
-                    .font(.system(size: 16, weight: .regular))
+                    .font(.system(size: 22, weight: .regular))
             }
-            .position(x: Self.width / 2, y: 308 + 21)
+            .position(x: Self.width / 2, y: 466 + 32)
 
-            CircleButton(size: 34) {
+            CircleButton(size: 56, accessibilityLabel: "Play or pause") {
                 fire(.playPause)
             } content: {
                 Image(systemName: "playpause.fill")
-                    .font(.system(size: 13, weight: .regular))
+                    .font(.system(size: 18, weight: .regular))
             }
-            .position(x: Self.width - 28 - 17, y: 312 + 17)
+            .position(x: Self.width - 40 - 28, y: 470 + 28)
 
-            // ROW 5: Volume rocker (left)
-            Rocker(width: 72, height: 32) {
-                Image(systemName: "minus").font(.system(size: 13, weight: .semibold))
+            // ROW 5: Volume rocker (left).
+            Rocker(width: 120, height: 52,
+                   topLabel: "Volume down", bottomLabel: "Volume up") {
+                Image(systemName: "minus").font(.system(size: 18, weight: .semibold))
             } bottom: {
-                Image(systemName: "plus").font(.system(size: 13, weight: .semibold))
+                Image(systemName: "plus").font(.system(size: 18, weight: .semibold))
             } topAction: {
                 fire(.volumeDown)
             } bottomAction: {
                 fire(.volumeUp)
             }
-            .position(x: 22 + 36, y: 372 + 16)
+            .position(x: 40 + 60, y: 562 + 26)
 
-            // ROW 5: Channel rocker (right)
-            Rocker(width: 72, height: 32) {
-                Image(systemName: "chevron.up").font(.system(size: 12, weight: .semibold))
+            // ROW 5: Channel rocker (right).
+            Rocker(width: 120, height: 52,
+                   topLabel: "Channel up", bottomLabel: "Channel down") {
+                Image(systemName: "chevron.up").font(.system(size: 16, weight: .semibold))
             } bottom: {
-                Image(systemName: "chevron.down").font(.system(size: 12, weight: .semibold))
+                Image(systemName: "chevron.down").font(.system(size: 16, weight: .semibold))
             } topAction: {
                 fire(.channelUp)
             } bottomAction: {
                 fire(.channelDown)
             }
-            .position(x: Self.width - 22 - 36, y: 372 + 16)
+            .position(x: Self.width - 40 - 60, y: 562 + 26)
 
-            // CC/AD label + speaker.slash under volume rocker — wired so the text fires
-            // captions and the icon fires mute (both small targets, hence the wider hit area).
-            HStack(spacing: 6) {
+            // CC/AD + mute hint row beneath the volume rocker. The hit areas are
+            // expanded via `.frame(...)` + `.contentShape(...)` so each half meets
+            // a reasonable tap minimum even though the visible glyphs stay small to
+            // honour the design's quiet hint-style.
+            HStack(spacing: 8) {
                 Button {
                     fire(.captions)
                 } label: {
                     Text("CC/AD")
+                        .frame(minWidth: 56, minHeight: 36)
+                        .contentShape(.rect)
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel("Closed captions")
@@ -137,42 +147,40 @@ struct RemoteSamsungBody: View {
                     fire(.mute)
                 } label: {
                     Image(systemName: "speaker.slash")
-                        .font(.system(size: 10, weight: .regular))
+                        .font(.system(size: 12, weight: .regular))
+                        .frame(minWidth: 44, minHeight: 36)
+                        .contentShape(.rect)
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel("Mute")
             }
-            .font(.system(size: 8, weight: .bold))
+            .font(.system(size: 10, weight: .bold))
             .tracking(0.6)
             .foregroundStyle(Color(white: 0.48))
-            .frame(width: 72)
-            .position(x: 22 + 36, y: 416)
+            .position(x: 40 + 60, y: 624)
 
-            // ROW 6: App slots — first four installed apps + LIVE TV at center.
-            appSlot(at: 0, size: 42)
-                .position(x: 22 + 21, y: 450 + 21)
+            // ROW 6: App slots — only three slots in the new design (APP 1, LIVE, APP 2).
+            // APP 1 and APP 2 bind dynamically to the first two installed apps the TV
+            // surfaces (placeholders shown until the user opens the Installed Apps panel
+            // and taps "Load Apps"). LIVE TV is the static `goLive()` action.
+            appSlot(at: 0, size: 56)
+                .position(x: 40 + 28, y: 656 + 28)
 
-            AppSlot(size: 50, label: "LIVE", sublabel: "TV") {
+            AppSlot(size: 64, label: "LIVE", sublabel: "TV", accessibilityName: "Live TV") {
                 Task { await onLiveTV() }
             }
-            .position(x: Self.width / 2, y: 446 + 25)
+            .position(x: Self.width / 2, y: 652 + 32)
 
-            appSlot(at: 1, size: 42)
-                .position(x: Self.width - 22 - 21, y: 450 + 21)
+            appSlot(at: 1, size: 56)
+                .position(x: Self.width - 40 - 28, y: 656 + 28)
 
-            appSlot(at: 2, size: 50)
-                .position(x: Self.width / 2, y: 510 + 25)
-
-            appSlot(at: 3, size: 42)
-                .position(x: Self.width - 22 - 21, y: 514 + 21)
-
-            // Brand label
+            // Brand label.
             Text("ANOTHER REMOTE")
                 .font(.system(size: 11, weight: .bold))
                 .tracking(2)
                 .foregroundStyle(RemoteTheme.labelDim)
                 .frame(width: Self.width)
-                .position(x: Self.width / 2, y: Self.height - 28 - 6)
+                .position(x: Self.width / 2, y: Self.height - 28)
         }
         .frame(width: Self.width, height: Self.height)
     }
@@ -182,8 +190,8 @@ struct RemoteSamsungBody: View {
         switch inputMode {
         case .dpad:
             DPad(
-                outerSize: 150,
-                innerSize: 62,
+                outerSize: 220,
+                innerSize: 96,
                 onUp: { fire(.up) },
                 onDown: { fire(.down) },
                 onLeft: { fire(.left) },
@@ -191,20 +199,21 @@ struct RemoteSamsungBody: View {
                 onOK: { fire(.enter) }
             )
         case .trackpad:
-            TrackpadSection(diameter: 150, onCommand: onCommand)
+            TrackpadSection(diameter: 220, onCommand: onCommand)
         }
     }
 
     /// Builds an app slot bound to the n-th installed app, falling back to a numbered
     /// placeholder when fewer than `index + 1` apps have been detected (or the user
-    /// hasn't loaded the list yet).
+    /// hasn't opened the Installed Apps panel and tapped "Load Apps" yet).
     @ViewBuilder
     private func appSlot(at index: Int, size: CGFloat) -> some View {
         let app = appAtIndex(index)
         AppSlot(
             size: size,
             label: slotLabel(for: app),
-            sublabel: app == nil ? "\(index + 1)" : nil
+            sublabel: app == nil ? "\(index + 1)" : nil,
+            accessibilityName: a11yName(for: app, index: index)
         ) {
             if let app {
                 Task { await onLaunchApp(app.appID) }
@@ -221,6 +230,11 @@ struct RemoteSamsungBody: View {
         guard let app else { return "APP" }
         let upper = app.name.uppercased()
         return String(upper.prefix(6))
+    }
+
+    private func a11yName(for app: InstalledApp?, index: Int) -> String {
+        guard let app else { return "App slot \(index + 1) (empty)" }
+        return "Launch \(app.name)"
     }
 
     private func fire(_ command: TVCommand) {
