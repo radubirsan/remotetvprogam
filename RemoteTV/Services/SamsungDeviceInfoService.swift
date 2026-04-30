@@ -11,6 +11,10 @@ struct SamsungDeviceInfoService: Sendable {
         let name: String
         let modelName: String
         let wifiMac: String?
+        /// Last reported power state from `device.PowerState`. Modern Tizen returns
+        /// `"on"` for awake and either `"off"` or `"standby"` for the low-power state;
+        /// missing/unparseable values map to ``TVPowerState/unknown``.
+        let powerState: TVPowerState
     }
 
     private let session: URLSession
@@ -50,10 +54,23 @@ struct SamsungDeviceInfoService: Sendable {
             return Info(
                 name: payload.device.name ?? "Samsung TV",
                 modelName: payload.device.modelName ?? "",
-                wifiMac: Self.normalizeMAC(payload.device.wifiMac)
+                wifiMac: Self.normalizeMAC(payload.device.wifiMac),
+                powerState: Self.parsePowerState(payload.device.powerState)
             )
         } catch {
             throw TVServiceError.deviceInfoFailure("Malformed JSON: \(error)")
+        }
+    }
+
+    static func parsePowerState(_ raw: String?) -> TVPowerState {
+        guard let raw = raw?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased(),
+              !raw.isEmpty else {
+            return .unknown
+        }
+        switch raw {
+        case "on":               return .on
+        case "off", "standby":   return .off
+        default:                 return .unknown
         }
     }
 
@@ -73,6 +90,16 @@ struct SamsungDeviceInfoService: Sendable {
             let name: String?
             let modelName: String?
             let wifiMac: String?
+            let powerState: String?
+
+            enum CodingKeys: String, CodingKey {
+                case name
+                case modelName
+                case wifiMac
+                /// Samsung returns the field with a capital `P` — explicit mapping so
+                /// Swift's default lowerCamelCase strategy doesn't miss it.
+                case powerState = "PowerState"
+            }
         }
     }
 }

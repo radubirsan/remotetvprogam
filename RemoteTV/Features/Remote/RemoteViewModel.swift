@@ -24,6 +24,7 @@ final class RemoteViewModel {
     var state: TVConnectionState { service.state }
     var mode: TVConnectionMode { device.mode }
     var sniffLog: [SniffLogEntry] { service.sniffLog }
+    var tvPowerState: TVPowerState { service.tvPowerState }
 
     func clearSniffLog() {
         service.clearSniffLog()

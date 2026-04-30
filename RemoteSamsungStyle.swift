@@ -68,7 +68,7 @@ struct CircleButton<Content: View>: View {
             .overlay(Circle().stroke(Color.white.opacity(0.05), lineWidth: 0.5))
             .shadow(color: .black.opacity(0.5), radius: 3, y: 2)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.hapticPress)
         .accessibilityLabel(Text(accessibilityLabel))
     }
 }
@@ -94,7 +94,7 @@ struct Rocker<Top: View, Bottom: View>: View {
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                         .contentShape(Rectangle())
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.hapticPress)
                 .accessibilityLabel(Text(topLabel))
 
                 Button(action: bottomAction) {
@@ -102,7 +102,7 @@ struct Rocker<Top: View, Bottom: View>: View {
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                         .contentShape(Rectangle())
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.hapticPress)
                 .accessibilityLabel(Text(bottomLabel))
             }
         }
@@ -161,7 +161,7 @@ struct DPad: View {
                         .foregroundStyle(Color.white.opacity(0.85))
                 }
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.hapticPress)
             .accessibilityLabel(Text("OK"))
         }
         .frame(width: outerSize, height: outerSize)
@@ -185,7 +185,7 @@ private struct DPadTapZone: View {
                 .frame(width: 60, height: 60)
                 .contentShape(.rect)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.hapticPress)
         .accessibilityLabel(Text(accessibilityLabel))
     }
 }
@@ -217,7 +217,7 @@ struct AppSlot: View {
             }
             .frame(width: size, height: size)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.hapticPress)
         .accessibilityLabel(Text(accessibilityName.isEmpty ? "\(label) \(sublabel ?? "")" : accessibilityName))
     }
 }
@@ -249,7 +249,7 @@ struct RemoteSamsungStyleView: View {
                     .frame(width: 44, height: 44)
                     .background(Color.white.opacity(0.04), in: Circle())
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.hapticPress)
             .accessibilityLabel("Settings")
             .position(x: W - 32, y: 76)
 

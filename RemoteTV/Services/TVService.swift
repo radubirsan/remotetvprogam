@@ -7,6 +7,12 @@ import Foundation
 @MainActor
 protocol TVService: AnyObject {
     var state: TVConnectionState { get }
+    /// Last-known power state from the TV's REST info endpoint. Refreshed periodically
+    /// while connected. ``TVPowerState/unknown`` means we haven't successfully polled
+    /// yet (or aren't connected). The Samsung WebSocket is silent on state changes,
+    /// so this REST-derived value is the only feedback signal beyond the lifecycle in
+    /// ``TVConnectionState``.
+    var tvPowerState: TVPowerState { get }
     func connect(to device: TVDevice) async throws
     func send(_ command: TVCommand) async throws
     /// Launches a Tizen app by ID. Works for both hard-coded shortcuts (``TVApp``) and

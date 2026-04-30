@@ -15,6 +15,7 @@ struct RemoteSamsungBody: View {
     static let height: CGFloat = 880
 
     let state: TVConnectionState
+    let powerState: TVPowerState
     let hasError: Bool
     let inputMode: RemoteInputMode
     let installedApps: [InstalledApp]?
@@ -45,7 +46,7 @@ struct RemoteSamsungBody: View {
             .position(x: 75, y: 71)
 
             VStack(spacing: 3) {
-                RemoteStatusLED(state: state, hasError: hasError)
+                RemoteStatusLED(state: state, powerState: powerState, hasError: hasError)
                 Text("MIC")
                     .font(.system(size: 10, weight: .bold))
                     .tracking(1.2)
@@ -139,7 +140,7 @@ struct RemoteSamsungBody: View {
                         .frame(minWidth: 56, minHeight: 36)
                         .contentShape(.rect)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.hapticPress)
                 .accessibilityLabel("Closed captions")
 
                 Button {
@@ -150,7 +151,7 @@ struct RemoteSamsungBody: View {
                         .frame(minWidth: 44, minHeight: 36)
                         .contentShape(.rect)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.hapticPress)
                 .accessibilityLabel("Mute")
             }
             .font(.system(size: 11, weight: .bold))

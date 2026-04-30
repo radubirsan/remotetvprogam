@@ -28,7 +28,7 @@ struct CompactCommercialMute: View {
             .overlay(Capsule().stroke(Color.white.opacity(0.06), lineWidth: 0.5))
             .shadow(color: .black.opacity(0.5), radius: 2, y: 2)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.hapticPress)
         .accessibilityLabel(accessibilityLabel)
     }
 

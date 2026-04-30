@@ -8,6 +8,11 @@ import SwiftUI
 @MainActor
 struct RemoteStatusLED: View {
     let state: TVConnectionState
+    /// Last-known TV power state. Used to render `.connected + .off` as a dim grey
+    /// (TV is reachable but in standby) versus the solid green of a fully active TV.
+    /// `.unknown` is treated as "assume on" so the LED doesn't flicker grey during the
+    /// brief window between WS connect and the first successful REST poll.
+    let powerState: TVPowerState
     /// Non-nil means the most recent connect/send/launch surfaced an error — the LED
     /// turns red regardless of `state`.
     let hasError: Bool
@@ -37,7 +42,7 @@ struct RemoteStatusLED: View {
         case .disconnected:    return Color(white: 0.35)
         case .connecting:      return .orange
         case .awaitingPairing: return .blue
-        case .connected:       return .green
+        case .connected:       return powerState == .off ? Color(white: 0.55) : .green
         case .failed:          return .red
         }
     }

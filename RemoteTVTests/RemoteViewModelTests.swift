@@ -5,6 +5,7 @@ import Testing
 @MainActor
 private final class FakeTVService: TVService {
     var state: TVConnectionState = .disconnected
+    var tvPowerState: TVPowerState = .unknown
     var sniffLog: [SniffLogEntry] = []
     var sentCommands: [TVCommand] = []
     var launchedAppIDs: [String] = []

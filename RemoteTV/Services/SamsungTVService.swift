@@ -10,6 +10,11 @@ import Observation
 @Observable
 final class SamsungTVService: TVService {
     private(set) var state: TVConnectionState = .disconnected
+    /// Last-known TV power state, derived from periodic `GET /api/v2/` polling while
+    /// connected. The WebSocket can stay open while the TV slips into standby, so the
+    /// UI uses this to render "connected but TV is off" differently from
+    /// "fully connected and on". Resets to ``TVPowerState/unknown`` on disconnect.
+    private(set) var tvPowerState: TVPowerState = .unknown
     /// Rolling buffer of control-channel traffic. Bounded to ``sniffLogLimit`` entries.
     private(set) var sniffLog: [SniffLogEntry] = []
     private let sniffLogLimit = 300
@@ -17,9 +22,14 @@ final class SamsungTVService: TVService {
     private let tokenStore: any TVTokenStore
     private let rememberedTVsStore: (any RememberedTVsStore)?
     private let deviceInfoService: SamsungDeviceInfoService?
+    /// How often the REST info endpoint is polled while connected. Short enough to
+    /// feel snappy when the user uses the physical remote to standby/wake the TV,
+    /// long enough not to flood the TV's tiny HTTP server.
+    private let infoPollInterval: Duration = .seconds(6)
     private var session: URLSession?
     private var webSocketTask: URLSessionWebSocketTask?
     private var receiveTask: Task<Void, Never>?
+    private var infoPollTask: Task<Void, Never>?
     private var trustDelegate: SamsungTrustDelegate?
     private var currentDevice: TVDevice?
 
@@ -208,21 +218,39 @@ final class SamsungTVService: TVService {
         }
     }
 
-    /// After a successful connect, hit the TV's REST info endpoint to capture its MAC for
-    /// Wake-on-LAN and persist a ``RememberedTV`` record. Best-effort: failures are swallowed
-    /// since the remote-control channel itself doesn't depend on this.
-    private func captureDeviceInfo(for device: TVDevice) async {
-        guard let rememberedTVsStore, let deviceInfoService else { return }
+    /// Recurring REST info poll. First tick persists a ``RememberedTV`` record (so
+    /// Wake-on-LAN works on next launch even before the TV responds again); every
+    /// tick refreshes ``tvPowerState`` so the UI can react when the TV slips into
+    /// standby while the WebSocket is still nominally up. Best-effort throughout —
+    /// transient HTTP failures don't tear down the WebSocket; the next tick covers it.
+    private func startInfoPolling(for device: TVDevice) {
+        infoPollTask?.cancel()
+        infoPollTask = Task { [weak self] in
+            var pendingPersist = true
+            while !Task.isCancelled {
+                await self?.refreshTVInfo(for: device, persistRememberedTV: pendingPersist)
+                pendingPersist = false
+                try? await Task.sleep(for: self?.infoPollInterval ?? .seconds(6))
+            }
+        }
+    }
 
+    private func refreshTVInfo(for device: TVDevice, persistRememberedTV: Bool) async {
+        guard let deviceInfoService else { return }
         let info = try? await deviceInfoService.fetch(ip: device.ip)
-        let record = RememberedTV(
-            ip: device.ip,
-            friendlyName: info?.name ?? device.name,
-            modelName: info?.modelName ?? "",
-            mac: info?.wifiMac,
-            udn: nil
-        )
-        try? await rememberedTVsStore.upsert(record)
+        if let info {
+            tvPowerState = info.powerState
+        }
+        if persistRememberedTV, let rememberedTVsStore {
+            let record = RememberedTV(
+                ip: device.ip,
+                friendlyName: info?.name ?? device.name,
+                modelName: info?.modelName ?? "",
+                mac: info?.wifiMac,
+                udn: nil
+            )
+            try? await rememberedTVsStore.upsert(record)
+        }
     }
 
     // MARK: - Handshake
@@ -248,7 +276,7 @@ final class SamsungTVService: TVService {
             }
             state = .connected
             startReceiveLoop(on: task)
-            Task { await captureDeviceInfo(for: device) }
+            startInfoPolling(for: device)
         case .unauthorized:
             await teardown()
             throw TVServiceError.tokenRejected
@@ -327,22 +355,39 @@ final class SamsungTVService: TVService {
                     let message = try await task.receive()
                     self?.recordInbound(message)
                 } catch {
-                    if !Task.isCancelled {
-                        self?.markFailed(error)
-                    }
+                    if Task.isCancelled { return }
+                    self?.handleReceiveTermination(task: task, error: error)
                     return
                 }
             }
         }
     }
 
-    private func markFailed(_ error: Error) {
-        state = .failed(mapError(error))
+    /// Differentiates a clean WebSocket close (TV powered off, app backgrounded long
+    /// enough that the TV ended the session) from an actual transport failure. A
+    /// normal close drops us to ``TVConnectionState/disconnected`` and clears the
+    /// power state so the LED reverts to grey rather than glaring red. Anything else
+    /// falls through to ``TVConnectionState/failed`` so the user can retry / repair.
+    private func handleReceiveTermination(task: URLSessionWebSocketTask, error: Error) {
+        let code = task.closeCode
+        let normal = code == .normalClosure || code == .goingAway
+        appendSniff(.info, "ws closed code=\(code.rawValue) normal=\(normal)")
+        infoPollTask?.cancel()
+        infoPollTask = nil
+        tvPowerState = .unknown
+        if normal {
+            state = .disconnected
+        } else {
+            state = .failed(mapError(error))
+        }
     }
 
     private func teardown() async {
         receiveTask?.cancel()
         receiveTask = nil
+        infoPollTask?.cancel()
+        infoPollTask = nil
+        tvPowerState = .unknown
         webSocketTask?.cancel(with: .normalClosure, reason: nil)
         webSocketTask = nil
         session?.invalidateAndCancel()

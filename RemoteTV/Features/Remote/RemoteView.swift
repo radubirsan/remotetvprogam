@@ -67,6 +67,7 @@ struct RemoteView: View {
                     ZStack(alignment: .topLeading) {
                         RemoteSamsungBody(
                             state: viewModel.state,
+                            powerState: viewModel.tvPowerState,
                             hasError: viewModel.lastError != nil,
                             inputMode: inputMode,
                             installedApps: viewModel.installedApps,

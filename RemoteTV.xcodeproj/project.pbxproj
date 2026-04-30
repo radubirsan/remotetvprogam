@@ -61,6 +61,8 @@
 		B2000000000000000000F04D /* RemoteSidePanelInstalledApps.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F04D /* RemoteSidePanelInstalledApps.swift */; };
 		B2000000000000000000F04E /* RemoteSidePanelSniffLog.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F04E /* RemoteSidePanelSniffLog.swift */; };
 		B2000000000000000000F04F /* RemoteSidePanelShortcuts.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F04F /* RemoteSidePanelShortcuts.swift */; };
+		B2000000000000000000F050 /* TVPowerState.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F050 /* TVPowerState.swift */; };
+		B2000000000000000000F051 /* HapticPressStyle.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F051 /* HapticPressStyle.swift */; };
 		C2000000000000000000F018 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F018 /* Assets.xcassets */; };
 		C2000000000000000000F019 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F019 /* Localizable.xcstrings */; };
 		D2000000000000000000F01B /* TVCommandEncoderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F01B /* TVCommandEncoderTests.swift */; };
@@ -150,6 +152,8 @@
 		A2000000000000000000F04D /* RemoteSidePanelInstalledApps.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteSidePanelInstalledApps.swift; sourceTree = "<group>"; };
 		A2000000000000000000F04E /* RemoteSidePanelSniffLog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteSidePanelSniffLog.swift; sourceTree = "<group>"; };
 		A2000000000000000000F04F /* RemoteSidePanelShortcuts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteSidePanelShortcuts.swift; sourceTree = "<group>"; };
+		A2000000000000000000F050 /* TVPowerState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TVPowerState.swift; sourceTree = "<group>"; };
+		A2000000000000000000F051 /* HapticPressStyle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HapticPressStyle.swift; sourceTree = "<group>"; };
 		C1000000000000000000F001 /* RemoteTV.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = RemoteTV.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		C1000000000000000000F002 /* RemoteTVTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = RemoteTVTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -240,6 +244,7 @@
 				A2000000000000000000F03D /* InstalledApp.swift */,
 				A2000000000000000000F03F /* KnownTVApps.swift */,
 				A2000000000000000000F043 /* SniffLogEntry.swift */,
+				A2000000000000000000F050 /* TVPowerState.swift */,
 			);
 			path = Domain;
 			sourceTree = "<group>";
@@ -300,6 +305,7 @@
 				A2000000000000000000F04D /* RemoteSidePanelInstalledApps.swift */,
 				A2000000000000000000F04E /* RemoteSidePanelSniffLog.swift */,
 				A2000000000000000000F04F /* RemoteSidePanelShortcuts.swift */,
+				A2000000000000000000F051 /* HapticPressStyle.swift */,
 			);
 			path = Remote;
 			sourceTree = "<group>";
@@ -477,6 +483,8 @@
 				B2000000000000000000F04D /* RemoteSidePanelInstalledApps.swift in Sources */,
 				B2000000000000000000F04E /* RemoteSidePanelSniffLog.swift in Sources */,
 				B2000000000000000000F04F /* RemoteSidePanelShortcuts.swift in Sources */,
+				B2000000000000000000F050 /* TVPowerState.swift in Sources */,
+				B2000000000000000000F051 /* HapticPressStyle.swift in Sources */,
 				B2000000000000000000F02F /* DiscoveryView.swift in Sources */,
 				B2000000000000000000F030 /* DiscoveryViewModel.swift in Sources */,
 				B2000000000000000000F031 /* TVListRow.swift in Sources */,
