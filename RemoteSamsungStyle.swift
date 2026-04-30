@@ -168,9 +168,10 @@ struct DPad: View {
     }
 }
 
-/// Single cardinal direction button used inside ``DPad``. Sized to comfortably exceed
-/// HIG 44pt with a quiet chevron glyph that doubles as a visual hint about where to
-/// tap. Kept private to the design file — `DPad` is the public composition.
+/// Single cardinal direction button used inside ``DPad``. Sized comfortably above
+/// HIG 44pt (60×60 hit area, +25% from the previous 48×48 to match the rest of the
+/// scaled-up remote). Kept private to the design file — `DPad` is the public
+/// composition.
 private struct DPadTapZone: View {
     let systemImage: String
     let accessibilityLabel: String
@@ -179,9 +180,9 @@ private struct DPadTapZone: View {
     var body: some View {
         Button(action: action) {
             Image(systemName: systemImage)
-                .font(.system(size: 18, weight: .semibold))
+                .font(.system(size: 22, weight: .semibold))
                 .foregroundStyle(Color.white.opacity(0.55))
-                .frame(width: 48, height: 48)
+                .frame(width: 60, height: 60)
                 .contentShape(.rect)
         }
         .buttonStyle(.plain)

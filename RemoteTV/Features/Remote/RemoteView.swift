@@ -24,10 +24,13 @@ struct RemoteView: View {
     @AppStorage("remoteSidePanel") private var sidePanel: SidePanelMode = .none
     @Environment(\.dismiss) private var dismiss
 
-    /// Virtual canvas dimensions. Matches `RemoteSamsungStyleView`'s 393×852 with
-    /// the body offset by 60pt from the top — same numbers the design ships with.
+    /// Virtual canvas dimensions. Width matches the design's 393pt iPhone canvas;
+    /// height bumped to 940 to accommodate the +25%-scaled remote body (880 tall
+    /// instead of 760). The +10% canvas height ratio versus the +25% button growth
+    /// is intentional — `GeometryReader` scales the canvas to fit, so a smaller
+    /// canvas-height bump means the buttons render visibly larger on iPhone.
     private let canvasWidth: CGFloat = 393
-    private let canvasHeight: CGFloat = 852
+    private let canvasHeight: CGFloat = 940
     private let bodyTop: CGFloat = 60
     private let bodyHeight: CGFloat = RemoteSamsungBody.height
     private let bodyWidth: CGFloat = RemoteSamsungBody.width

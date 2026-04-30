@@ -1,17 +1,18 @@
 import SwiftUI
 
 /// The contents of the Samsung-style remote shell — every control that lives *inside*
-/// the rounded body, laid out at the design's exact pixel coordinates (340×760,
-/// matching the HIG-compliant sizing in `RemoteSamsungStyleView`). Wired to the live
-/// ``RemoteViewModel``.
+/// the rounded body, laid out at the design's coordinates with all interactive
+/// elements scaled +25% from the previous iteration for a more comfortable hit area.
 ///
-/// All tappable elements meet Apple's 44×44 minimum (the few that don't are flagged
-/// inline). Positions, sizes, corner radii and shadow values all mirror the design
-/// file — keeping the two in lock-step is intentional.
+/// Sizes (Power/Mic/123/Back/Play 70, Home/LIVE 80, app slots 70, DPad 275/120,
+/// Trackpad 275, rockers 150×65) all sit comfortably above HIG 44pt. Positions and
+/// body height were re-spaced so the bigger controls still leave consistent vertical
+/// gaps between rows.
 @MainActor
 struct RemoteSamsungBody: View {
     static let width: CGFloat = 340
-    static let height: CGFloat = 760
+    /// Bumped from 760 → 880 to absorb the +25% button growth without rows colliding.
+    static let height: CGFloat = 880
 
     let state: TVConnectionState
     let hasError: Bool
@@ -23,7 +24,7 @@ struct RemoteSamsungBody: View {
 
     var body: some View {
         ZStack(alignment: .topLeading) {
-            // Body shell — corner radius and shadow match `RemoteSamsungStyleView`.
+            // Body shell.
             RoundedRectangle(cornerRadius: 56, style: .continuous)
                 .fill(RemoteTheme.body)
                 .frame(width: Self.width, height: Self.height)
@@ -34,14 +35,14 @@ struct RemoteSamsungBody: View {
                 .shadow(color: .black.opacity(0.6), radius: 22, y: 14)
 
             // ROW 1: Power (left), MIC label + status LED (centre), Mic (right).
-            CircleButton(size: 56, iconColor: RemoteTheme.powerRed,
+            CircleButton(size: 70, iconColor: RemoteTheme.powerRed,
                          accessibilityLabel: "Power") {
                 fire(.powerOff)
             } content: {
                 Image(systemName: "power")
-                    .font(.system(size: 22, weight: .heavy))
+                    .font(.system(size: 28, weight: .heavy))
             }
-            .position(x: 40 + 28, y: 36 + 28)
+            .position(x: 75, y: 71)
 
             VStack(spacing: 3) {
                 RemoteStatusLED(state: state, hasError: hasError)
@@ -53,85 +54,83 @@ struct RemoteSamsungBody: View {
             .position(x: Self.width / 2, y: 50)
 
             // Mic — visual placeholder per design (no voice input wired up).
-            CircleButton(size: 56, accessibilityLabel: "Voice (not implemented)") {
+            CircleButton(size: 70, accessibilityLabel: "Voice (not implemented)") {
             } content: {
                 Image(systemName: "mic")
-                    .font(.system(size: 20, weight: .regular))
+                    .font(.system(size: 25, weight: .regular))
             }
-            .position(x: Self.width - 40 - 28, y: 36 + 28)
+            .position(x: 265, y: 71)
 
             // ROW 2: Settings/123 (under power) — visual placeholder per design.
-            CircleButton(size: 56, accessibilityLabel: "Number pad (not implemented)") {
+            CircleButton(size: 70, accessibilityLabel: "Number pad (not implemented)") {
             } content: {
                 VStack(spacing: 0) {
                     Image(systemName: "gearshape")
-                        .font(.system(size: 13, weight: .regular))
+                        .font(.system(size: 16, weight: .regular))
                     Text("123")
-                        .font(.system(size: 9, weight: .bold))
+                        .font(.system(size: 11, weight: .bold))
                         .tracking(0.5)
                 }
             }
-            .position(x: 40 + 28, y: 110 + 28)
+            .position(x: 75, y: 159)
 
             // CENTRAL CONTROL — D-Pad wheel or virtual trackpad, swappable from the gear menu.
             centralControl
-                .position(x: Self.width / 2, y: 200 + 110)
+                .position(x: Self.width / 2, y: 365)
 
             // ROW 4: Back / Home / Play-Pause.
-            CircleButton(size: 56, accessibilityLabel: "Back") {
+            CircleButton(size: 70, accessibilityLabel: "Back") {
                 fire(.back)
             } content: {
                 Image(systemName: "arrow.uturn.backward")
-                    .font(.system(size: 19, weight: .semibold))
+                    .font(.system(size: 24, weight: .semibold))
             }
-            .position(x: 40 + 28, y: 470 + 28)
+            .position(x: 75, y: 559)
 
-            CircleButton(size: 64, accessibilityLabel: "Home") {
+            CircleButton(size: 80, accessibilityLabel: "Home") {
                 fire(.home)
             } content: {
                 Image(systemName: "house.fill")
-                    .font(.system(size: 22, weight: .regular))
+                    .font(.system(size: 28, weight: .regular))
             }
-            .position(x: Self.width / 2, y: 466 + 32)
+            .position(x: Self.width / 2, y: 559)
 
-            CircleButton(size: 56, accessibilityLabel: "Play or pause") {
+            CircleButton(size: 70, accessibilityLabel: "Play or pause") {
                 fire(.playPause)
             } content: {
                 Image(systemName: "playpause.fill")
-                    .font(.system(size: 18, weight: .regular))
+                    .font(.system(size: 22, weight: .regular))
             }
-            .position(x: Self.width - 40 - 28, y: 470 + 28)
+            .position(x: 265, y: 559)
 
-            // ROW 5: Volume rocker (left).
-            Rocker(width: 120, height: 52,
+            // ROW 5: Volume rocker (left). At width 150 the rockers had to shift apart
+            // (x=85 / x=255 instead of 100 / 240) to leave a 20pt gap between them.
+            Rocker(width: 150, height: 65,
                    topLabel: "Volume down", bottomLabel: "Volume up") {
-                Image(systemName: "minus").font(.system(size: 18, weight: .semibold))
+                Image(systemName: "minus").font(.system(size: 22, weight: .semibold))
             } bottom: {
-                Image(systemName: "plus").font(.system(size: 18, weight: .semibold))
+                Image(systemName: "plus").font(.system(size: 22, weight: .semibold))
             } topAction: {
                 fire(.volumeDown)
             } bottomAction: {
                 fire(.volumeUp)
             }
-            .position(x: 40 + 60, y: 562 + 26)
+            .position(x: 85, y: 663)
 
             // ROW 5: Channel rocker (right).
-            Rocker(width: 120, height: 52,
+            Rocker(width: 150, height: 65,
                    topLabel: "Channel up", bottomLabel: "Channel down") {
-                Image(systemName: "chevron.up").font(.system(size: 16, weight: .semibold))
+                Image(systemName: "chevron.up").font(.system(size: 20, weight: .semibold))
             } bottom: {
-                Image(systemName: "chevron.down").font(.system(size: 16, weight: .semibold))
+                Image(systemName: "chevron.down").font(.system(size: 20, weight: .semibold))
             } topAction: {
                 fire(.channelUp)
             } bottomAction: {
                 fire(.channelDown)
             }
-            .position(x: Self.width - 40 - 60, y: 562 + 26)
+            .position(x: 255, y: 663)
 
-            // CC/AD + mute hint row beneath the volume rocker. The hit areas are
-            // expanded via `.frame(...)` + `.contentShape(...)` so each half meets
-            // a reasonable tap minimum even though the visible glyphs stay small to
-            // honour the design's quiet hint-style.
+            // CC/AD + mute hint row beneath the volume rocker.
             HStack(spacing: 8) {
                 Button {
                     fire(.captions)
@@ -147,32 +146,31 @@ struct RemoteSamsungBody: View {
                     fire(.mute)
                 } label: {
                     Image(systemName: "speaker.slash")
-                        .font(.system(size: 12, weight: .regular))
+                        .font(.system(size: 14, weight: .regular))
                         .frame(minWidth: 44, minHeight: 36)
                         .contentShape(.rect)
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel("Mute")
             }
-            .font(.system(size: 10, weight: .bold))
+            .font(.system(size: 11, weight: .bold))
             .tracking(0.6)
             .foregroundStyle(Color(white: 0.48))
-            .position(x: 40 + 60, y: 624)
+            .position(x: 85, y: 724)
 
-            // ROW 6: App slots — only three slots in the new design (APP 1, LIVE, APP 2).
-            // APP 1 and APP 2 bind dynamically to the first two installed apps the TV
-            // surfaces (placeholders shown until the user opens the Installed Apps panel
-            // and taps "Load Apps"). LIVE TV is the static `goLive()` action.
-            appSlot(at: 0, size: 56)
-                .position(x: 40 + 28, y: 656 + 28)
+            // ROW 6: App slots — three slots (APP 1, LIVE, APP 2). APP 1 / APP 2 bind
+            // dynamically to the first two installed apps the TV surfaces (placeholders
+            // until the user opens the Installed Apps panel and taps "Load Apps").
+            appSlot(at: 0, size: 70)
+                .position(x: 75, y: 787)
 
-            AppSlot(size: 64, label: "LIVE", sublabel: "TV", accessibilityName: "Live TV") {
+            AppSlot(size: 80, label: "LIVE", sublabel: "TV", accessibilityName: "Live TV") {
                 Task { await onLiveTV() }
             }
-            .position(x: Self.width / 2, y: 652 + 32)
+            .position(x: Self.width / 2, y: 787)
 
-            appSlot(at: 1, size: 56)
-                .position(x: Self.width - 40 - 28, y: 656 + 28)
+            appSlot(at: 1, size: 70)
+                .position(x: 265, y: 787)
 
             // Brand label.
             Text("ANOTHER REMOTE")
@@ -190,8 +188,8 @@ struct RemoteSamsungBody: View {
         switch inputMode {
         case .dpad:
             DPad(
-                outerSize: 220,
-                innerSize: 96,
+                outerSize: 275,
+                innerSize: 120,
                 onUp: { fire(.up) },
                 onDown: { fire(.down) },
                 onLeft: { fire(.left) },
@@ -199,7 +197,7 @@ struct RemoteSamsungBody: View {
                 onOK: { fire(.enter) }
             )
         case .trackpad:
-            TrackpadSection(diameter: 220, onCommand: onCommand)
+            TrackpadSection(diameter: 275, onCommand: onCommand)
         }
     }
 
