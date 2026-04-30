@@ -3,6 +3,9 @@ import SwiftUI
 @MainActor
 struct RemoteView: View {
     @State private var viewModel: RemoteViewModel
+    /// Persisted across launches so the user only picks D-Pad vs Trackpad once.
+    /// Same convention as `lastConnectionMode` (see project notes).
+    @AppStorage("remoteInputMode") private var inputMode: RemoteInputMode = .dpad
     @Environment(\.dismiss) private var dismiss
 
     init(device: TVDevice, service: any TVService) {
@@ -18,7 +21,19 @@ struct RemoteView: View {
                     onToggle: viewModel.toggleCommercialMute
                 )
                 Spacer()
-                DPadSection(onCommand: viewModel.send)
+                Picker("Input mode", selection: $inputMode) {
+                    ForEach(RemoteInputMode.allCases) { mode in
+                        Text(mode.label).tag(mode)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .labelsHidden()
+                switch inputMode {
+                case .dpad:
+                    DPadSection(onCommand: viewModel.send)
+                case .trackpad:
+                    TrackpadSection(onCommand: viewModel.send)
+                }
                 Spacer()
                 VolumeSection(onCommand: viewModel.send)
                 Spacer()
@@ -33,7 +48,10 @@ struct RemoteView: View {
                     onLaunch: viewModel.launchApp
                 )
                 Spacer()
-                BottomActionsSection(onCommand: viewModel.send)
+                BottomActionsSection(
+                    onCommand: viewModel.send,
+                    onLiveTV: viewModel.goLive
+                )
                 Spacer()
                 SniffLogSection(
                     entries: viewModel.sniffLog,

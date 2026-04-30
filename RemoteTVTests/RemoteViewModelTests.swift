@@ -152,4 +152,14 @@ struct RemoteViewModelTests {
 
         #expect(service.launchedAppIDs == ["111299001912"])
     }
+
+    @Test func goLiveSendsExitThenLiveTV() async {
+        let service = FakeTVService()
+        service.state = .connected
+        let vm = RemoteViewModel(device: makeDevice(), service: service)
+
+        await vm.goLive()
+
+        #expect(service.sentCommands == [.exit, .liveTV])
+    }
 }

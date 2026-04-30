@@ -14,6 +14,9 @@ enum TVCommand: String, CaseIterable, Sendable, Identifiable {
     case enter = "KEY_ENTER"
     case back = "KEY_RETURN"
     case home = "KEY_HOME"
+    /// Closes the foreground app. Used as part of the ``RemoteViewModel/goLive`` sequence
+    /// because `KEY_TV` alone is intercepted by Netflix/HBO/etc. and never reaches Tizen.
+    case exit = "KEY_EXIT"
     case liveTV = "KEY_TV"
     case powerOff = "KEY_POWER"
 

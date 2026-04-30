@@ -50,6 +50,9 @@
 		B2000000000000000000F03F /* KnownTVApps.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F03F /* KnownTVApps.swift */; };
 		B2000000000000000000F043 /* SniffLogEntry.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F043 /* SniffLogEntry.swift */; };
 		B2000000000000000000F044 /* SniffLogSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F044 /* SniffLogSection.swift */; };
+		B2000000000000000000F045 /* TrackpadGestureMapper.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F045 /* TrackpadGestureMapper.swift */; };
+		B2000000000000000000F046 /* TrackpadSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F046 /* TrackpadSection.swift */; };
+		B2000000000000000000F047 /* RemoteInputMode.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F047 /* RemoteInputMode.swift */; };
 		C2000000000000000000F018 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F018 /* Assets.xcassets */; };
 		C2000000000000000000F019 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F019 /* Localizable.xcstrings */; };
 		D2000000000000000000F01B /* TVCommandEncoderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F01B /* TVCommandEncoderTests.swift */; };
@@ -59,6 +62,7 @@
 		D2000000000000000000F027 /* MagicPacketBuilderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F027 /* MagicPacketBuilderTests.swift */; };
 		D2000000000000000000F028 /* RememberedTVsStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F028 /* RememberedTVsStoreTests.swift */; };
 		D2000000000000000000F035 /* DiscoveryViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F035 /* DiscoveryViewModelTests.swift */; };
+		D2000000000000000000F048 /* TrackpadGestureMapperTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F048 /* TrackpadGestureMapperTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -126,6 +130,10 @@
 		A2000000000000000000F03F /* KnownTVApps.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KnownTVApps.swift; sourceTree = "<group>"; };
 		A2000000000000000000F043 /* SniffLogEntry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SniffLogEntry.swift; sourceTree = "<group>"; };
 		A2000000000000000000F044 /* SniffLogSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SniffLogSection.swift; sourceTree = "<group>"; };
+		A2000000000000000000F045 /* TrackpadGestureMapper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrackpadGestureMapper.swift; sourceTree = "<group>"; };
+		A2000000000000000000F046 /* TrackpadSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrackpadSection.swift; sourceTree = "<group>"; };
+		A2000000000000000000F047 /* RemoteInputMode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteInputMode.swift; sourceTree = "<group>"; };
+		A2000000000000000000F048 /* TrackpadGestureMapperTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrackpadGestureMapperTests.swift; sourceTree = "<group>"; };
 		C1000000000000000000F001 /* RemoteTV.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = RemoteTV.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		C1000000000000000000F002 /* RemoteTVTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = RemoteTVTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -189,6 +197,7 @@
 				A2000000000000000000F027 /* MagicPacketBuilderTests.swift */,
 				A2000000000000000000F028 /* RememberedTVsStoreTests.swift */,
 				A2000000000000000000F035 /* DiscoveryViewModelTests.swift */,
+				A2000000000000000000F048 /* TrackpadGestureMapperTests.swift */,
 			);
 			path = RemoteTVTests;
 			sourceTree = "<group>";
@@ -264,6 +273,9 @@
 				A2000000000000000000F03C /* AppsSection.swift */,
 				A2000000000000000000F03E /* InstalledAppsSection.swift */,
 				A2000000000000000000F044 /* SniffLogSection.swift */,
+				A2000000000000000000F045 /* TrackpadGestureMapper.swift */,
+				A2000000000000000000F046 /* TrackpadSection.swift */,
+				A2000000000000000000F047 /* RemoteInputMode.swift */,
 			);
 			path = Remote;
 			sourceTree = "<group>";
@@ -430,6 +442,9 @@
 				B2000000000000000000F03F /* KnownTVApps.swift in Sources */,
 				B2000000000000000000F043 /* SniffLogEntry.swift in Sources */,
 				B2000000000000000000F044 /* SniffLogSection.swift in Sources */,
+				B2000000000000000000F045 /* TrackpadGestureMapper.swift in Sources */,
+				B2000000000000000000F046 /* TrackpadSection.swift in Sources */,
+				B2000000000000000000F047 /* RemoteInputMode.swift in Sources */,
 				B2000000000000000000F02F /* DiscoveryView.swift in Sources */,
 				B2000000000000000000F030 /* DiscoveryViewModel.swift in Sources */,
 				B2000000000000000000F031 /* TVListRow.swift in Sources */,
@@ -447,6 +462,7 @@
 				D2000000000000000000F027 /* MagicPacketBuilderTests.swift in Sources */,
 				D2000000000000000000F028 /* RememberedTVsStoreTests.swift in Sources */,
 				D2000000000000000000F035 /* DiscoveryViewModelTests.swift in Sources */,
+				D2000000000000000000F048 /* TrackpadGestureMapperTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -65,6 +65,17 @@ final class RemoteViewModel {
         }
     }
 
+    /// "Get me back to live TV" — a compound action that works from inside apps that would
+    /// otherwise swallow `KEY_TV`. First sends `KEY_EXIT` (apps generally let this bubble
+    /// up to Tizen), waits for the app to tear down, then selects the tuner with `KEY_TV`.
+    /// Pressing `KEY_TV` alone from inside Netflix/HBO does nothing because the app has
+    /// input focus and doesn't handle that key.
+    func goLive() async {
+        await send(.exit)
+        try? await Task.sleep(for: .milliseconds(500))
+        await send(.liveTV)
+    }
+
     func disconnect() async {
         cancelCommercialMute()
         await service.disconnect()

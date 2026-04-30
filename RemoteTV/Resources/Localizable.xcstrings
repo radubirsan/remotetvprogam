@@ -93,6 +93,9 @@
         }
       }
     },
+    "D-Pad" : {
+
+    },
     "Disconnect & switch mode" : {
       "localizations" : {
         "en" : {
@@ -163,6 +166,9 @@
       }
     },
     "If Power On isn't working" : {
+
+    },
+    "Input mode" : {
 
     },
     "IP address" : {
@@ -362,10 +368,19 @@
     "Stop" : {
 
     },
+    "Swipe or tap" : {
+
+    },
+    "Swipe to navigate, tap to select" : {
+
+    },
     "Tap Search to find TVs on your network." : {
 
     },
     "Tap to Unmute" : {
+
+    },
+    "Trackpad" : {
 
     },
     "Try Again" : {

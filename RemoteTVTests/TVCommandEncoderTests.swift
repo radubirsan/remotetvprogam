@@ -37,6 +37,8 @@ struct TVCommandEncoderTests {
         #expect(TVCommand.enter.rawValue == "KEY_ENTER")
         #expect(TVCommand.back.rawValue == "KEY_RETURN")
         #expect(TVCommand.home.rawValue == "KEY_HOME")
+        #expect(TVCommand.exit.rawValue == "KEY_EXIT")
+        #expect(TVCommand.liveTV.rawValue == "KEY_TV")
         #expect(TVCommand.powerOff.rawValue == "KEY_POWER")
     }
 }
