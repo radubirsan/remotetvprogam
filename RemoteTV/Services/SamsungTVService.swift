@@ -210,6 +210,55 @@ final class SamsungTVService: TVService {
         state = .disconnected
     }
 
+    /// Recovery hook for foregrounding. The receive loop is parked on
+    /// `URLSessionWebSocketTask.receive()` while the app is suspended; iOS routinely
+    /// kills the underlying TCP connection for backgrounded apps, but the parked read
+    /// only surfaces the failure on the next system-driven wake — so on resume `state`
+    /// can still read `.connected` against an actually-dead socket. We probe with a
+    /// WebSocket ping (cheap, racing a 2s timeout) and only re-handshake when the
+    /// probe fails or the state machine already shows the connection gone. No-op when
+    /// a connect is already in flight or there's no remembered device.
+    func reconnectIfNeeded() async {
+        guard let device = currentDevice else { return }
+
+        switch state {
+        case .connecting, .awaitingPairing:
+            return
+        case .connected:
+            if await isSocketAlive() { return }
+            appendSniff(.info, "ping failed; reconnecting")
+        case .disconnected, .failed:
+            appendSniff(.info, "auto-reconnect after \(state)")
+        }
+
+        try? await connect(to: device)
+    }
+
+    /// Sends a single WebSocket ping and returns whether a pong arrived inside the
+    /// timeout. We can't trust `URLSessionWebSocketTask.closeCode` alone: it's `.invalid`
+    /// for the entire happy-path lifetime and only flips on a clean close, so a TCP
+    /// connection silently severed by iOS leaves it stuck at `.invalid`. The ping is
+    /// the only way to force a round-trip and learn the truth.
+    private func isSocketAlive() async -> Bool {
+        guard let task = webSocketTask else { return false }
+        return await withTaskGroup(of: Bool.self) { group in
+            group.addTask {
+                await withCheckedContinuation { (cont: CheckedContinuation<Bool, Never>) in
+                    task.sendPing { error in
+                        cont.resume(returning: error == nil)
+                    }
+                }
+            }
+            group.addTask {
+                try? await Task.sleep(for: .seconds(2))
+                return false
+            }
+            let alive = await group.next() ?? false
+            group.cancelAll()
+            return alive
+        }
+    }
+
     func forget(_ device: TVDevice) async {
         try? await tokenStore.delete(for: device.ip)
         try? await rememberedTVsStore?.delete(ip: device.ip)

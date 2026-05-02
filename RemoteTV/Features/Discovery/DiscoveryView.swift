@@ -6,6 +6,12 @@ struct DiscoveryView: View {
     @State private var viewModel: DiscoveryViewModel
     @State private var showPowerOnHelp: Bool = false
     @AppStorage("lastConnectionMode") private var storedMode: String = TVConnectionMode.plain.rawValue
+    /// JSON-encoded ``TVDevice`` of the last TV the user navigated into, persisted
+    /// across launches so the app can relaunch straight into ``RemoteView`` for that
+    /// TV. Empty string means "no stored device — start at Discovery." The value is
+    /// kept in sync by the `onChange(of: viewModel.path)` observer below: any push
+    /// stores the topmost device, any pop (Disconnect, Forget, system back) clears it.
+    @AppStorage("lastRemoteDeviceJSON") private var lastRemoteDeviceJSON: String = ""
 
     init(
         service: any TVService,
@@ -39,9 +45,13 @@ struct DiscoveryView: View {
         .task {
             restoreStoredMode()
             await viewModel.loadRemembered()
+            restoreLastRemoteDevice()
         }
         .onChange(of: viewModel.mode) { _, newValue in
             storedMode = newValue.rawValue
+        }
+        .onChange(of: viewModel.path) { _, newPath in
+            persistLastRemoteDevice(newPath.last)
         }
     }
 
@@ -118,6 +128,39 @@ struct DiscoveryView: View {
         if let stored = TVConnectionMode(rawValue: storedMode) {
             viewModel.mode = stored
         }
+    }
+
+    /// Re-pushes the last TV onto the navigation path so the user lands directly in
+    /// ``RemoteView`` after a relaunch. Bails if the path is already non-empty (e.g.
+    /// `.task` re-fired after a navigation that's already in flight) or the stored
+    /// JSON is malformed — the latter clears the slot so a corrupt entry doesn't
+    /// hijack every future launch.
+    private func restoreLastRemoteDevice() {
+        guard viewModel.path.isEmpty, !lastRemoteDeviceJSON.isEmpty else { return }
+        let data = Data(lastRemoteDeviceJSON.utf8)
+        guard let device = try? JSONDecoder().decode(TVDevice.self, from: data) else {
+            lastRemoteDeviceJSON = ""
+            return
+        }
+        viewModel.path.append(device)
+    }
+
+    /// Mirrors the topmost path entry into `@AppStorage`. Called from the path
+    /// observer on every push and pop, so disconnecting / forgetting / using the
+    /// system back gesture all clear the stored device automatically — no separate
+    /// teardown wiring needed in the toolbar handlers.
+    private func persistLastRemoteDevice(_ device: TVDevice?) {
+        guard let device else {
+            lastRemoteDeviceJSON = ""
+            return
+        }
+        guard
+            let data = try? JSONEncoder().encode(device),
+            let json = String(data: data, encoding: .utf8)
+        else {
+            return
+        }
+        lastRemoteDeviceJSON = json
     }
 }
 

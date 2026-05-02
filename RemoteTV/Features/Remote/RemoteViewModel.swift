@@ -82,6 +82,18 @@ final class RemoteViewModel {
         await service.disconnect()
     }
 
+    /// Hook for the view's scene-phase observer. Called every time the app comes back
+    /// to `.active` so the service can transparently re-handshake if iOS killed the
+    /// WebSocket while the app was suspended (lock screen, app-switcher). Resolves the
+    /// outer error banner on a successful reconnect so the UI doesn't show a stale
+    /// failure.
+    func reconnectIfNeeded() async {
+        await service.reconnectIfNeeded()
+        if service.state == .connected {
+            lastError = nil
+        }
+    }
+
     func forgetTV() async {
         await service.forget(device)
     }

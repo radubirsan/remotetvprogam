@@ -14,6 +14,7 @@ private final class FakeTVService: TVService {
     var sendError: (any Error)?
     var launchError: (any Error)?
     var installedAppsResult: Result<[InstalledApp], any Error> = .success([])
+    var reconnectCallCount: Int = 0
 
     func connect(to device: TVDevice) async throws {
         if let error = connectError { throw error }
@@ -44,6 +45,10 @@ private final class FakeTVService: TVService {
 
     func forget(_ device: TVDevice) async {
         forgottenDeviceIDs.append(device.id)
+    }
+
+    func reconnectIfNeeded() async {
+        reconnectCallCount += 1
     }
 }
 
@@ -162,5 +167,30 @@ struct RemoteViewModelTests {
         await vm.goLive()
 
         #expect(service.sentCommands == [.exit, .liveTV])
+    }
+
+    @Test func reconnectIfNeededDelegatesToService() async {
+        let service = FakeTVService()
+        let vm = RemoteViewModel(device: makeDevice(), service: service)
+
+        await vm.reconnectIfNeeded()
+
+        #expect(service.reconnectCallCount == 1)
+    }
+
+    @Test func reconnectIfNeededClearsLastErrorOnRecovery() async {
+        let service = FakeTVService()
+        service.sendError = TVServiceError.notConnected
+        let vm = RemoteViewModel(device: makeDevice(), service: service)
+        await vm.send(.up)
+        #expect(vm.lastError != nil)
+
+        // Simulate the service successfully reconnecting via the scene-phase hook —
+        // the banner should clear so the UI doesn't show a stale "not connected".
+        service.sendError = nil
+        service.state = .connected
+        await vm.reconnectIfNeeded()
+
+        #expect(vm.lastError == nil)
     }
 }

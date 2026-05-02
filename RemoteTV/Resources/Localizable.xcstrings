@@ -57,6 +57,12 @@
     "CC/AD" : {
 
     },
+    "CHANNEL" : {
+
+    },
+    "Channel %@" : {
+
+    },
     "Check that the TV is powered on and on the same Wi-Fi network." : {
 
     },
@@ -288,10 +294,16 @@
     "No apps reported by the TV." : {
 
     },
+    "No digits entered" : {
+
+    },
     "No messages yet. Launch an app on the TV with the physical remote and watch here." : {
 
     },
     "No TVs found" : {
+
+    },
+    "Number Pad" : {
 
     },
     "Off" : {
@@ -327,6 +339,9 @@
           }
         }
       }
+    },
+    "Power" : {
+
     },
     "Power off" : {
       "localizations" : {
@@ -401,6 +416,9 @@
     "Side panel" : {
 
     },
+    "Sleep timer" : {
+
+    },
     "Sniff Log" : {
 
     },
@@ -417,6 +435,9 @@
 
     },
     "Tap Search to find TVs on your network." : {
+
+    },
+    "Tap to toggle power. Long press for sleep timer." : {
 
     },
     "Tap to Unmute" : {

@@ -31,4 +31,13 @@ protocol TVService: AnyObject {
     func disconnect() async
     /// Wipes any stored pairing token for the given TV. Next connect will re-pair.
     func forget(_ device: TVDevice) async
+    /// Idempotent recovery hook called when the app returns from the background. iOS
+    /// silently tears down the WebSocket while the app is suspended (lock screen,
+    /// app-switcher, Control Center) and the receive loop only notices on the next
+    /// read — so by the time the user is looking at the remote again, `state` may
+    /// still claim `.connected` even though the next `send` would fail. Implementations
+    /// should verify the live socket and re-handshake against the last device when
+    /// it's gone, while no-opping when the connection is healthy or a connect attempt
+    /// is already in flight.
+    func reconnectIfNeeded() async
 }

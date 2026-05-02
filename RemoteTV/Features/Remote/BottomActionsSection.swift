@@ -18,7 +18,7 @@ struct BottomActionsSection: View {
                 await onLiveTV()
             }
             RemoteButton(label: "Power off", systemImage: "power", tint: .red) {
-                await onCommand(.powerOff)
+                await onCommand(.power)
             }
         }
     }

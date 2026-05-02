@@ -1,7 +1,7 @@
 import Foundation
 
 /// The websocket transport Samsung TVs expect depending on model year.
-enum TVConnectionMode: String, CaseIterable, Identifiable, Sendable {
+enum TVConnectionMode: String, CaseIterable, Identifiable, Sendable, Codable {
     /// `ws://<ip>:8001` — older models (roughly 2016–2018).
     case plain
     /// `wss://<ip>:8002` — 2019+ models. Requires trusting the TV's self-signed certificate.

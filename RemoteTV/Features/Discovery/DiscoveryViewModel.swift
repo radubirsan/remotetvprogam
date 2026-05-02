@@ -64,7 +64,12 @@ final class DiscoveryViewModel {
         rememberedStore: any RememberedTVsStore,
         wakeService: (any WakeOnLANService)? = nil,
         initialMode: TVConnectionMode = .plain,
-        emptyStateDelay: Duration = .seconds(10)
+        // Bumped from 10s → 15s so the timer sits comfortably past the proactive
+        // re-query schedule in BonjourDiscoveryService (last requery at +7s, plus
+        // ~1–2s for the TV's PTR/SRV/TXT round-trip and resolve). On a fresh install
+        // the user is also reading the Local Network permission prompt during the
+        // first few seconds — 10s used to expire while they were still tapping Allow.
+        emptyStateDelay: Duration = .seconds(15)
     ) {
         self.discovery = discovery
         self.rememberedStore = rememberedStore

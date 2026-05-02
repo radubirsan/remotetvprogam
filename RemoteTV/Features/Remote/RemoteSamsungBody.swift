@@ -23,6 +23,10 @@ struct RemoteSamsungBody: View {
     let onLiveTV: () async -> Void
     let onLaunchApp: (String) async -> Void
 
+    /// Drives the modal number-pad sheet that the 123 button summons. Local to the
+    /// body since no other surface needs to read it.
+    @State private var showNumberPad: Bool = false
+
     var body: some View {
         ZStack(alignment: .topLeading) {
             // Body shell.
@@ -36,13 +40,14 @@ struct RemoteSamsungBody: View {
                 .shadow(color: .black.opacity(0.6), radius: 22, y: 14)
 
             // ROW 1: Power (left), MIC label + status LED (centre), Mic (right).
-            CircleButton(size: 70, iconColor: RemoteTheme.powerRed,
-                         accessibilityLabel: "Power") {
-                fire(.powerOff)
-            } content: {
-                Image(systemName: "power")
-                    .font(.system(size: 28, weight: .heavy))
-            }
+            // Power is a dual-action control — tap fires `KEY_POWER` (standby toggle);
+            // hold ~0.9s fires `KEY_SLEEP` to open Tizen's sleep-timer menu. The
+            // green ring around the button visualises the long-press progress.
+            PowerButton(
+                size: 70,
+                onTap: { fire(.power) },
+                onLongPress: { fire(.sleepTimer) }
+            )
             .position(x: 75, y: 71)
 
             VStack(spacing: 3) {
@@ -62,8 +67,11 @@ struct RemoteSamsungBody: View {
             }
             .position(x: 265, y: 71)
 
-            // ROW 2: Settings/123 (under power) — visual placeholder per design.
-            CircleButton(size: 70, accessibilityLabel: "Number pad (not implemented)") {
+            // ROW 2: Settings/123 (under power). Opens the modal `NumberPadView` so
+            // the user can tap a channel number — each digit dispatches `KEY_<n>` to
+            // the TV the same way a physical remote does.
+            CircleButton(size: 70, accessibilityLabel: "Number pad") {
+                showNumberPad = true
             } content: {
                 VStack(spacing: 0) {
                     Image(systemName: "gearshape")
@@ -182,6 +190,13 @@ struct RemoteSamsungBody: View {
                 .position(x: Self.width / 2, y: Self.height - 28)
         }
         .frame(width: Self.width, height: Self.height)
+        .sheet(isPresented: $showNumberPad) {
+            // `.large` only — at `.medium` the bottom Enter row gets clipped because
+            // the keypad needs ~470pt of vertical room and medium gives ~426pt.
+            NumberPadView(onCommand: onCommand)
+                .presentationDetents([.large])
+                .presentationDragIndicator(.visible)
+        }
     }
 
     @ViewBuilder

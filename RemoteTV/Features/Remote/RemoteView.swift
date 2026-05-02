@@ -23,6 +23,11 @@ struct RemoteView: View {
     /// the remote at full size.
     @AppStorage("remoteSidePanel") private var sidePanel: SidePanelMode = .none
     @Environment(\.dismiss) private var dismiss
+    /// Lets us auto-recover the WebSocket when the user unlocks the phone or returns
+    /// from the app switcher — iOS suspends URLSession traffic in the background and
+    /// the TV closes idle sockets, so the remote screen on resume needs an explicit
+    /// re-handshake to keep working without the user backing out and re-entering.
+    @Environment(\.scenePhase) private var scenePhase
 
     /// Virtual canvas dimensions. Width matches the design's 393pt iPhone canvas;
     /// height bumped to 940 to accommodate the +25%-scaled remote body (880 tall
@@ -68,6 +73,7 @@ struct RemoteView: View {
                         RemoteSamsungBody(
                             state: viewModel.state,
                             powerState: viewModel.tvPowerState,
+                            
                             hasError: viewModel.lastError != nil,
                             inputMode: inputMode,
                             installedApps: viewModel.installedApps,
@@ -146,6 +152,10 @@ struct RemoteView: View {
         }
         .task {
             await viewModel.connect()
+        }
+        .onChange(of: scenePhase) { oldPhase, newPhase in
+            guard newPhase == .active, oldPhase != .active else { return }
+            Task { await viewModel.reconnectIfNeeded() }
         }
     }
 }

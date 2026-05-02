@@ -1,5 +1,5 @@
 import Foundation
-import Testing
+//import Testing
 @testable import RemoteTV
 
 struct TVCommandEncoderTests {
@@ -39,7 +39,8 @@ struct TVCommandEncoderTests {
         #expect(TVCommand.home.rawValue == "KEY_HOME")
         #expect(TVCommand.exit.rawValue == "KEY_EXIT")
         #expect(TVCommand.liveTV.rawValue == "KEY_TV")
-        #expect(TVCommand.powerOff.rawValue == "KEY_POWER")
+        #expect(TVCommand.power.rawValue == "KEY_POWER")
+        #expect(TVCommand.sleepTimer.rawValue == "KEY_SLEEP")
         #expect(TVCommand.playPause.rawValue == "KEY_PLAY")
         #expect(TVCommand.captions.rawValue == "KEY_CAPTION")
     }

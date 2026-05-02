@@ -23,6 +23,16 @@ actor BonjourDiscoveryService: TVDiscoveryService {
     private var continuation: AsyncStream<DiscoveredTV>.Continuation?
     private var seenIdentifiers: Set<String> = []
     private var resolvers: [NWConnection] = []
+    /// Drives the proactive re-query schedule (`+3s`, `+7s`). Cancelled on `stop()`.
+    private var requeryTask: Task<Void, Never>?
+    /// Set the moment a single browse result arrives. Used to short-circuit the
+    /// proactive re-queries — if discovery is already working, restarting the browser
+    /// would just churn for no reason.
+    private var hasFoundResults: Bool = false
+    /// Latches when `NWBrowser` reports `.waiting`, which on iOS almost always means
+    /// the Local Network permission prompt is up. The first subsequent `.ready` means
+    /// the user just tapped Allow and we should re-issue the PTR query.
+    private var hasObservedWaiting: Bool = false
 
     init(serviceType: String = "_samsungmsf._tcp") {
         self.serviceType = serviceType
@@ -39,6 +49,8 @@ actor BonjourDiscoveryService: TVDiscoveryService {
     func start() async {
         await stop()
         seenIdentifiers = []
+        hasFoundResults = false
+        hasObservedWaiting = false
 
         // On a fresh install, iOS does not always show the Local Network permission prompt
         // just because `NWBrowser` is browsing — the browser can stay in `.ready` while
@@ -47,6 +59,18 @@ actor BonjourDiscoveryService: TVDiscoveryService {
         // prompt immediately, so the user grants access at launch instead of only after they
         // manually connect to a typed-in IP.
         primeLocalNetworkPermission()
+        startBrowser()
+        scheduleProactiveRequery()
+    }
+
+    /// Cancels and re-creates the underlying `NWBrowser`. Used both for the initial
+    /// start and for re-querying after a permission grant or empty-result timeout —
+    /// `NWBrowser` doesn't auto-reissue mDNS queries when it transitions out of
+    /// `.waiting`, so the only way to force a fresh PTR query on the wire is to tear
+    /// the browser down and stand a new one up. mDNSResponder treats this as a brand-
+    /// new browse and broadcasts again.
+    private func startBrowser() {
+        browser?.cancel()
 
         let parameters = NWParameters()
         parameters.includePeerToPeer = false
@@ -62,14 +86,61 @@ actor BonjourDiscoveryService: TVDiscoveryService {
         browser.browseResultsChangedHandler = { results, _ in
             resultsBridge.handle(results)
         }
+        let stateBridge = StateBridge { [weak self] state in
+            guard let self else { return }
+            Task { await self.handleBrowserState(state) }
+        }
         browser.stateUpdateHandler = { state in
-            if case let .failed(error) = state {
-                // Surfaced via stderr rather than throwing, since the browser continues to
-                // live on the actor and callers only observe discoveries through the stream.
-                NSLog("BonjourDiscoveryService browser failed: \(error.localizedDescription)")
-            }
+            stateBridge.handle(state)
         }
         browser.start(queue: queue)
+    }
+
+    /// Two-step proactive re-query schedule that fires only when no results have
+    /// arrived yet. The fresh-install failure mode is well-defined: `NWBrowser`
+    /// transitions to `.waiting` while the Local Network permission prompt is up,
+    /// drops the in-flight PTR query, then settles in `.ready` once the user taps
+    /// Allow — but it never re-broadcasts. We reissue at `+3s` and `+7s` so a TV
+    /// that didn't happen to send an unsolicited announcement during the prompt
+    /// window still gets surfaced before the empty-state timer fires.
+    private func scheduleProactiveRequery() {
+        requeryTask = Task { [weak self] in
+            for delay: Duration in [.seconds(3), .seconds(7)] {
+                try? await Task.sleep(for: delay)
+                guard !Task.isCancelled else { return }
+                await self?.requeryIfEmpty()
+            }
+        }
+    }
+
+    private func requeryIfEmpty() {
+        guard !hasFoundResults else { return }
+        startBrowser()
+    }
+
+    /// Reacts to browser-state transitions to keep discovery alive across the Local
+    /// Network permission prompt. iOS reports `.waiting(NWError)` while the prompt is
+    /// up, then `.ready` once the user taps Allow — but the original PTR query has
+    /// already been swallowed. We latch the `.waiting` observation and force an
+    /// immediate re-query on the next `.ready`, which restores discovery without
+    /// waiting for the proactive timer.
+    private func handleBrowserState(_ state: NWBrowser.State) {
+        switch state {
+        case .waiting(let error):
+            hasObservedWaiting = true
+            NSLog("BonjourDiscoveryService browser waiting: \(error.localizedDescription)")
+        case .ready:
+            if hasObservedWaiting {
+                hasObservedWaiting = false
+                requeryIfEmpty()
+            }
+        case .failed(let error):
+            // Surfaced via stderr rather than throwing, since the browser continues to
+            // live on the actor and callers only observe discoveries through the stream.
+            NSLog("BonjourDiscoveryService browser failed: \(error.localizedDescription)")
+        default:
+            break
+        }
     }
 
     /// Opens a short-lived UDP "connection" to the mDNS multicast address (224.0.0.251:5353)
@@ -89,6 +160,8 @@ actor BonjourDiscoveryService: TVDiscoveryService {
     /// discovery stream alive so a subsequent ``start()`` resumes emitting onto the same
     /// continuation.
     func stop() async {
+        requeryTask?.cancel()
+        requeryTask = nil
         browser?.cancel()
         browser = nil
         for resolver in resolvers {
@@ -105,6 +178,9 @@ actor BonjourDiscoveryService: TVDiscoveryService {
             let identifier = "\(name).\(type).\(domain)"
             guard !seenIdentifiers.contains(identifier) else { continue }
             seenIdentifiers.insert(identifier)
+            // Latch so the proactive re-query schedule short-circuits — no need to
+            // restart a browser that's actively pulling results.
+            hasFoundResults = true
 
             let metadata = Self.extractMetadata(from: result.metadata, serviceName: name, fallbackIdentifier: identifier)
             resolve(endpoint: result.endpoint, metadata: metadata)
@@ -224,6 +300,15 @@ private final class ResultsBridge: @unchecked Sendable {
     private let handler: @Sendable (Set<NWBrowser.Result>) -> Void
     init(_ handler: @escaping @Sendable (Set<NWBrowser.Result>) -> Void) { self.handler = handler }
     func handle(_ results: Set<NWBrowser.Result>) { handler(results) }
+}
+
+/// Mirrors ``ResultsBridge`` for browser state-change callbacks. Lets the actor
+/// observe permission-related state transitions (`.waiting` → `.ready`) without
+/// crossing executors with a non-Sendable closure.
+private final class StateBridge: @unchecked Sendable {
+    private let handler: @Sendable (NWBrowser.State) -> Void
+    init(_ handler: @escaping @Sendable (NWBrowser.State) -> Void) { self.handler = handler }
+    func handle(_ state: NWBrowser.State) { handler(state) }
 }
 
 /// Mirrors ``ResultsBridge`` for the single-shot resolve callback.
