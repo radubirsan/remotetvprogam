@@ -1,6 +1,13 @@
-import Foundation
+// `@preconcurrency` silences spurious URL-Sendable warnings on Linux's
+// swift-corelibs-foundation (where URL hasn't yet been audited for Sendable).
+// On Apple SDKs URL *is* Sendable, so strict checking still applies.
+@preconcurrency import Foundation
 #if canImport(Compression)
 import Compression
+#endif
+// On Linux, URLSession lives in a separate module that needs to be imported explicitly.
+#if canImport(FoundationNetworking)
+import FoundationNetworking
 #endif
 
 /// Downloads an XMLTV feed and caches the raw payload on disk so we don't re-fetch
@@ -15,7 +22,10 @@ public actor XMLTVFetcher {
 
         public init(
             sourceURL: URL,
-            cacheDirectory: URL = .temporaryDirectory.appending(path: "tvepg-cache"),
+            // `URL.temporaryDirectory` and `URL.appending(path:)` are iOS 16+/macOS 13+
+            // only; using the `FileManager`-based equivalent keeps Linux happy too.
+            cacheDirectory: URL = FileManager.default.temporaryDirectory
+                .appendingPathComponent("tvepg-cache", isDirectory: true),
             cacheTTL: TimeInterval = 24 * 60 * 60,
             requestTimeout: TimeInterval = 60
         ) {
@@ -83,7 +93,7 @@ public actor XMLTVFetcher {
         let safeHost = configuration.sourceURL.host ?? "source"
         let hashed = abs(configuration.sourceURL.absoluteString.hashValue)
         let name = "\(safeHost)-\(hashed).xml"
-        return configuration.cacheDirectory.appending(path: name)
+        return configuration.cacheDirectory.appendingPathComponent(name)
     }
 
     private func readCachedIfFresh(at url: URL) throws -> Data? {

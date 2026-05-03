@@ -1,4 +1,8 @@
 import Foundation
+// On Linux, XMLParser/XMLParserDelegate live in a separate module.
+#if canImport(FoundationXML)
+import FoundationXML
+#endif
 
 /// Parses an XMLTV document (https://github.com/XMLTV/xmltv) into a `Guide`.
 ///

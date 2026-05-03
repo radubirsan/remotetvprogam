@@ -1,5 +1,10 @@
 import Foundation
 
+/// `TimeZone(identifier:)` is unfortunately fallible on Linux too, but "GMT" is a
+/// guaranteed identifier on every platform, so this is the cross-platform stand-in for
+/// `TimeZone.gmt` (which only exists on Apple SDKs ≥ iOS 16/macOS 13).
+private let utc: TimeZone = TimeZone(secondsFromGMT: 0)!
+
 /// Parses XMLTV's compact date format.
 ///
 /// XMLTV timestamps look like `20260503060000 +0200` — no separators, optional timezone.
@@ -47,17 +52,17 @@ enum XMLTVDate {
         components.hour = hour
         components.minute = minute
         components.second = second
-        components.timeZone = parseTimeZone(tzString) ?? .gmt
+        components.timeZone = parseTimeZone(tzString) ?? utc
 
         var calendar = Calendar(identifier: .gregorian)
-        calendar.timeZone = components.timeZone ?? .gmt
+        calendar.timeZone = components.timeZone ?? utc
         return calendar.date(from: components)
     }
 
     /// Parses `+0200` / `-0530` / `Z` / `UTC` style suffixes.
     private static func parseTimeZone(_ raw: String?) -> TimeZone? {
         guard let raw, !raw.isEmpty else { return nil }
-        if raw == "Z" || raw.uppercased() == "UTC" { return .gmt }
+        if raw == "Z" || raw.uppercased() == "UTC" { return utc }
         guard raw.count == 5 else { return TimeZone(identifier: raw) }
 
         let sign: Int

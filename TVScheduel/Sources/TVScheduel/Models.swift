@@ -1,4 +1,7 @@
-import Foundation
+// `@preconcurrency` here suppresses the URL-Sendable warning on Linux's
+// swift-corelibs-foundation; URL is Sendable on Apple SDKs so strict checking still
+// applies there.
+@preconcurrency import Foundation
 
 /// A TV channel listed in an XMLTV feed.
 public struct Channel: Codable, Sendable, Hashable, Identifiable {
