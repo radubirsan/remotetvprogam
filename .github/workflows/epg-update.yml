@@ -1,0 +1,107 @@
+name: Update EPG
+
+# Daily Romanian XMLTV → JSON pipeline.
+#
+# Runs the TVScheduel CLI on a fresh epgshare01 dump, then publishes the resulting
+# guide.json on a dedicated `epg-data` branch. The iOS app reads from
+# https://raw.githubusercontent.com/<owner>/<repo>/epg-data/guide.json.
+#
+# `epg-data` is rewritten as an orphan branch each run so it doesn't accumulate
+# 15 MB blobs every day in the main repo's history.
+
+on:
+  schedule:
+    # 04:00 UTC = 06:00/07:00 in Romania (CET/CEST). epgshare01 regenerates around
+    # 02:00 UTC, so this gives the upstream a couple hours of slack.
+    - cron: "0 4 * * *"
+  workflow_dispatch:
+  # Run once when the workflow itself changes so we don't have to wait for the cron.
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/epg-update.yml"
+      - "TVScheduel/**"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: epg-update
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    env:
+      EPG_SOURCE_URL: https://epgshare01.online/epgshare01/epg_ripper_RO1.xml.gz
+      DATA_BRANCH: epg-data
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Swift
+        uses: swift-actions/setup-swift@v2
+        with:
+          swift-version: "5.10"
+
+      - name: Build CLI
+        working-directory: TVScheduel
+        run: swift build -c release --product tvepg
+
+      - name: Fetch and convert XMLTV → JSON
+        working-directory: TVScheduel
+        run: |
+          set -euo pipefail
+          mkdir -p ../out
+          # Pre-decompress on the shell side; the Linux build of the CLI doesn't
+          # link Apple's Compression framework, so we feed it plain XML on stdin.
+          curl --fail --silent --show-error --location \
+               --max-time 120 \
+               "$EPG_SOURCE_URL" \
+            | gunzip \
+            | .build/release/tvepg dump --input - \
+            > ../out/guide.json
+
+      - name: Summarize output
+        run: |
+          ls -lh out/
+          # Quick sanity check — counts and a sample channel.
+          python3 - <<'PY'
+          import json, pathlib
+          guide = json.loads(pathlib.Path("out/guide.json").read_text())
+          print(f"channels:   {len(guide['channels'])}")
+          print(f"programmes: {len(guide['programmes'])}")
+          print(f"fetchedAt:  {guide['fetchedAt']}")
+          PY
+
+      - name: Publish to ${{ env.DATA_BRANCH }} branch
+        run: |
+          set -euo pipefail
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # Build a brand-new orphan branch in a worktree so we don't disturb main.
+          rm -rf /tmp/epg-publish
+          git worktree add --detach /tmp/epg-publish
+          cd /tmp/epg-publish
+          git checkout --orphan "$DATA_BRANCH"
+          git rm -rf . > /dev/null 2>&1 || true
+          cp "$GITHUB_WORKSPACE/out/guide.json" .
+
+          # Tiny README so anyone landing on the branch knows what it is.
+          cat > README.md <<'MD'
+          # epg-data
+
+          Auto-generated branch. Daily Romanian XMLTV converted to JSON by
+          `.github/workflows/epg-update.yml` on the `main` branch.
+
+          Consumed by the RemoteTV iOS app. Do not edit by hand — the workflow
+          force-pushes this branch on every run.
+          MD
+
+          git add guide.json README.md
+          git commit -m "EPG update $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          git push --force origin "$DATA_BRANCH"

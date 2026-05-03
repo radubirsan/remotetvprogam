@@ -64,6 +64,12 @@
 		B2000000000000000000F050 /* TVPowerState.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F050 /* TVPowerState.swift */; };
 		B2000000000000000000F052 /* PowerButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F052 /* PowerButton.swift */; };
 		B2000000000000000000F053 /* NumberPadView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F053 /* NumberPadView.swift */; };
+		B2000000000000000000F054 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F054 /* RootView.swift */; };
+		B2000000000000000000F055 /* PowerOnHelpSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F055 /* PowerOnHelpSheet.swift */; };
+		B2000000000000000000F056 /* EPGChannel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F056 /* EPGChannel.swift */; };
+		B2000000000000000000F057 /* EPGProgramme.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F057 /* EPGProgramme.swift */; };
+		B2000000000000000000F058 /* EPGGuide.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F058 /* EPGGuide.swift */; };
+		B2000000000000000000F059 /* EPGClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F059 /* EPGClient.swift */; };
 		B2000000000000000000F051 /* HapticPressStyle.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F051 /* HapticPressStyle.swift */; };
 		C2000000000000000000F018 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F018 /* Assets.xcassets */; };
 		C2000000000000000000F019 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F019 /* Localizable.xcstrings */; };
@@ -157,6 +163,12 @@
 		A2000000000000000000F050 /* TVPowerState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TVPowerState.swift; sourceTree = "<group>"; };
 		A2000000000000000000F052 /* PowerButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PowerButton.swift; sourceTree = "<group>"; };
 		A2000000000000000000F053 /* NumberPadView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NumberPadView.swift; sourceTree = "<group>"; };
+		A2000000000000000000F054 /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
+		A2000000000000000000F055 /* PowerOnHelpSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PowerOnHelpSheet.swift; sourceTree = "<group>"; };
+		A2000000000000000000F056 /* EPGChannel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EPGChannel.swift; sourceTree = "<group>"; };
+		A2000000000000000000F057 /* EPGProgramme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EPGProgramme.swift; sourceTree = "<group>"; };
+		A2000000000000000000F058 /* EPGGuide.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EPGGuide.swift; sourceTree = "<group>"; };
+		A2000000000000000000F059 /* EPGClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EPGClient.swift; sourceTree = "<group>"; };
 		A2000000000000000000F051 /* HapticPressStyle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HapticPressStyle.swift; sourceTree = "<group>"; };
 		C1000000000000000000F001 /* RemoteTV.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = RemoteTV.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		C1000000000000000000F002 /* RemoteTVTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = RemoteTVTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -230,6 +242,7 @@
 			isa = PBXGroup;
 			children = (
 				A2000000000000000000F001 /* RemoteTVApp.swift */,
+				A2000000000000000000F054 /* RootView.swift */,
 			);
 			path = App;
 			sourceTree = "<group>";
@@ -249,6 +262,9 @@
 				A2000000000000000000F03F /* KnownTVApps.swift */,
 				A2000000000000000000F043 /* SniffLogEntry.swift */,
 				A2000000000000000000F050 /* TVPowerState.swift */,
+				A2000000000000000000F056 /* EPGChannel.swift */,
+				A2000000000000000000F057 /* EPGProgramme.swift */,
+				A2000000000000000000F058 /* EPGGuide.swift */,
 			);
 			path = Domain;
 			sourceTree = "<group>";
@@ -269,6 +285,7 @@
 				A2000000000000000000F024 /* SamsungDeviceInfoService.swift */,
 				A2000000000000000000F025 /* RememberedTVsStore.swift */,
 				A2000000000000000000F026 /* FileRememberedTVsStore.swift */,
+				A2000000000000000000F059 /* EPGClient.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -312,6 +329,7 @@
 				A2000000000000000000F051 /* HapticPressStyle.swift */,
 				A2000000000000000000F052 /* PowerButton.swift */,
 				A2000000000000000000F053 /* NumberPadView.swift */,
+				A2000000000000000000F055 /* PowerOnHelpSheet.swift */,
 			);
 			path = Remote;
 			sourceTree = "<group>";
@@ -492,6 +510,12 @@
 				B2000000000000000000F050 /* TVPowerState.swift in Sources */,
 				B2000000000000000000F052 /* PowerButton.swift in Sources */,
 				B2000000000000000000F053 /* NumberPadView.swift in Sources */,
+				B2000000000000000000F054 /* RootView.swift in Sources */,
+				B2000000000000000000F055 /* PowerOnHelpSheet.swift in Sources */,
+				B2000000000000000000F056 /* EPGChannel.swift in Sources */,
+				B2000000000000000000F057 /* EPGProgramme.swift in Sources */,
+				B2000000000000000000F058 /* EPGGuide.swift in Sources */,
+				B2000000000000000000F059 /* EPGClient.swift in Sources */,
 				B2000000000000000000F051 /* HapticPressStyle.swift in Sources */,
 				B2000000000000000000F02F /* DiscoveryView.swift in Sources */,
 				B2000000000000000000F030 /* DiscoveryViewModel.swift in Sources */,
