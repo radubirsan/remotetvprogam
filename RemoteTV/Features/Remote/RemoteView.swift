@@ -17,6 +17,10 @@ import SwiftUI
 @MainActor
 struct RemoteView: View {
     @State private var viewModel: RemoteViewModel
+    /// Held at this level so the on-disk-cached `EPGGuide` survives the user toggling
+    /// the TV-guide side panel on and off — `EPGViewModel` owns the `EPGClient` whose
+    /// in-memory cache would otherwise be lost on every panel close.
+    @State private var epgViewModel = EPGViewModel()
     /// Hand-off to the parent ``RootView`` when the user picks *Disconnect & switch
     /// mode* or *Forget this TV* from the gear menu — clearing the active-device
     /// slot is the only way the app surfaces Discovery again, since there is no
@@ -130,6 +134,12 @@ struct RemoteView: View {
                     )
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .transition(.move(edge: .trailing).combined(with: .opacity))
+                }
+
+                if sidePanel == .tvGuide {
+                    RemoteSidePanelEPG(vm: epgViewModel)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .transition(.move(edge: .trailing).combined(with: .opacity))
                 }
             }
             .animation(.snappy, value: sidePanel)

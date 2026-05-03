@@ -54,6 +54,9 @@
         }
       }
     },
+    "Back to channel list" : {
+
+    },
     "CC/AD" : {
 
     },
@@ -110,6 +113,9 @@
           }
         }
       }
+    },
+    "Couldn't load TV guide" : {
+
     },
     "D-Pad" : {
 
@@ -294,10 +300,19 @@
     "No apps reported by the TV." : {
 
     },
+    "No channels match \"%@\"." : {
+
+    },
+    "No data for now" : {
+
+    },
     "No digits entered" : {
 
     },
     "No messages yet. Launch an app on the TV with the physical remote and watch here." : {
+
+    },
+    "No programmes in the feed for today." : {
 
     },
     "No TVs found" : {
@@ -368,6 +383,9 @@
     "Refresh Installed Apps" : {
 
     },
+    "Refresh TV guide" : {
+
+    },
     "RemoteTV" : {
       "localizations" : {
         "en" : {
@@ -377,6 +395,9 @@
           }
         }
       }
+    },
+    "Retry" : {
+
     },
     "Right" : {
       "localizations" : {
@@ -392,6 +413,9 @@
 
     },
     "Search" : {
+
+    },
+    "Search channels" : {
 
     },
     "Searching for TVs…" : {
@@ -434,6 +458,9 @@
     "Tap Load to fetch the apps installed on the TV." : {
 
     },
+    "Tap Refresh to load today's TV guide." : {
+
+    },
     "Tap Search to find TVs on your network." : {
 
     },
@@ -462,6 +489,9 @@
           }
         }
       }
+    },
+    "TV Guide" : {
+
     },
     "Unmute now. Otherwise auto-unmutes in %@." : {
 
