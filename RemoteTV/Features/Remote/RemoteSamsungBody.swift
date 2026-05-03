@@ -22,6 +22,16 @@ struct RemoteSamsungBody: View {
     let onCommand: (TVCommand) async -> Void
     let onLiveTV: () async -> Void
     let onLaunchApp: (String) async -> Void
+    /// Power-button visual mode (green / amber ring). Parent picks this based on
+    /// `RemoteViewModel.isInWakeMode`.
+    let powerMode: PowerButton.Mode
+    /// Sync wrapper supplied by the parent — it decides whether tap should fire
+    /// `KEY_POWER` (standby) or a Wake-on-LAN packet (wake mode).
+    let onPowerTap: () -> Void
+    /// Long-press companion. In standby mode this fires `KEY_SLEEP`; in wake mode
+    /// the parent presents `PowerOnHelpSheet` so the user can troubleshoot why the
+    /// magic packet might not be arriving.
+    let onPowerLongPress: () -> Void
 
     /// Drives the modal number-pad sheet that the 123 button summons. Local to the
     /// body since no other surface needs to read it.
@@ -40,13 +50,15 @@ struct RemoteSamsungBody: View {
                 .shadow(color: .black.opacity(0.6), radius: 22, y: 14)
 
             // ROW 1: Power (left), MIC label + status LED (centre), Mic (right).
-            // Power is a dual-action control — tap fires `KEY_POWER` (standby toggle);
-            // hold ~0.9s fires `KEY_SLEEP` to open Tizen's sleep-timer menu. The
-            // green ring around the button visualises the long-press progress.
+            // The dispatch logic lives in the parent so the same button can flip
+            // into "wake mode" (Wake-on-LAN on tap, help sheet on long-press) when
+            // the WebSocket is unreachable. Visual cue is the ring colour, driven
+            // by `powerMode`.
             PowerButton(
                 size: 70,
-                onTap: { fire(.power) },
-                onLongPress: { fire(.sleepTimer) }
+                mode: powerMode,
+                onTap: onPowerTap,
+                onLongPress: onPowerLongPress
             )
             .position(x: 75, y: 71)
 

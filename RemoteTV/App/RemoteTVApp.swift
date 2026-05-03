@@ -20,11 +20,19 @@ struct RemoteTVApp: App {
         self.rememberedTVsStore = rememberedTVsStore
         self.wakeService = UDPBroadcastWakeService()
         self.discoveryService = BonjourDiscoveryService()
+        
+        Task {
+             let epg = EPGClient(configuration: .init(sourceURL:
+         EPGClient.Configuration.defaultSourceURL))
+             if let now = try? await epg.nowPlaying(on: "Digi.24.HD.ro") {
+                 print("Now on Digi 24 HD:", now.title, "until", now.stop)
+             }
+         }  
     }
 
     var body: some Scene {
         WindowGroup {
-            DiscoveryView(
+            RootView(
                 service: service,
                 discovery: discoveryService,
                 rememberedTVsStore: rememberedTVsStore,

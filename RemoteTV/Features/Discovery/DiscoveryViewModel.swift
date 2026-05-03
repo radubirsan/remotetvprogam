@@ -32,7 +32,6 @@ final class DiscoveryViewModel {
     // MARK: - Observable state
 
     var rows: [Row] = []
-    var path: [TVDevice] = []
     var mode: TVConnectionMode
     var errorMessage: String?
     /// User-typed IP for the manual-connect affordance. Kept on the VM so the text survives
@@ -152,15 +151,16 @@ final class DiscoveryViewModel {
         )
     }
 
-    /// Pushes a manually-entered IP onto the navigation path. Trims whitespace and bails
-    /// silently if the field is empty; formal IP-format validation is left to
-    /// ``TVURLBuilder``. An existing remembered name is reused when we have one on file so
-    /// the navigation title reads nicely.
-    func connectToManualIP() {
+    /// Builds a ``TVDevice`` from the manual-IP field. Returns `nil` when the field
+    /// is empty; formal IP-format validation is left to ``TVURLBuilder``. An existing
+    /// remembered name is reused when we have one on file so the title reads nicely.
+    /// The view passes the result up to the root, which flips its `@AppStorage` slot
+    /// and the app re-renders into the remote screen — no navigation push.
+    func makeManualDevice() -> TVDevice? {
         let trimmed = manualIP.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return }
+        guard !trimmed.isEmpty else { return nil }
         let name = remembered.first { $0.ip == trimmed }?.friendlyName ?? "Samsung TV"
-        path.append(TVDevice(ip: trimmed, name: name, mode: mode))
+        return TVDevice(ip: trimmed, name: name, mode: mode)
     }
 
     /// Sends a Wake-on-LAN magic packet for a remembered, currently-off TV, then restarts

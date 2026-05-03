@@ -17,12 +17,20 @@ import SwiftUI
 @MainActor
 struct RemoteView: View {
     @State private var viewModel: RemoteViewModel
+    /// Hand-off to the parent ``RootView`` when the user picks *Disconnect & switch
+    /// mode* or *Forget this TV* from the gear menu — clearing the active-device
+    /// slot is the only way the app surfaces Discovery again, since there is no
+    /// back button.
+    let onDisconnect: () -> Void
     /// Persisted across launches so the user only picks D-Pad vs Trackpad once.
     @AppStorage("remoteInputMode") private var inputMode: RemoteInputMode = .dpad
     /// Persisted across launches; default is no side panel so first-run users see
     /// the remote at full size.
     @AppStorage("remoteSidePanel") private var sidePanel: SidePanelMode = .none
-    @Environment(\.dismiss) private var dismiss
+    /// Drives the modal `PowerOnHelpSheet` that the power button's long-press in
+    /// wake mode presents — explains why a magic packet might not be reaching the
+    /// TV (Network Standby disabled, MAC missing, etc.).
+    @State private var showPowerOnHelp: Bool = false
     /// Lets us auto-recover the WebSocket when the user unlocks the phone or returns
     /// from the app switcher — iOS suspends URLSession traffic in the background and
     /// the TV closes idle sockets, so the remote screen on resume needs an explicit
@@ -41,11 +49,27 @@ struct RemoteView: View {
     private let bodyWidth: CGFloat = RemoteSamsungBody.width
     private var bodyLeading: CGFloat { (canvasWidth - bodyWidth) / 2 }
 
-    init(device: TVDevice, service: any TVService) {
-        _viewModel = State(initialValue: RemoteViewModel(device: device, service: service))
+    init(
+        device: TVDevice,
+        service: any TVService,
+        wakeService: (any WakeOnLANService)? = nil,
+        rememberedTVsStore: (any RememberedTVsStore)? = nil,
+        onDisconnect: @escaping () -> Void
+    ) {
+        _viewModel = State(initialValue: RemoteViewModel(
+            device: device,
+            service: service,
+            wakeService: wakeService,
+            rememberedTVsStore: rememberedTVsStore
+        ))
+        self.onDisconnect = onDisconnect
     }
 
     var body: some View {
+        // Wrapped in `NavigationStack` because `RemoteView` is now installed as a
+        // root view by ``RootView`` rather than pushed onto the discovery stack —
+        // the toolbar and `.navigationTitle` need a stack ancestor to render.
+        NavigationStack {
         ZStack {
             RemoteTheme.bg.ignoresSafeArea()
 
@@ -73,13 +97,21 @@ struct RemoteView: View {
                         RemoteSamsungBody(
                             state: viewModel.state,
                             powerState: viewModel.tvPowerState,
-                            
                             hasError: viewModel.lastError != nil,
                             inputMode: inputMode,
                             installedApps: viewModel.installedApps,
                             onCommand: viewModel.send,
                             onLiveTV: viewModel.goLive,
-                            onLaunchApp: viewModel.launchApp
+                            onLaunchApp: viewModel.launchApp,
+                            powerMode: viewModel.isInWakeMode ? .wake : .standby,
+                            onPowerTap: { Task { await viewModel.handlePowerTap() } },
+                            onPowerLongPress: {
+                                if viewModel.isInWakeMode {
+                                    showPowerOnHelp = true
+                                } else {
+                                    Task { await viewModel.send(.sleepTimer) }
+                                }
+                            }
                         )
                         .frame(width: bodyWidth, height: bodyHeight)
                         .offset(x: bodyLeading, y: bodyTop)
@@ -136,13 +168,13 @@ struct RemoteView: View {
                     Button("Disconnect & switch mode", systemImage: "arrow.left.arrow.right") {
                         Task {
                             await viewModel.disconnect()
-                            dismiss()
+                            onDisconnect()
                         }
                     }
                     Button("Forget this TV", systemImage: "trash", role: .destructive) {
                         Task {
                             await viewModel.forgetTV()
-                            dismiss()
+                            onDisconnect()
                         }
                     }
                 } label: {
@@ -156,6 +188,11 @@ struct RemoteView: View {
         .onChange(of: scenePhase) { oldPhase, newPhase in
             guard newPhase == .active, oldPhase != .active else { return }
             Task { await viewModel.reconnectIfNeeded() }
+        }
+        .sheet(isPresented: $showPowerOnHelp) {
+            PowerOnHelpSheet()
+                .presentationDetents([.medium])
+        }
         }
     }
 }

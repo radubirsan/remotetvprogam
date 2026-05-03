@@ -3,23 +3,24 @@ import SwiftUI
 @MainActor
 struct DiscoveryView: View {
     let service: any TVService
+    /// Hand-off to the parent ``RootView`` when the user picks a TV — the parent
+    /// flips its `@AppStorage` slot and re-renders, swapping this view out for the
+    /// remote. There is no navigation push here on purpose: returning to Discovery
+    /// is intentionally a one-way trip from the gear menu, not a back-button affair.
+    let onConnect: (TVDevice) -> Void
     @State private var viewModel: DiscoveryViewModel
     @State private var showPowerOnHelp: Bool = false
     @AppStorage("lastConnectionMode") private var storedMode: String = TVConnectionMode.plain.rawValue
-    /// JSON-encoded ``TVDevice`` of the last TV the user navigated into, persisted
-    /// across launches so the app can relaunch straight into ``RemoteView`` for that
-    /// TV. Empty string means "no stored device — start at Discovery." The value is
-    /// kept in sync by the `onChange(of: viewModel.path)` observer below: any push
-    /// stores the topmost device, any pop (Disconnect, Forget, system back) clears it.
-    @AppStorage("lastRemoteDeviceJSON") private var lastRemoteDeviceJSON: String = ""
 
     init(
         service: any TVService,
         discovery: any TVDiscoveryService,
         rememberedTVsStore: any RememberedTVsStore,
-        wakeService: (any WakeOnLANService)? = nil
+        wakeService: (any WakeOnLANService)? = nil,
+        onConnect: @escaping (TVDevice) -> Void
     ) {
         self.service = service
+        self.onConnect = onConnect
         _viewModel = State(initialValue: DiscoveryViewModel(
             discovery: discovery,
             rememberedStore: rememberedTVsStore,
@@ -28,14 +29,15 @@ struct DiscoveryView: View {
     }
 
     var body: some View {
-        NavigationStack(path: $viewModel.path) {
+        // Plain `NavigationStack` (no path binding) — Discovery has no child routes
+        // anymore; the TV-picked transition is handled by the parent ``RootView``
+        // swapping this view out wholesale. The stack is kept solely to host the
+        // navigation bar and the Search/Stop toolbar.
+        NavigationStack {
             ZStack {
                 content
             }
             .navigationTitle("RemoteTV")
-            .navigationDestination(for: TVDevice.self) { device in
-                RemoteView(device: device, service: service)
-            }
             .toolbar { toolbar }
             .sheet(isPresented: $showPowerOnHelp) {
                 PowerOnHelpSheet()
@@ -45,14 +47,17 @@ struct DiscoveryView: View {
         .task {
             restoreStoredMode()
             await viewModel.loadRemembered()
-            restoreLastRemoteDevice()
         }
         .onChange(of: viewModel.mode) { _, newValue in
             storedMode = newValue.rawValue
         }
-        .onChange(of: viewModel.path) { _, newPath in
-            persistLastRemoteDevice(newPath.last)
-        }
+    }
+
+    /// Bridges the manual-connect button in ``ManualConnectRow`` (which only knows
+    /// `() -> Void`) to the typed `onConnect` callback the parent expects.
+    private func connectManualIP() {
+        guard let device = viewModel.makeManualDevice() else { return }
+        onConnect(device)
     }
 
     @ViewBuilder
@@ -76,7 +81,7 @@ struct DiscoveryView: View {
                 Section("Connect by IP") {
                     ManualConnectRow(
                         ip: $viewModel.manualIP,
-                        onConnect: viewModel.connectToManualIP
+                        onConnect: { connectManualIP() }
                     )
                 }
 
@@ -128,39 +133,6 @@ struct DiscoveryView: View {
         if let stored = TVConnectionMode(rawValue: storedMode) {
             viewModel.mode = stored
         }
-    }
-
-    /// Re-pushes the last TV onto the navigation path so the user lands directly in
-    /// ``RemoteView`` after a relaunch. Bails if the path is already non-empty (e.g.
-    /// `.task` re-fired after a navigation that's already in flight) or the stored
-    /// JSON is malformed — the latter clears the slot so a corrupt entry doesn't
-    /// hijack every future launch.
-    private func restoreLastRemoteDevice() {
-        guard viewModel.path.isEmpty, !lastRemoteDeviceJSON.isEmpty else { return }
-        let data = Data(lastRemoteDeviceJSON.utf8)
-        guard let device = try? JSONDecoder().decode(TVDevice.self, from: data) else {
-            lastRemoteDeviceJSON = ""
-            return
-        }
-        viewModel.path.append(device)
-    }
-
-    /// Mirrors the topmost path entry into `@AppStorage`. Called from the path
-    /// observer on every push and pop, so disconnecting / forgetting / using the
-    /// system back gesture all clear the stored device automatically — no separate
-    /// teardown wiring needed in the toolbar handlers.
-    private func persistLastRemoteDevice(_ device: TVDevice?) {
-        guard let device else {
-            lastRemoteDeviceJSON = ""
-            return
-        }
-        guard
-            let data = try? JSONEncoder().encode(device),
-            let json = String(data: data, encoding: .utf8)
-        else {
-            return
-        }
-        lastRemoteDeviceJSON = json
     }
 }
 
@@ -227,28 +199,5 @@ private struct EmptyStateView: View {
     }
 }
 
-private struct PowerOnHelpSheet: View {
-    @Environment(\.dismiss) private var dismiss
-
-    var body: some View {
-        NavigationStack {
-            List {
-                Section("If Power On isn't working") {
-                    Text("Samsung TVs only listen for Wake-on-LAN packets when Network Standby is enabled.")
-                    Text("Turn the TV on and go to Settings → General → Network → Expert Settings → Power On with Mobile, then enable it.")
-                    Text("You may also need to enable IP Remote in the same menu.")
-                }
-                Section("First-time setup") {
-                    Text("Connect to the TV at least once while it's on. The app captures its MAC address on that first connect, which is what the magic packet needs.")
-                }
-            }
-            .navigationTitle("Power On Help")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("Done") { dismiss() }
-                }
-            }
-        }
-    }
-}
+// `PowerOnHelpSheet` lives in `Features/Remote/PowerOnHelpSheet.swift` and is shared
+// with the remote screen's power-button long-press when in wake mode.

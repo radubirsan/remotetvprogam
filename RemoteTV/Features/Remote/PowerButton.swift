@@ -12,7 +12,20 @@ import SwiftUI
 /// in re-arms a fresh press/long-press cycle.
 @MainActor
 struct PowerButton: View {
+    /// Controls the visual treatment so the user knows the button is in a different
+    /// dispatch mode without having to read accompanying text. Action wiring is
+    /// supplied by the parent — `Mode` is purely a styling hint here.
+    enum Mode: Sendable {
+        /// WebSocket is healthy: tap sends `KEY_POWER`, long press sends `KEY_SLEEP`.
+        /// Progress ring fills green.
+        case standby
+        /// WebSocket is down: tap fires Wake-on-LAN, long press surfaces the
+        /// `PowerOnHelpSheet`. Progress ring fills amber to signal the swap.
+        case wake
+    }
+
     let size: CGFloat
+    var mode: Mode = .standby
     let onTap: () -> Void
     let onLongPress: () -> Void
     /// How long the user has to hold for long-press to register.
@@ -45,11 +58,13 @@ struct PowerButton: View {
 
             // Progress ring — `trim(from: 0, to: 0)` already renders nothing, so no
             // explicit opacity gate needed. Starts at 12 o'clock (after -90°) and
-            // sweeps clockwise as `pressProgress` animates 0 → 1.
+            // sweeps clockwise as `pressProgress` animates 0 → 1. Colour follows
+            // ``mode`` so the user can tell at a glance whether tapping will fire
+            // `KEY_POWER` (green ring) or a Wake-on-LAN packet (amber ring).
             Circle()
                 .trim(from: 0, to: pressProgress)
                 .stroke(
-                    Color.green,
+                    ringColor,
                     style: StrokeStyle(lineWidth: 3, lineCap: .round)
                 )
                 .rotationEffect(.degrees(-90))
@@ -93,6 +108,13 @@ struct PowerButton: View {
         .accessibilityHint("Tap to toggle power. Long press for sleep timer.")
         .accessibilityAction { onTap() }
         .accessibilityAction(named: "Sleep timer") { onLongPress() }
+    }
+
+    private var ringColor: Color {
+        switch mode {
+        case .standby: .green
+        case .wake:    .orange
+        }
     }
 
     private func isInsideHitArea(_ point: CGPoint) -> Bool {
