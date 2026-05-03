@@ -31,8 +31,13 @@ concurrency:
 
 jobs:
   update:
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
+    # macOS runner: the TVScheduel package is Apple-targeted (consumed by the iOS app),
+    # so it freely uses Apple-only Foundation APIs (Date.formatted, URL.appending(path:),
+    # TimeZone.gmt, etc.) that Linux's swift-corelibs-foundation lags behind. Running on
+    # macOS gives us the full SDK and avoids endless cross-platform shimming. Negligible
+    # cost: ~15 effective minutes/month even with the 10x macOS multiplier.
+    runs-on: macos-latest
+    timeout-minutes: 20
 
     env:
       EPG_SOURCE_URL: https://epgshare01.online/epgshare01/epg_ripper_RO1.xml.gz
@@ -42,10 +47,7 @@ jobs:
       - name: Check out source
         uses: actions/checkout@v4
 
-      - name: Set up Swift
-        uses: swift-actions/setup-swift@v2
-        with:
-          swift-version: "5.10"
+      # No setup-swift step — macos-latest ships a recent Xcode (and hence Swift) preinstalled.
 
       - name: Build CLI
         working-directory: TVScheduel
