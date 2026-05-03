@@ -71,7 +71,7 @@ public actor XMLTVFetcher {
         request.timeoutInterval = configuration.requestTimeout
         request.setValue("gzip", forHTTPHeaderField: "Accept-Encoding")
 
-        let (data, response) = try await session.data(for: request)
+        let (data, response) = try await performRequest(request)
         if let http = response as? HTTPURLResponse, !(200...299).contains(http.statusCode) {
             throw FetchError.httpStatus(http.statusCode)
         }
@@ -85,6 +85,28 @@ public actor XMLTVFetcher {
     public func fetchGuide(forceRefresh: Bool = false) async throws -> Guide {
         let xml = try await fetchRawXML(forceRefresh: forceRefresh)
         return try XMLTVParser.parse(xml)
+    }
+
+    /// Cross-platform `URLSession.data(for:)`.
+    ///
+    /// Apple SDKs ship the async `URLSession.data(for:)` directly, but Swift 5.10's
+    /// Linux `FoundationNetworking` doesn't — it only exposes the closure-based
+    /// `dataTask(with:completionHandler:)`. Bridging through a continuation works
+    /// on both, so we always go through it rather than litter the call site with
+    /// `#if canImport(...)`.
+    private func performRequest(_ request: URLRequest) async throws -> (Data, URLResponse) {
+        try await withCheckedThrowingContinuation { continuation in
+            let task = session.dataTask(with: request) { data, response, error in
+                if let error {
+                    continuation.resume(throwing: error)
+                } else if let data, let response {
+                    continuation.resume(returning: (data, response))
+                } else {
+                    continuation.resume(throwing: URLError(.badServerResponse))
+                }
+            }
+            task.resume()
+        }
     }
 
     // MARK: - Cache
