@@ -72,6 +72,8 @@
 		B2000000000000000000F059 /* EPGClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F059 /* EPGClient.swift */; };
 		B2000000000000000000F05A /* EPGViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F05A /* EPGViewModel.swift */; };
 		B2000000000000000000F05B /* RemoteSidePanelEPG.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F05B /* RemoteSidePanelEPG.swift */; };
+		B2000000000000000000F05C /* NowOnTVPill.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F05C /* NowOnTVPill.swift */; };
+		B2000000000000000000F05D /* KnownChannelNumbers.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F05D /* KnownChannelNumbers.swift */; };
 		B2000000000000000000F051 /* HapticPressStyle.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F051 /* HapticPressStyle.swift */; };
 		C2000000000000000000F018 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F018 /* Assets.xcassets */; };
 		C2000000000000000000F019 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F019 /* Localizable.xcstrings */; };
@@ -173,6 +175,8 @@
 		A2000000000000000000F059 /* EPGClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EPGClient.swift; sourceTree = "<group>"; };
 		A2000000000000000000F05A /* EPGViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EPGViewModel.swift; sourceTree = "<group>"; };
 		A2000000000000000000F05B /* RemoteSidePanelEPG.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteSidePanelEPG.swift; sourceTree = "<group>"; };
+		A2000000000000000000F05C /* NowOnTVPill.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NowOnTVPill.swift; sourceTree = "<group>"; };
+		A2000000000000000000F05D /* KnownChannelNumbers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KnownChannelNumbers.swift; sourceTree = "<group>"; };
 		A2000000000000000000F051 /* HapticPressStyle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HapticPressStyle.swift; sourceTree = "<group>"; };
 		C1000000000000000000F001 /* RemoteTV.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = RemoteTV.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		C1000000000000000000F002 /* RemoteTVTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = RemoteTVTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -269,6 +273,7 @@
 				A2000000000000000000F056 /* EPGChannel.swift */,
 				A2000000000000000000F057 /* EPGProgramme.swift */,
 				A2000000000000000000F058 /* EPGGuide.swift */,
+				A2000000000000000000F05D /* KnownChannelNumbers.swift */,
 			);
 			path = Domain;
 			sourceTree = "<group>";
@@ -336,6 +341,7 @@
 				A2000000000000000000F055 /* PowerOnHelpSheet.swift */,
 				A2000000000000000000F05A /* EPGViewModel.swift */,
 				A2000000000000000000F05B /* RemoteSidePanelEPG.swift */,
+				A2000000000000000000F05C /* NowOnTVPill.swift */,
 			);
 			path = Remote;
 			sourceTree = "<group>";
@@ -524,6 +530,8 @@
 				B2000000000000000000F059 /* EPGClient.swift in Sources */,
 				B2000000000000000000F05A /* EPGViewModel.swift in Sources */,
 				B2000000000000000000F05B /* RemoteSidePanelEPG.swift in Sources */,
+				B2000000000000000000F05C /* NowOnTVPill.swift in Sources */,
+				B2000000000000000000F05D /* KnownChannelNumbers.swift in Sources */,
 				B2000000000000000000F051 /* HapticPressStyle.swift in Sources */,
 				B2000000000000000000F02F /* DiscoveryView.swift in Sources */,
 				B2000000000000000000F030 /* DiscoveryViewModel.swift in Sources */,

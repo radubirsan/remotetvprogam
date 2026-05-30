@@ -49,15 +49,26 @@ final class SamsungTVService: TVService {
         state = .connecting
         appendSniff(.info, "connect \(device.ip) mode=\(device.mode)")
 
-        let storedToken = await tokenStore.token(for: device.ip)
+        // Resolve the token *and* the TV's MAC up-front so both the in-flight
+        // handshake and the post-success save use a DHCP-rotation-proof key.
+        // Without this, every router lease change re-prompted the user for
+        // pairing on the physical remote — the IP-keyed token in Keychain
+        // looked up against the new IP would miss and we'd open the socket
+        // with no token at all.
+        let (storedToken, mac) = await resolveStoredToken(for: device)
 
         do {
-            try await performHandshake(device: device, token: storedToken)
+            try await performHandshake(device: device, token: storedToken, mac: mac)
         } catch TVServiceError.tokenRejected where storedToken != nil {
-            // Stored token was stale — drop it and re-pair once.
-            try? await tokenStore.delete(for: device.ip)
+            // Stored token was stale — wipe under every key it was written
+            // under (IP + MAC) and re-pair. Re-resolve MAC fresh from the
+            // wire on the retry: if the IP got recycled to a *different* TV
+            // (rare but possible), the cached MAC would mis-bind the new
+            // pairing.
+            await deleteToken(for: device, mac: mac)
+            let retryMAC = await freshMAC(for: device) ?? mac
             do {
-                try await performHandshake(device: device, token: nil)
+                try await performHandshake(device: device, token: nil, mac: retryMAC)
             } catch {
                 state = .failed(mapError(error))
                 throw error
@@ -260,7 +271,13 @@ final class SamsungTVService: TVService {
     }
 
     func forget(_ device: TVDevice) async {
-        try? await tokenStore.delete(for: device.ip)
+        // Capture the cached MAC *before* deleting the remembered-TVs record —
+        // once it's gone, the MAC-rescue lookup wouldn't find it for the
+        // matching `deleteToken` sweep and a stale MAC-keyed token would
+        // survive in the Keychain, silently re-authenticating the user on the
+        // next connect to the same TV.
+        let mac = await cachedMAC(for: device.ip)
+        await deleteToken(for: device, mac: mac)
         try? await rememberedTVsStore?.delete(ip: device.ip)
         if currentDevice?.ip == device.ip {
             await disconnect()
@@ -304,7 +321,7 @@ final class SamsungTVService: TVService {
 
     // MARK: - Handshake
 
-    private func performHandshake(device: TVDevice, token: String?) async throws {
+    private func performHandshake(device: TVDevice, token: String?, mac: String?) async throws {
         let url = try TVURLBuilder.connectURL(for: device, token: token)
         let session = makeSession(for: device.mode)
         self.session = session
@@ -320,8 +337,15 @@ final class SamsungTVService: TVService {
         let result = try await awaitHandshake(on: task)
         switch result {
         case .connected(let receivedToken):
-            if let receivedToken {
-                try? await tokenStore.save(receivedToken, for: device.ip)
+            // Modern Tizen echoes the token on a fresh pairing but stays
+            // silent on token reuse. In both cases the credential we want
+            // persisted is "whatever just authenticated this socket" — the
+            // echoed token if present, otherwise the one we sent in. We also
+            // ignore empty-string echoes so a defensive firmware quirk can't
+            // poison the Keychain entry into an unusable empty value.
+            let effective = (receivedToken?.isEmpty == false ? receivedToken : nil) ?? token
+            if let effective {
+                await saveToken(effective, for: device, mac: mac)
             }
             state = .connected
             startReceiveLoop(on: task)
@@ -337,6 +361,86 @@ final class SamsungTVService: TVService {
             throw TVServiceError.pairingTimeout
         }
     }
+
+    // MARK: - Token resolution
+
+    /// Reads the cached MAC for a TV from the remembered-TVs store, normalised
+    /// to lowercase. Returns `nil` for "we have no record at this IP" or "the
+    /// record has no MAC field yet" (e.g. first-ever connect, before the
+    /// info-poll has had a chance to capture it).
+    private func cachedMAC(for ip: String) async -> String? {
+        guard
+            let raw = await rememberedTVsStore?.get(ip: ip)?.mac,
+            !raw.isEmpty
+        else { return nil }
+        return raw.lowercased()
+    }
+
+    /// Fetches the TV's MAC straight from the REST info endpoint, bypassing
+    /// the cache entirely. Used on the rescue/retry paths where the cached
+    /// MAC might be stale (DHCP rotation surfaced a new IP, TV swap on a
+    /// recycled IP). Bounded by `SamsungDeviceInfoService.timeout` (3s).
+    private func freshMAC(for device: TVDevice) async -> String? {
+        guard let deviceInfoService else { return nil }
+        guard let info = try? await deviceInfoService.fetch(ip: device.ip) else { return nil }
+        guard let mac = info.wifiMac, !mac.isEmpty else { return nil }
+        return mac.lowercased()
+    }
+
+    /// Cache-first MAC resolution: hits the remembered-TVs store, then falls
+    /// back to a REST probe. Used during the rescue path when an IP-keyed
+    /// token misses but a MAC-keyed one might still be valid from a previous
+    /// DHCP lease. The REST cost is only paid on the rescue path, never on
+    /// the steady-state happy path where the IP-keyed token resolves cleanly.
+    private func stableMAC(for device: TVDevice) async -> String? {
+        if let mac = await cachedMAC(for: device.ip) { return mac }
+        return await freshMAC(for: device)
+    }
+
+    /// Two-tier token lookup that fixes the "TV re-asks for pairing every
+    /// couple of days" failure mode: try the legacy IP key first (cheap, hits
+    /// for the common case where DHCP didn't rotate), then rescue via MAC
+    /// when it doesn't. The MAC is returned alongside the token so the
+    /// post-handshake save can also write under MAC even when the cheap IP
+    /// lookup found the token first — without that, the very first IP
+    /// rotation after the fix shipped would still strand the user.
+    private func resolveStoredToken(for device: TVDevice) async -> (token: String?, mac: String?) {
+        if let token = await tokenStore.token(for: device.ip), !token.isEmpty {
+            return (token, await cachedMAC(for: device.ip))
+        }
+        let mac = await stableMAC(for: device)
+        if let mac, let token = await tokenStore.token(for: mac), !token.isEmpty {
+            appendSniff(.info, "token resolved via MAC \(mac) (IP changed since pairing)")
+            return (token, mac)
+        }
+        return (nil, mac)
+    }
+
+    /// Writes the token under every key we'd later look it up under: the
+    /// current IP (legacy slot, also rescues us if MAC capture ever fails)
+    /// and the MAC if we know it. Empty tokens are silently ignored — they
+    /// can't authenticate but would mask a real saved token on the next
+    /// lookup if we let them overwrite a populated slot.
+    private func saveToken(_ token: String, for device: TVDevice, mac: String?) async {
+        guard !token.isEmpty else { return }
+        try? await tokenStore.save(token, for: device.ip)
+        if let mac {
+            try? await tokenStore.save(token, for: mac)
+        }
+    }
+
+    /// Drops every key we may have written this device's token under. Run on
+    /// both `ms.channel.unauthorized` (TV invalidated the pairing) and
+    /// explicit user Forget — without the MAC sweep, a stale MAC-keyed token
+    /// would survive the retry and keep getting offered to the TV.
+    private func deleteToken(for device: TVDevice, mac: String?) async {
+        try? await tokenStore.delete(for: device.ip)
+        if let mac {
+            try? await tokenStore.delete(for: mac)
+        }
+    }
+
+    // MARK: - Handshake message loop
 
     private func awaitHandshake(on task: URLSessionWebSocketTask) async throws -> HandshakeResult {
         while true {

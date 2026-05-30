@@ -1,6 +1,9 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "· now" : {
+
+    },
     "%@ • %@" : {
       "localizations" : {
         "en" : {
@@ -10,6 +13,9 @@
           }
         }
       }
+    },
+    "%lld" : {
+
     },
     "123" : {
 
@@ -64,6 +70,9 @@
 
     },
     "Channel %@" : {
+
+    },
+    "Channel %lld" : {
 
     },
     "Check that the TV is powered on and on the same Wi-Fi network." : {
@@ -312,6 +321,9 @@
     "No messages yet. Launch an app on the TV with the physical remote and watch here." : {
 
     },
+    "No programme data right now" : {
+
+    },
     "No programmes in the feed for today." : {
 
     },
@@ -344,6 +356,15 @@
           }
         }
       }
+    },
+    "Opens the TV guide for this channel." : {
+
+    },
+    "Pin as TV's current channel" : {
+
+    },
+    "Pinned to remote" : {
+
     },
     "Plain (8001)" : {
       "localizations" : {
@@ -476,6 +497,22 @@
     "Try Again" : {
 
     },
+    "Tune %lld" : {
+
+    },
+    "Tune the TV to channel %lld, %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Tune the TV to channel %1$lld, %2$@"
+          }
+        }
+      }
+    },
+    "Tune to channel %lld" : {
+
+    },
     "Turn the TV on and go to Settings → General → Network → Expert Settings → Power On with Mobile, then enable it." : {
 
     },
@@ -497,6 +534,12 @@
 
     },
     "Unmutes in %@" : {
+
+    },
+    "Unpin from remote" : {
+
+    },
+    "until" : {
 
     },
     "Up" : {

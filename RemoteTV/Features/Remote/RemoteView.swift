@@ -53,6 +53,23 @@ struct RemoteView: View {
     private let bodyWidth: CGFloat = RemoteSamsungBody.width
     private var bodyLeading: CGFloat { (canvasWidth - bodyWidth) / 2 }
 
+    /// Inter-key delay for tune macros. Tizen drops digits when they arrive faster than
+    /// ~80 ms apart on this generation of TVs (same gating the physical remote uses
+    /// internally). 120 ms is comfortable headroom and still feels instant.
+    private static let tuneInterKeyDelay: Duration = .milliseconds(120)
+
+    /// Dispatches a multi-key macro (e.g. the digits + Enter to tune to a channel)
+    /// through the remote view-model. Awaits each command before sending the next so
+    /// the TV sees a clean digit sequence rather than a racing batch.
+    private func dispatchTuneMacro(_ commands: [TVCommand]) async {
+        for (index, command) in commands.enumerated() {
+            await viewModel.send(command)
+            if index < commands.count - 1 {
+                try? await Task.sleep(for: Self.tuneInterKeyDelay)
+            }
+        }
+    }
+
     init(
         device: TVDevice,
         service: any TVService,
@@ -77,7 +94,24 @@ struct RemoteView: View {
         ZStack {
             RemoteTheme.bg.ignoresSafeArea()
 
-            HStack(spacing: 0) {
+            VStack(spacing: 0) {
+                // "Now on TV" pill — only rendered when the user has pinned a channel
+                // in the TV Guide panel. Tapping it opens that panel scrolled to the
+                // pinned channel's schedule. Loads the EPG lazily on first appearance
+                // so unpinned-by-default users don't pay the network cost.
+                if let pinned = epgViewModel.pinnedChannel {
+                    NowOnTVPill(
+                        channel: pinned,
+                        programme: epgViewModel.pinnedNowPlaying,
+                        onTap: {
+                            sidePanel = .tvGuide
+                            epgViewModel.selectedChannelID = pinned.id
+                        }
+                    )
+                    .transition(.opacity.combined(with: .move(edge: .top)))
+                }
+
+                HStack(spacing: 0) {
                 if sidePanel == .shortcuts {
                     RemoteSidePanelShortcuts(onLaunch: viewModel.launchApp)
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -137,13 +171,25 @@ struct RemoteView: View {
                 }
 
                 if sidePanel == .tvGuide {
-                    RemoteSidePanelEPG(vm: epgViewModel)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        .transition(.move(edge: .trailing).combined(with: .opacity))
+                    RemoteSidePanelEPG(
+                        vm: epgViewModel,
+                        onDispatchMacro: dispatchTuneMacro
+                    )
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .transition(.move(edge: .trailing).combined(with: .opacity))
                 }
             }
             .animation(.snappy, value: sidePanel)
-           
+            }  // close outer VStack added for the NowOnTVPill
+            .animation(.snappy, value: epgViewModel.pinnedChannelID)
+            .task {
+                // Pre-warm the EPG so the pinned-channel pill can populate immediately
+                // on first launch (otherwise the pill would render with no programme
+                // data until the user opened the TV Guide panel).
+                if epgViewModel.pinnedChannelID != nil {
+                    await epgViewModel.loadIfNeeded()
+                }
+            }
         }
         .navigationTitle(viewModel.device.name)
         .navigationBarTitleDisplayMode(.inline)

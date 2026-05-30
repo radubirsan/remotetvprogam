@@ -11,6 +11,11 @@ import SwiftUI
 @MainActor
 struct RemoteSidePanelEPG: View {
     @Bindable var vm: EPGViewModel
+    /// Dispatches a sequence of TV commands. Supplied by `RemoteView` so the panel can
+    /// fire the Tune-to-channel macro through the same `RemoteViewModel.send` path the
+    /// rest of the remote uses. Each command is awaited in order so the TV sees them
+    /// as a clean digit-by-digit sequence rather than racing batch.
+    let onDispatchMacro: ([TVCommand]) async -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -53,7 +58,7 @@ struct RemoteSidePanelEPG: View {
     @ViewBuilder
     private var header: some View {
         HStack(spacing: 8) {
-            if vm.selectedChannel != nil {
+            if let selected = vm.selectedChannel {
                 Button {
                     vm.selectedChannelID = nil
                 } label: {
@@ -63,14 +68,54 @@ struct RemoteSidePanelEPG: View {
                 }
                 .buttonStyle(.bordered)
                 .accessibilityLabel("Back to channel list")
+
+                Text(selected.primaryName)
+                    .font(.title3.bold())
+                    .lineLimit(1)
+                    .foregroundStyle(.white)
+
+                Spacer()
+
+                if let number = vm.tvChannelNumber(for: selected.id) {
+                    Button {
+                        Task {
+                            // Fire the digit sequence then pin so the "Now on TV"
+                            // pill matches what we just told the TV to tune to.
+                            if let commands = vm.tuneCommands(for: selected.id) {
+                                await onDispatchMacro(commands)
+                            }
+                            vm.pinnedChannelID = selected.id
+                        }
+                    } label: {
+                        Label("Tune \(number)", systemImage: "tv.badge.wifi")
+                            .labelStyle(.titleAndIcon)
+                            .font(.caption.bold())
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .accessibilityLabel("Tune the TV to channel \(number), \(selected.primaryName)")
+                }
+
+                Button {
+                    vm.togglePin(selected.id)
+                } label: {
+                    Image(systemName: vm.isPinned(selected.id) ? "pin.fill" : "pin")
+                        .frame(width: 32, height: 32)
+                }
+                .buttonStyle(.bordered)
+                .tint(vm.isPinned(selected.id) ? .yellow : .accentColor)
+                .accessibilityLabel(
+                    vm.isPinned(selected.id)
+                        ? "Unpin from remote"
+                        : "Pin as TV's current channel"
+                )
+            } else {
+                Text("TV Guide")
+                    .font(.title3.bold())
+                    .lineLimit(1)
+                    .foregroundStyle(.white)
+
+                Spacer()
             }
-
-            Text(vm.selectedChannel?.primaryName ?? "TV Guide")
-                .font(.title3.bold())
-                .lineLimit(1)
-                .foregroundStyle(.white)
-
-            Spacer()
 
             Button {
                 Task { await vm.reload() }
@@ -108,6 +153,29 @@ struct RemoteSidePanelEPG: View {
                             channelRow(channel)
                         }
                         .buttonStyle(.plain)
+                        .contextMenu {
+                            if let number = vm.tvChannelNumber(for: channel.id) {
+                                Button(
+                                    "Tune to channel \(number)",
+                                    systemImage: "tv.badge.wifi"
+                                ) {
+                                    Task {
+                                        if let commands = vm.tuneCommands(for: channel.id) {
+                                            await onDispatchMacro(commands)
+                                        }
+                                        vm.pinnedChannelID = channel.id
+                                    }
+                                }
+                            }
+                            Button(
+                                vm.isPinned(channel.id)
+                                    ? "Unpin from remote"
+                                    : "Pin as TV's current channel",
+                                systemImage: vm.isPinned(channel.id) ? "pin.slash" : "pin"
+                            ) {
+                                vm.togglePin(channel.id)
+                            }
+                        }
                         .accessibilityElement(children: .combine)
                         .accessibilityLabel(accessibilityLabel(for: channel))
                     }
@@ -120,28 +188,52 @@ struct RemoteSidePanelEPG: View {
     @ViewBuilder
     private func channelRow(_ channel: EPGChannel) -> some View {
         let now = vm.nowPlaying(for: channel.id)
-        VStack(alignment: .leading, spacing: 2) {
-            Text(channel.primaryName)
-                .font(.subheadline.bold())
-                .foregroundStyle(.white)
-                .lineLimit(1)
-            if let now {
-                Text(now.title)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+        let pinned = vm.isPinned(channel.id)
+        let number = vm.tvChannelNumber(for: channel.id)
+        HStack(alignment: .top, spacing: 6) {
+            if let number {
+                Text("\(number)")
+                    .font(.caption2.monospacedDigit().bold())
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(
+                        RoundedRectangle(cornerRadius: 4, style: .continuous)
+                            .fill(Color.accentColor.opacity(0.35))
+                    )
+                    .accessibilityLabel("Channel \(number)")
+            }
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(channel.primaryName)
+                    .font(.subheadline.bold())
+                    .foregroundStyle(.white)
                     .lineLimit(1)
-            } else {
-                Text("No data for now")
-                    .font(.caption)
-                    .foregroundStyle(.tertiary)
+                if let now {
+                    Text(now.title)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                } else {
+                    Text("No data for now")
+                        .font(.caption)
+                        .foregroundStyle(.tertiary)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+
+            if pinned {
+                Image(systemName: "pin.fill")
+                    .font(.caption2)
+                    .foregroundStyle(.yellow)
+                    .accessibilityLabel("Pinned to remote")
             }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, 10)
         .padding(.vertical, 8)
         .background(
             RoundedRectangle(cornerRadius: 8, style: .continuous)
-                .fill(Color.white.opacity(0.05))
+                .fill(pinned ? Color.yellow.opacity(0.10) : Color.white.opacity(0.05))
         )
     }
 
