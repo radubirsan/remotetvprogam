@@ -147,7 +147,10 @@ final class DiscoveryViewModel {
         TVDevice(
             ip: row.ip,
             name: row.friendlyName.isEmpty ? "Samsung TV" : row.friendlyName,
-            mode: mode
+            mode: mode,
+            // Carry the MAC (donated by a matched remembered record) so the service can
+            // resolve the pairing token by MAC even if DHCP gave the TV a new IP.
+            mac: row.mac
         )
     }
 
@@ -159,8 +162,9 @@ final class DiscoveryViewModel {
     func makeManualDevice() -> TVDevice? {
         let trimmed = manualIP.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return nil }
-        let name = remembered.first { $0.ip == trimmed }?.friendlyName ?? "Samsung TV"
-        return TVDevice(ip: trimmed, name: name, mode: mode)
+        let record = remembered.first { $0.ip == trimmed }
+        let name = record?.friendlyName ?? "Samsung TV"
+        return TVDevice(ip: trimmed, name: name, mode: mode, mac: record?.mac)
     }
 
     /// Sends a Wake-on-LAN magic packet for a remembered, currently-off TV, then restarts

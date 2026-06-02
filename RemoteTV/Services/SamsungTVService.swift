@@ -32,6 +32,14 @@ final class SamsungTVService: TVService {
     private var infoPollTask: Task<Void, Never>?
     private var trustDelegate: SamsungTrustDelegate?
     private var currentDevice: TVDevice?
+    /// The token that authenticated the live socket, and the MAC we've already
+    /// written it under. Retained so the info-poll can *back-fill* the MAC-keyed
+    /// Keychain slot the moment it learns the MAC — without this, a pairing where
+    /// the MAC wasn't yet known (REST info server slow to come up right after
+    /// power-on) would leave the token under the IP key only, and the next DHCP
+    /// rotation would strand it and re-prompt for pairing. `nil` while disconnected.
+    private var currentToken: String?
+    private var currentMAC: String?
 
     init(
         tokenStore: any TVTokenStore,
@@ -84,6 +92,18 @@ final class SamsungTVService: TVService {
             throw TVServiceError.notConnected
         }
         let data = try TVCommandEncoder.payload(for: command)
+        guard let text = String(data: data, encoding: .utf8) else {
+            throw TVServiceError.webSocketFailure("Could not encode payload as UTF-8")
+        }
+        appendSniff(.outbound, text)
+        try await task.send(.string(text))
+    }
+
+    func sendText(_ string: String) async throws {
+        guard state == .connected, let task = webSocketTask else {
+            throw TVServiceError.notConnected
+        }
+        let data = try TVCommandEncoder.textPayload(for: string)
         guard let text = String(data: data, encoding: .utf8) else {
             throw TVServiceError.webSocketFailure("Could not encode payload as UTF-8")
         }
@@ -307,6 +327,16 @@ final class SamsungTVService: TVService {
         if let info {
             tvPowerState = info.powerState
         }
+        // Back-fill the MAC-keyed token slot the first time we learn a MAC we haven't
+        // already saved the live token under. Closes the gap where the MAC was unknown
+        // at handshake (so the token only landed under the IP key) — from here on a
+        // DHCP rotation can still recover the token via MAC instead of re-pairing.
+        if let mac = info?.wifiMac?.lowercased(), !mac.isEmpty,
+           mac != currentMAC, let token = currentToken {
+            await saveToken(token, for: device, mac: mac)
+            currentMAC = mac
+            appendSniff(.info, "back-filled token under MAC \(mac)")
+        }
         if persistRememberedTV, let rememberedTVsStore {
             let record = RememberedTV(
                 ip: device.ip,
@@ -347,6 +377,10 @@ final class SamsungTVService: TVService {
             if let effective {
                 await saveToken(effective, for: device, mac: mac)
             }
+            // Retain the live credential so the info-poll can back-fill the MAC slot
+            // later if `mac` was nil here (MAC not yet known at handshake time).
+            currentToken = effective
+            currentMAC = mac
             state = .connected
             startReceiveLoop(on: task)
             startInfoPolling(for: device)
@@ -405,10 +439,25 @@ final class SamsungTVService: TVService {
     /// lookup found the token first — without that, the very first IP
     /// rotation after the fix shipped would still strand the user.
     private func resolveStoredToken(for device: TVDevice) async -> (token: String?, mac: String?) {
+        // A MAC carried on the device (donated by the remembered-TVs record at
+        // discovery time) is the cheapest stable anchor — no Keychain-by-IP miss,
+        // no REST probe. Prefer it for the MAC we thread through the save path.
+        let carriedMAC = device.mac.flatMap { $0.isEmpty ? nil : $0.lowercased() }
+
         if let token = await tokenStore.token(for: device.ip), !token.isEmpty {
+            if let carriedMAC {
+                return (token, carriedMAC)
+            }
             return (token, await cachedMAC(for: device.ip))
         }
-        let mac = await stableMAC(for: device)
+        // IP slot missed (likely a DHCP rotation). Fall back to the MAC slot, using
+        // the carried MAC first and only probing the network if we still don't know it.
+        let mac: String?
+        if let carriedMAC {
+            mac = carriedMAC
+        } else {
+            mac = await stableMAC(for: device)
+        }
         if let mac, let token = await tokenStore.token(for: mac), !token.isEmpty {
             appendSniff(.info, "token resolved via MAC \(mac) (IP changed since pairing)")
             return (token, mac)
@@ -541,6 +590,8 @@ final class SamsungTVService: TVService {
         infoPollTask?.cancel()
         infoPollTask = nil
         tvPowerState = .unknown
+        currentToken = nil
+        currentMAC = nil
         webSocketTask?.cancel(with: .normalClosure, reason: nil)
         webSocketTask = nil
         session?.invalidateAndCancel()

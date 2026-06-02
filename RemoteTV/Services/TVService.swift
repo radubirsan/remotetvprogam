@@ -15,6 +15,11 @@ protocol TVService: AnyObject {
     var tvPowerState: TVPowerState { get }
     func connect(to device: TVDevice) async throws
     func send(_ command: TVCommand) async throws
+    /// Types a UTF-8 string into the TV's currently-focused text field via the
+    /// `SendInputString` control frame. No-ops on the TV side if nothing has input
+    /// focus. Used by the voice/dictation affordance to push recognized text to a
+    /// search box without per-letter key navigation.
+    func sendText(_ text: String) async throws
     /// Launches a Tizen app by ID. Works for both hard-coded shortcuts (``TVApp``) and
     /// dynamically discovered apps from ``requestInstalledApps()``.
     func launch(appID: String) async throws

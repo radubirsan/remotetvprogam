@@ -141,6 +141,7 @@ struct RemoteView: View {
                             onCommand: viewModel.send,
                             onLiveTV: viewModel.goLive,
                             onLaunchApp: viewModel.launchApp,
+                            onMic: { Task { await viewModel.sendDictation() } },
                             powerMode: viewModel.isInWakeMode ? .wake : .standby,
                             onPowerTap: { Task { await viewModel.handlePowerTap() } },
                             onPowerLongPress: {

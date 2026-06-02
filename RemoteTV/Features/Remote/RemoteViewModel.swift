@@ -99,6 +99,27 @@ final class RemoteViewModel {
         }
     }
 
+    /// Hardcoded test phrase the mic button types into the TV. Pulled out as a constant
+    /// so it's a one-line change to swap in real dictation output later (e.g. from
+    /// `SFSpeechRecognizer`) — the transport in ``sendDictation()`` stays the same.
+    static let dictationTestPhrase = "next channel"
+
+    /// Backs the remote's mic button. Types ``dictationTestPhrase`` into whatever text
+    /// field is focused on the TV via the `SendInputString` control frame — the local,
+    /// no-cloud way to push text to the set. The text only lands if a field on the TV
+    /// has input focus (e.g. an open search box); otherwise the TV silently drops it,
+    /// which surfaces as no visible change rather than an error.
+    func sendDictation() async {
+        do {
+            try await service.sendText(Self.dictationTestPhrase)
+            lastError = nil
+        } catch let error as TVServiceError {
+            lastError = error.errorDescription
+        } catch {
+            lastError = error.localizedDescription
+        }
+    }
+
     func launchApp(appID: String) async {
         do {
             try await service.launch(appID: appID)

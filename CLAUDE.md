@@ -13,14 +13,21 @@ network, opens a WebSocket control channel, and sends key-code commands.
 - **SwiftUI only.** No UIKit unless requested.
 - **No third-party frameworks.** Everything is Foundation + Network.framework + SwiftUI.
 - Tests use **Swift Testing** (`@Test`, `#expect`), not XCTest.
+- **`TVScheduel/` is a separate SwiftPM package** (the EPG grabber), not part of the Xcode
+  project. It targets `swift-tools-version 5.9` / macOS 13 and is deliberately written to
+  also build under Linux Swift (for CI) — so it can NOT use the iOS-26-only APIs the app
+  freely uses. See its own section below.
 
 ## Project layout
 
 ```
 RemoteTV/
-  App/              RemoteTVApp.swift — composition root, wires concrete services into DiscoveryView.
+  App/              RemoteTVApp.swift — composition root, builds concrete services.
+                    RootView.swift   — switches Discovery ⇄ Remote on @AppStorage state.
   Domain/           Value types (DiscoveredTV, RememberedTV, TVDevice, TVCommand,
-                    TVConnectionMode, TVConnectionState, TVServiceError).
+                    TVConnectionMode, TVConnectionState, TVPowerState, TVServiceError,
+                    TVApp, InstalledApp, KnownTVApps, SniffLogEntry).
+                    EPG types: EPGGuide, EPGChannel, EPGProgramme, KnownChannelNumbers.
   Discovery/        TVDiscoveryService protocol + BonjourDiscoveryService (NWBrowser).
   Services/         Everything network/persistence:
                       SamsungTVService       — WebSocket transport + pairing
@@ -31,17 +38,30 @@ RemoteTV/
                       KeychainTVTokenStore   — pairing tokens in Keychain
                       FileRememberedTVsStore — remembered-TV JSON in Application Support
                       UDPBroadcastWakeService + MagicPacketBuilder — WoL
+                      EPGClient              — actor that fetches/caches the EPG JSON dump
   Features/
     Discovery/      DiscoveryView + DiscoveryViewModel + TVListRow.
-    Remote/         RemoteView + RemoteViewModel + per-section button groups
-                    (DPadSection, VolumeSection, ChannelSection, BottomActionsSection, …).
+    Remote/         RemoteView + RemoteViewModel; RemoteSamsungBody is the redesigned
+                    canvas. Per-section button groups (DPadSection, VolumeSection,
+                    ChannelSection, BottomActionsSection, TrackpadSection, NumberPadView,
+                    CommercialMuteSection, …) + side panels (SidePanelMode +
+                    RemoteSidePanel{EPG,Shortcuts,InstalledApps,SniffLog}). EPGViewModel
+                    drives the EPG panel; NowOnTVPill shows the pinned channel's show.
   Resources/        Info.plist, RemoteTV.entitlements, Localizable.xcstrings, Assets.xcassets.
 RemoteTVTests/      Swift Testing target — one file per SUT.
+TVScheduel/         Standalone SwiftPM package: Romanian XMLTV → JSON grabber (see below).
+.github/workflows/  epg-update.yml — daily CI that publishes guide.json to `epg-data` branch.
 PLAN.md             Long-form design doc; useful for "why" but can drift from code.
 ```
 
 View models are `@MainActor @Observable` and owned via `@State`. Services are injected via
 init so tests swap in fakes.
+
+`RootView` is the real top of the tree (not `DiscoveryView`): it renders `RemoteView` when
+`@AppStorage("lastRemoteDeviceJSON")` holds an encoded `TVDevice`, otherwise `DiscoveryView`.
+Discovery writes that key when a TV is picked; Remote clears it on disconnect/forget. The
+`.id(device.id)` on `RemoteView` is load-bearing — it forces a fresh instance (and a fresh
+`.task` → `connect()`) when the user switches TVs. Don't remove it.
 
 ## Key flows
 
@@ -118,6 +138,41 @@ entry next time Samsung rebrands something.
 UDP port 9. Requires a MAC on file (captured on first successful connect). After sending,
 the Discovery VM reruns `start()` so the woken TV surfaces as `.available`.
 
+### Power state vs connection state
+
+`TVPowerState` (`unknown`/`on`/`off`) is a *separate axis* from `TVConnectionState`. The
+WebSocket can stay connected while the TV is in standby, so the UI tracks both — e.g. the
+status LED is dim grey for "connected but standby" vs solid green for fully active. Power
+state is derived from `device.PowerState` on the `GET /api/v2/` REST poll. The Power button
+toggles standby; surfacing standby is what the "Sandby / Power button" work added.
+
+### TV Guide / EPG
+
+This is a **read-only** electronic programme guide, entirely decoupled from TV control —
+nothing here goes over the WebSocket. The data path is:
+
+1. **`TVScheduel/` package** (see its section) runs as a daily GitHub Action
+   (`.github/workflows/epg-update.yml`), fetches a Romanian XMLTV feed, and force-pushes
+   `guide.json` to an orphan `epg-data` branch.
+2. **`EPGClient`** (an `actor` in `Services/`) downloads that JSON from GitHub raw
+   (`EPGClient.Configuration.defaultSourceURL`), with an in-memory + on-disk cache (24h TTL,
+   `URL.cachesDirectory/epg`). Decodes into `EPGGuide` (`channels` + `programmes` +
+   `fetchedAt`).
+3. **`EPGViewModel`** drives `RemoteSidePanelEPG`: channel list with search, drill-in to a
+   channel's schedule, "now playing" per row, and a *pinned* channel (persisted in
+   `UserDefaults` key `pinnedTVChannelID`) that feeds `NowOnTVPill` above the remote.
+
+**Why the pin is manual, not auto-detected:** Tizen's WebSocket is silent on channel changes
+and there's no documented REST endpoint for the current broadcast channel (only SmartThings
+cloud OAuth exposes it). A manual pin is the honest option until a sniff-log frame proves
+otherwise — don't claim auto-detection.
+
+**Tune macro:** `KnownChannelNumbers` maps EPG channel ids (`Digi.24.HD.ro` style) → TV
+channel numbers for a specific Digi cable lineup. `EPGViewModel.tuneCommands` turns a number
+into per-digit `TVCommand`s + a trailing `KEY_ENTER` (the Enter avoids Tizen's ~1.5s
+post-digit tune delay). Channels not in the table simply have no Tune button — the lineup
+varies by region/tier, so the map is a sensible default, not ground truth.
+
 ## Conventions
 
 - **Service protocols sit in their own files** (`TVService.swift`, `TVDiscoveryService.swift`,
@@ -141,8 +196,10 @@ the Discovery VM reruns `start()` so the woken TV surfaces as `.available`.
 4. The app target's `PBXSourcesBuildPhase` — add `B2…F0xx`
 
 Grep for an existing sibling file (e.g. `VolumeSection`) to copy the pattern. Currently
-the highest used suffix is `F044` (SniffLogSection). Suffixes `F040`–`F042` are retired
-(they belonged to the removed DIAL feature); don't reuse them.
+the highest used suffix is `F05D`. Suffixes `F040`–`F042` are retired (they belonged to
+the removed DIAL feature); don't reuse them.
+
+`TVScheduel/` files do NOT go in the pbxproj — that package builds with SwiftPM, not Xcode.
 
 ## Gotchas — things that have been tried and rejected
 
@@ -163,6 +220,41 @@ the highest used suffix is `F044` (SniffLogSection). Suffixes `F040`–`F042` ar
 - **`device(for:)` on DiscoveryViewModel**: kept for now but unused by the view — tapping
   a row populates `manualIP` instead of navigating. Safe to prune alongside its tests if
   you're sure you won't need it.
+
+## TVScheduel package (EPG grabber)
+
+Standalone SwiftPM package under `TVScheduel/`. Produces a `tvepg` CLI and a `TVScheduel`
+library; the iOS app does **not** link the library — it consumes the *output* JSON via
+`EPGClient` instead. Pieces: `XMLTVFetcher` (download + 24h disk cache + gzip),
+`XMLTVParser` (`<channel>`/`<programme>` → `Guide`), `XMLTVDate` (XMLTV timestamp parsing),
+`Models` (`Channel`, `Programme`, `Guide` — `Sendable`/`Codable`).
+
+**Cross-platform constraint:** this package must build on **both** Apple SDKs and **Linux
+Swift**, because CI used to run it on Ubuntu. Consequences baked into the code, keep them:
+- `@preconcurrency import Foundation` + `#if canImport(FoundationNetworking)` for URLSession.
+- `performRequest` bridges `dataTask(_:completionHandler:)` to async via a continuation —
+  Linux's `FoundationNetworking` lacks the native `URLSession.data(for:)`.
+- gzip via Apple's `Compression` is `#if canImport(Compression)`-gated; on Linux it throws,
+  so callers must pre-decompress (the CI does `curl … | gunzip | tvepg dump --input -`).
+- Avoid iOS-26/macOS-only Foundation conveniences in this package even though the app uses
+  them freely. (The `epg-update.yml` workflow now runs on `macos-latest` anyway, but the
+  Linux-safety in the code is intentional — don't rip it out.)
+
+```sh
+cd TVScheduel
+swift run tvepg channels            # list channels
+swift run tvepg today "Digi 24"     # today's schedule for a channel
+swift run tvepg dump > guide.json   # full guide as JSON (what CI publishes)
+swift test                          # XMLTVParser + XMLTVDate tests
+```
+
+## EPG CI pipeline
+
+`.github/workflows/epg-update.yml` runs daily (04:00 UTC) + on push to the workflow/package:
+builds the CLI, fetches the epgshare01 RO feed, and force-pushes `guide.json` to the orphan
+`epg-data` branch (rewritten each run so 15 MB blobs don't accumulate in `main`'s history).
+`EPGClient.Configuration.defaultSourceURL` points at that branch's raw URL — if the repo
+owner/name changes, update that constant.
 
 ## Info.plist requirements
 
@@ -185,10 +277,19 @@ Prefer the Xcode MCP tools over shelling out:
 
 ## Tests
 
+App (Swift Testing, runs on a simulator):
+
 ```
 xcodebuild test -project RemoteTV.xcodeproj -scheme RemoteTV -destination 'platform=iOS Simulator,name=iPhone 15'
 ```
 
+EPG package (SwiftPM, no simulator needed):
+
+```
+cd TVScheduel && swift test
+```
+
 Unit-tested surfaces: `TVCommandEncoder`, `TVURLBuilder`, `KeychainTVTokenStore`,
 `FileRememberedTVsStore`, `MagicPacketBuilder`, `RemoteViewModel`, `DiscoveryViewModel`
-(including the pure `makeRows` merge logic).
+(including the pure `makeRows` merge logic), `TrackpadGestureMapper`; and in `TVScheduel/`:
+`XMLTVParser`, `XMLTVDate`.

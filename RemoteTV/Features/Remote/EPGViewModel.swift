@@ -83,24 +83,36 @@ final class EPGViewModel {
 
     // MARK: - Derived data
 
-    /// Channels filtered by ``searchText`` (case- and diacritic-insensitive),
-    /// alphabetised by display name.
+    /// Channels shown in the guide: every entry in ``KnownChannelNumbers/mapping``,
+    /// ordered by TV channel number (the order the mapping is written in). Channels the
+    /// daily feed happens to omit are still listed — synthesized from the id with a
+    /// humanized name and no programmes — so the list always mirrors the user's full
+    /// tunable lineup rather than just what's in today's XMLTV dump. ``searchText``
+    /// filters within that set (case- and diacritic-insensitive) without reordering.
     var filteredChannels: [EPGChannel] {
-        guard let channels = guide?.channels else { return [] }
         let trimmed = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
-        let base: [EPGChannel]
-        if trimmed.isEmpty {
-            base = channels
-        } else {
-            base = channels.filter { channel in
-                channel.primaryName.localizedStandardContains(trimmed) ||
-                channel.id.localizedStandardContains(trimmed) ||
-                channel.displayNames.contains { $0.localizedStandardContains(trimmed) }
-            }
+        guard !trimmed.isEmpty else { return allKnownChannels }
+        return allKnownChannels.filter { channel in
+            channel.primaryName.localizedStandardContains(trimmed) ||
+            channel.id.localizedStandardContains(trimmed) ||
+            channel.displayNames.contains { $0.localizedStandardContains(trimmed) }
         }
-        return base.sorted {
-            $0.primaryName.localizedStandardCompare($1.primaryName) == .orderedAscending
-        }
+    }
+
+    /// The user's full known lineup as ``EPGChannel`` values, ordered by channel
+    /// number. Each id resolves to the feed's channel when today's dump includes it,
+    /// or a synthesized placeholder when it doesn't.
+    private var allKnownChannels: [EPGChannel] {
+        KnownChannelNumbers.orderedIDs.compactMap(channel(for:))
+    }
+
+    /// Resolves an id to an ``EPGChannel``: the feed's entry if present (real
+    /// display name + icon), otherwise a placeholder synthesized from the id for any
+    /// id in ``KnownChannelNumbers/mapping``. Nil for ids we know nothing about.
+    private func channel(for id: String) -> EPGChannel? {
+        if let inFeed = guide?.channels.first(where: { $0.id == id }) { return inFeed }
+        guard KnownChannelNumbers.number(for: id) != nil else { return nil }
+        return EPGChannel(id: id, displayNames: [KnownChannelNumbers.displayName(for: id)], iconURL: nil)
     }
 
     /// What's airing right now on `channelID`, if anything in the feed overlaps `Date.now`.
@@ -116,15 +128,15 @@ final class EPGViewModel {
     }
 
     /// The selected channel object (display name, etc.) for the detail header.
+    /// Resolves synthesized channels too, so drilling into a channel that's in the
+    /// mapping but absent from today's feed still opens its (empty) schedule.
     var selectedChannel: EPGChannel? {
-        guard let id = selectedChannelID else { return nil }
-        return guide?.channels.first { $0.id == id }
+        selectedChannelID.flatMap(channel(for:))
     }
 
     /// The pinned channel object, if any.
     var pinnedChannel: EPGChannel? {
-        guard let id = pinnedChannelID else { return nil }
-        return guide?.channels.first { $0.id == id }
+        pinnedChannelID.flatMap(channel(for:))
     }
 
     /// What's airing on the pinned channel right now. Drives the "Now on TV" pill above

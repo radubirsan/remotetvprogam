@@ -26,6 +26,19 @@ struct TVCommandEncoderTests {
         #expect(params?["DataOfCmd"] as? String == command.rawValue)
     }
 
+    @Test func textPayloadUsesSendInputStringWithBase64() throws {
+        let data = try TVCommandEncoder.textPayload(for: "next channel")
+        let json = try JSONSerialization.jsonObject(with: data) as? [String: Any]
+        #expect(json?["method"] as? String == "ms.remote.control")
+        let params = json?["params"] as? [String: Any]
+        #expect(params?["TypeOfRemote"] as? String == "SendInputString")
+        #expect(params?["DataOfCmd"] as? String == "base64")
+        // Cmd carries the base64 of the UTF-8 text…
+        #expect(params?["Cmd"] as? String == Data("next channel".utf8).base64EncodedString())
+        // …and the key-press-only "Option" field must be absent for text frames.
+        #expect(params?["Option"] == nil)
+    }
+
     @Test func commandKeyCodesMatchSamsungProtocol() {
         #expect(TVCommand.volumeUp.rawValue == "KEY_VOLUP")
         #expect(TVCommand.volumeDown.rawValue == "KEY_VOLDOWN")

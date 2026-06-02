@@ -8,6 +8,7 @@ private final class FakeTVService: TVService {
     var tvPowerState: TVPowerState = .unknown
     var sniffLog: [SniffLogEntry] = []
     var sentCommands: [TVCommand] = []
+    var sentTexts: [String] = []
     var launchedAppIDs: [String] = []
     var forgottenDeviceIDs: [String] = []
     var connectError: (any Error)?
@@ -24,6 +25,11 @@ private final class FakeTVService: TVService {
     func send(_ command: TVCommand) async throws {
         if let error = sendError { throw error }
         sentCommands.append(command)
+    }
+
+    func sendText(_ text: String) async throws {
+        if let error = sendError { throw error }
+        sentTexts.append(text)
     }
 
     func launch(appID: String) async throws {

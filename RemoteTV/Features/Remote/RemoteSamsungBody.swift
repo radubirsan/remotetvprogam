@@ -22,6 +22,9 @@ struct RemoteSamsungBody: View {
     let onCommand: (TVCommand) async -> Void
     let onLiveTV: () async -> Void
     let onLaunchApp: (String) async -> Void
+    /// Mic button action — types a (currently fixed) phrase into the TV's focused
+    /// text field. Sync wrapper like `onPowerTap`; the parent bridges to the async VM.
+    let onMic: () -> Void
     /// Power-button visual mode (green / amber ring). Parent picks this based on
     /// `RemoteViewModel.isInWakeMode`.
     let powerMode: PowerButton.Mode
@@ -71,8 +74,9 @@ struct RemoteSamsungBody: View {
             }
             .position(x: Self.width / 2, y: 50)
 
-            // Mic — visual placeholder per design (no voice input wired up).
-            CircleButton(size: 70, accessibilityLabel: "Voice (not implemented)") {
+            // Mic — types a phrase into the TV's focused text field (SendInputString).
+            CircleButton(size: 70, accessibilityLabel: "Send voice text to TV") {
+                onMic()
             } content: {
                 Image(systemName: "mic")
                     .font(.system(size: 25, weight: .regular))
