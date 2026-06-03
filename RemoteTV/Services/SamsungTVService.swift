@@ -40,6 +40,11 @@ final class SamsungTVService: TVService {
     /// rotation would strand it and re-prompt for pairing. `nil` while disconnected.
     private var currentToken: String?
     private var currentMAC: String?
+    /// Resumed when the TV reports `ms.voiceApp.recording` after we open Bixby.
+    /// Only one voice session is in flight at a time, so a single optional suffices.
+    private var voiceRecordingWaiter: CheckedContinuation<Void, Error>?
+    /// Count of audio chunks sent in the current voice session — for console diagnosis.
+    private var voiceChunkCount = 0
 
     init(
         tokenStore: any TVTokenStore,
@@ -88,10 +93,35 @@ final class SamsungTVService: TVService {
     }
 
     func send(_ command: TVCommand) async throws {
+        try await transmit(TVCommandEncoder.payload(for: command))
+    }
+
+    func sendText(_ string: String) async throws {
+        // Readable marker first: the wire frame base64-encodes the text, so without
+        // this the log shows an opaque blob. If this line appears but no outbound
+        // frame follows, the socket was already gone when we tried to type (e.g. the
+        // TV closed the remote channel when Bixby took focus).
+        appendSniff(.info, "typing text: \"\(string)\"")
+        try await transmit(TVCommandEncoder.textPayload(for: string))
+    }
+
+    func sendRawKey(_ keyCode: String, hold: Bool) async throws {
+        if hold {
+            try await transmit(TVCommandEncoder.rawKeyPayload(keyCode: keyCode, cmd: "Press"))
+            try await Task.sleep(for: .milliseconds(700))
+            try await transmit(TVCommandEncoder.rawKeyPayload(keyCode: keyCode, cmd: "Release"))
+        } else {
+            try await transmit(TVCommandEncoder.rawKeyPayload(keyCode: keyCode))
+        }
+    }
+
+    /// Sends one already-encoded control frame over the live socket and mirrors it
+    /// into the sniff log. Shared by ``send(_:)``, ``sendText(_:)``, and
+    /// ``sendRawKey(_:hold:)`` so they all guard, log, and transmit identically.
+    private func transmit(_ data: Data) async throws {
         guard state == .connected, let task = webSocketTask else {
             throw TVServiceError.notConnected
         }
-        let data = try TVCommandEncoder.payload(for: command)
         guard let text = String(data: data, encoding: .utf8) else {
             throw TVServiceError.webSocketFailure("Could not encode payload as UTF-8")
         }
@@ -99,16 +129,91 @@ final class SamsungTVService: TVService {
         try await task.send(.string(text))
     }
 
-    func sendText(_ string: String) async throws {
+    // MARK: - Voice (Bixby) streaming — see Bixby.md
+
+    /// How long to wait for the TV's `ms.voiceApp.recording` after opening Bixby.
+    private let voiceRecordingTimeout: Duration = .seconds(4)
+
+    func beginVoiceSession() async throws {
+        guard state == .connected, webSocketTask != nil else {
+            throw TVServiceError.notConnected
+        }
+        // Step 1: toggle the voice key on (Press then Release, back-to-back).
+        voiceChunkCount = 0
+        // Hold-to-talk: send only the Press here and KEEP it held while audio streams —
+        // this firmware treats an immediate Release as "mic button let go" and closes
+        // Bixby right after it opens. The matching Release is sent in endVoiceSession().
+        try await transmit(TVCommandEncoder.voiceKeyPayload(cmd: "Press"))
+        appendSniff(.info, "voice: opening Bixby, waiting for recording…")
+        // Step 2: block until the TV says it's listening.
+        do {
+            try await awaitVoiceRecording()
+        } catch {
+            // Don't leave the voice key stuck "held" if Bixby never came up.
+            try? await transmit(TVCommandEncoder.voiceKeyPayload(cmd: "Release"))
+            throw error
+        }
+        appendSniff(.info, "voice: TV is recording")
+    }
+
+    func sendVoiceChunk(_ pcm: Data) async throws {
         guard state == .connected, let task = webSocketTask else {
             throw TVServiceError.notConnected
         }
-        let data = try TVCommandEncoder.textPayload(for: string)
-        guard let text = String(data: data, encoding: .utf8) else {
-            throw TVServiceError.webSocketFailure("Could not encode payload as UTF-8")
+        // Step 3: one binary frame per chunk.
+        let frame = TVCommandEncoder.voiceAudioFrame(pcm: pcm)
+        try await task.send(.data(frame))
+        voiceChunkCount += 1
+        appendSniff(.outbound, "voice audio chunk #\(voiceChunkCount): \(pcm.count) PCM bytes (\(frame.count)-byte frame)")
+    }
+
+    func endVoiceSession() async {
+        guard state == .connected, let task = webSocketTask else { return }
+        // Step 4: empty end-of-stream marker, then Release the (held-down) voice key —
+        // the Release is what tells Bixby the user "let go" and to process the utterance.
+        try? await task.send(.data(TVCommandEncoder.voiceAudioFrame(pcm: Data([0, 0, 0, 0]))))
+        try? await transmit(TVCommandEncoder.voiceKeyPayload(cmd: "Release"))
+        appendSniff(.info, "voice: end-of-stream marker + Release sent after \(voiceChunkCount) chunks")
+    }
+
+    /// Suspends until the receive loop sees `ms.voiceApp.recording`, or throws
+    /// ``TVServiceError/voiceNotReady`` after ``voiceRecordingTimeout``. Single-shot:
+    /// whichever of event/timeout fires first resumes the continuation and clears it.
+    private func awaitVoiceRecording() async throws {
+        let timeout = voiceRecordingTimeout
+        try await withCheckedThrowingContinuation { (cont: CheckedContinuation<Void, Error>) in
+            voiceRecordingWaiter = cont
+            Task { [weak self] in
+                try? await Task.sleep(for: timeout)
+                self?.failVoiceRecordingWaiter()
+            }
         }
-        appendSniff(.outbound, text)
-        try await task.send(.string(text))
+    }
+
+    private func resumeVoiceRecordingWaiter() {
+        voiceRecordingWaiter?.resume()
+        voiceRecordingWaiter = nil
+    }
+
+    private func failVoiceRecordingWaiter() {
+        voiceRecordingWaiter?.resume(throwing: TVServiceError.voiceNotReady)
+        voiceRecordingWaiter = nil
+    }
+
+    /// Parses an inbound frame for voice lifecycle events and reacts. Called from the
+    /// receive loop alongside ``recordInbound(_:)``.
+    private func handleVoiceEvent(_ message: URLSessionWebSocketTask.Message) {
+        guard let data = messageData(from: message),
+              let envelope = try? JSONDecoder().decode(EventEnvelope.self, from: data),
+              let event = envelope.event else { return }
+        switch event {
+        case "ms.voiceApp.recording":
+            resumeVoiceRecordingWaiter()
+        case "ms.voiceApp.hide":
+            appendSniff(.info, "voice: TV finished (ms.voiceApp.hide)")
+        default:
+            break
+        }
     }
 
     func clearSniffLog() {
@@ -120,6 +225,14 @@ final class SamsungTVService: TVService {
         if sniffLog.count > sniffLogLimit {
             sniffLog.removeFirst(sniffLog.count - sniffLogLimit)
         }
+        // Mirror to the Xcode console so logs can be copy-pasted for diagnosis.
+        let tag: String
+        switch direction {
+        case .inbound:  tag = "<-"
+        case .outbound: tag = "->"
+        case .info:     tag = " ."
+        }
+        print("[RemoteTV] \(tag) \(text)")
     }
 
     private func recordInbound(_ message: URLSessionWebSocketTask.Message) {
@@ -556,6 +669,7 @@ final class SamsungTVService: TVService {
                 do {
                     let message = try await task.receive()
                     self?.recordInbound(message)
+                    self?.handleVoiceEvent(message)
                 } catch {
                     if Task.isCancelled { return }
                     self?.handleReceiveTermination(task: task, error: error)
@@ -592,6 +706,8 @@ final class SamsungTVService: TVService {
         tvPowerState = .unknown
         currentToken = nil
         currentMAC = nil
+        // Don't leave a voice session waiter suspended across a disconnect.
+        failVoiceRecordingWaiter()
         webSocketTask?.cancel(with: .normalClosure, reason: nil)
         webSocketTask = nil
         session?.invalidateAndCancel()
@@ -609,6 +725,10 @@ final class SamsungTVService: TVService {
         case unauthorized
         case rejected
         case timeout
+    }
+
+    private struct EventEnvelope: Decodable {
+        let event: String?
     }
 
     private struct ConnectEnvelope: Decodable {

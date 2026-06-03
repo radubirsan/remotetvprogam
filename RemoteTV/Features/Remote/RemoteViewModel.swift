@@ -59,14 +59,28 @@ final class RemoteViewModel {
     var sniffLog: [SniffLogEntry] { service.sniffLog }
     var tvPowerState: TVPowerState { service.tvPowerState }
 
-    /// True when the WebSocket is unreachable — the TV is presumed off (or the
-    /// network blipped) and `KEY_POWER` over the WS would be a no-op. The view
-    /// uses this to swap the power button into wake mode (amber ring, WoL action
-    /// on tap, help sheet on long-press).
+    /// True when `KEY_POWER` over the WebSocket would be a no-op, so the power button
+    /// should fire a Wake-on-LAN magic packet instead (amber ring, WoL on tap, help
+    /// sheet on long-press). This is what lets the red power button wake a TV that's
+    /// been off without bouncing through Discovery to find the Wake button.
+    ///
+    /// Wake mode covers every state except "live socket to a TV that's actually on":
+    /// - `.disconnected` / `.failed` — no channel; only WoL can bring the TV back.
+    /// - `.connecting` — included on purpose: when the TV is off, the connect attempt
+    ///   can hang for many seconds before failing, and we don't want the user stuck
+    ///   pressing a dead power button during that window.
+    /// - `.connected` but `tvPowerState == .off` — the TV slipped into standby (or the
+    ///   socket is stale against a TV that was turned off behind our back); wake it.
+    /// `.unknown` power state while connected is treated as "on" so the button doesn't
+    /// flicker amber for the second or two before the first REST poll lands.
     var isInWakeMode: Bool {
         switch service.state {
-        case .disconnected, .failed: true
-        case .connecting, .awaitingPairing, .connected: false
+        case .disconnected, .failed, .connecting:
+            return true
+        case .awaitingPairing:
+            return false
+        case .connected:
+            return tvPowerState == .off
         }
     }
 
@@ -99,19 +113,117 @@ final class RemoteViewModel {
         }
     }
 
-    /// Hardcoded test phrase the mic button types into the TV. Pulled out as a constant
-    /// so it's a one-line change to swap in real dictation output later (e.g. from
-    /// `SFSpeechRecognizer`) — the transport in ``sendDictation()`` stays the same.
+    /// Test phrase for the Sniff Log "Send text" button (`SendInputString` probe).
     static let dictationTestPhrase = "next channel"
 
-    /// Backs the remote's mic button. Types ``dictationTestPhrase`` into whatever text
-    /// field is focused on the TV via the `SendInputString` control frame — the local,
-    /// no-cloud way to push text to the set. The text only lands if a field on the TV
-    /// has input focus (e.g. an open search box); otherwise the TV silently drops it,
-    /// which surfaces as no visible change rather than an error.
-    func sendDictation() async {
+    // MARK: - Voice (hold-to-talk Bixby) — see Bixby.md
+
+    /// Mic capture engine, owned for the VM's lifetime. Produces 16 kHz mono PCM
+    /// chunks while a voice session is active.
+    private let microphone = MicrophoneCaptureService()
+    /// Pumps mic chunks to the service in order; awaited (not cancelled) on stop so the
+    /// last chunks flush before the end-of-stream marker.
+    private var voicePumpTask: Task<Void, Never>?
+    /// True while streaming to Bixby — drives the mic button's "listening" look.
+    private(set) var isListening = false
+
+    /// Press-down on the mic button: request mic access, open Bixby, and start
+    /// streaming microphone audio until ``stopVoice()``.
+    func startVoice() async {
+        guard !isListening else { return }
+        print("[RemoteTV] voice: mic button pressed — requesting permission")
+        guard await MicrophoneCaptureService.requestPermission() else {
+            print("[RemoteTV] voice: microphone permission DENIED")
+            lastError = TVServiceError.microphoneDenied.errorDescription
+            return
+        }
+        do {
+            // Warm the mic engine BEFORE opening Bixby so audio can start the instant
+            // the TV is ready — otherwise Bixby times out and closes before the first
+            // chunk arrives. The gate stays shut (audio discarded) until beginStreaming().
+            print("[RemoteTV] voice: permission granted — warming mic")
+            let stream = try microphone.start()
+            print("[RemoteTV] voice: opening Bixby session")
+            try await service.beginVoiceSession()
+            microphone.beginStreaming()   // recording confirmed — open the audio gate now
+            isListening = true
+            lastError = nil
+            voicePumpTask = Task { [weak self] in
+                await self?.pumpVoice(stream)
+            }
+        } catch let error as TVServiceError {
+            microphone.stop()   // tear the warmed engine back down on failure
+            print("[RemoteTV] voice: startVoice failed — \(error)")
+            lastError = error.errorDescription
+        } catch {
+            microphone.stop()
+            print("[RemoteTV] voice: startVoice failed — \(error)")
+            lastError = error.localizedDescription
+        }
+    }
+
+    /// Release on the mic button: stop the mic, drain the stream in order, then send
+    /// the end-of-stream marker.
+    func stopVoice() async {
+        guard isListening else { return }
+        print("[RemoteTV] voice: mic button released — stopping")
+        isListening = false
+        microphone.stop()           // finishes the AsyncStream
+        await voicePumpTask?.value  // let the pump drain remaining chunks
+        voicePumpTask = nil
+        await service.endVoiceSession()
+        print("[RemoteTV] voice: session ended")
+    }
+
+    /// Forwards mic chunks to the TV sequentially. Runs on the main actor (it only
+    /// awaits the main-actor service), so chunks are sent strictly in order.
+    private func pumpVoice(_ stream: AsyncStream<Data>) async {
+        for await chunk in stream {
+            try? await service.sendVoiceChunk(chunk)
+        }
+    }
+
+    /// One experimental "does this open Bixby?" candidate. Edit ``bixbyProbes`` to try
+    /// other key codes — each renders as a labelled button in the Sniff Log panel, and
+    /// the resulting frame (plus any TV reply) shows up in the log so you can tell which
+    /// one the TV actually reacts to.
+    struct BixbyProbe: Identifiable, Sendable {
+        let id = UUID()
+        /// Short text on the button.
+        let label: String
+        /// The raw key code sent to the TV (not necessarily a real/known code — that's
+        /// the point of probing).
+        let keyCode: String
+        /// Press-and-hold instead of a single click. The physical remote's voice button
+        /// is a hold, so this is worth trying for the voice/Bixby case.
+        var hold: Bool = false
+    }
+
+    /// The probe set wired into the Sniff Log panel. `KEY_BT_VOICE` is the confirmed
+    /// "open Bixby" code; add or change codes freely while hunting.
+    static let bixbyProbes: [BixbyProbe] = [
+        .init(label: "BT_VOICE", keyCode: "KEY_BT_VOICE"),
+    ]
+
+    /// Sends ``dictationTestPhrase`` as a one-shot text frame (no Bixby key first), so
+    /// it can be fired manually right after the BT_VOICE button. The readable text and
+    /// the wire frame both land in ``sniffLog``.
+    func sendTestText() async {
         do {
             try await service.sendText(Self.dictationTestPhrase)
+            lastError = nil
+        } catch let error as TVServiceError {
+            lastError = error.errorDescription
+        } catch {
+            lastError = error.localizedDescription
+        }
+    }
+
+    /// Fires one ``BixbyProbe`` at the TV. Surfaces failures on ``lastError`` like the
+    /// other send paths; the sent frame and any TV response appear in ``sniffLog``.
+    func runProbe(_ probe: BixbyProbe) async {
+        do {
+            try await service.sendRawKey(probe.keyCode, hold: probe.hold)
             lastError = nil
         } catch let error as TVServiceError {
             lastError = error.errorDescription
@@ -175,17 +287,26 @@ final class RemoteViewModel {
         }
     }
 
-    /// Sends a Wake-on-LAN magic packet to the TV's stored MAC and, on success,
-    /// kicks off a reconnect attempt after ``postWakeReconnectDelay`` so the user
-    /// doesn't have to back out and re-enter the remote view to recover the
-    /// WebSocket once the TV finishes booting.
+    /// How many times to retry the post-wake reconnect. A TV cold-booting from fully
+    /// off can take 15–20 s to bring up its WebSocket server — one attempt at +5 s
+    /// usually lands before it's ready, leaving the user stuck. We retry up to this
+    /// many times (``postWakeReconnectDelay`` apart) so waking "just works".
+    private let postWakeReconnectAttempts = 5
+
+    /// Sends a Wake-on-LAN magic packet to the TV's stored MAC and then keeps trying to
+    /// reconnect until the TV has finished booting — so the user can press the power
+    /// button to wake the TV and end up back in a live session without ever leaving the
+    /// remote screen.
     func wakeAndReconnect() async {
         let outcome = await sendWake()
         switch outcome {
         case .sent:
             lastError = nil
-            try? await Task.sleep(for: postWakeReconnectDelay)
-            await connect()
+            for _ in 0..<postWakeReconnectAttempts {
+                try? await Task.sleep(for: postWakeReconnectDelay)
+                await connect()
+                if service.state == .connected { return }
+            }
         case .macUnknown:
             lastError = "Connect once while the TV is on so the app can capture its MAC."
         case .wakeServiceMissing:

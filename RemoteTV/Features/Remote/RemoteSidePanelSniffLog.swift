@@ -9,6 +9,13 @@ import SwiftUI
 struct RemoteSidePanelSniffLog: View {
     let entries: [SniffLogEntry]
     let onClear: @MainActor () -> Void
+    /// Experimental "open Bixby?" candidates rendered as a button row above the log.
+    let probes: [RemoteViewModel.BixbyProbe]
+    /// Fires the tapped probe; the resulting frame/response shows up in `entries`.
+    let onProbe: @MainActor (RemoteViewModel.BixbyProbe) -> Void
+    /// Sends the test text phrase to the TV (logged in `entries`). Tap it after the
+    /// BT_VOICE button to see whether Bixby reacts to injected text.
+    let onSendText: @MainActor () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -23,6 +30,30 @@ struct RemoteSidePanelSniffLog: View {
                 .buttonStyle(.bordered)
                 .controlSize(.small)
                 .disabled(entries.isEmpty)
+            }
+
+            // Bixby probe row — tap a candidate, watch the log below for the outbound
+            // frame and any TV reply. Helps hunt for the code that opens the assistant.
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Bixby probe")
+                    .font(.caption2.bold())
+                    .foregroundStyle(.secondary)
+                HStack(spacing: 6) {
+                    ForEach(probes) { probe in
+                        Button(probe.label) {
+                            onProbe(probe)
+                        }
+                        .buttonStyle(.bordered)
+                        .controlSize(.small)
+                        .tint(.orange)
+                    }
+                    Button("Send text") {
+                        onSendText()
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                    .tint(.cyan)
+                }
             }
 
             ScrollView {

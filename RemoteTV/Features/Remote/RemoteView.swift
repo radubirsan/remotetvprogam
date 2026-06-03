@@ -141,7 +141,8 @@ struct RemoteView: View {
                             onCommand: viewModel.send,
                             onLiveTV: viewModel.goLive,
                             onLaunchApp: viewModel.launchApp,
-                            onMic: { Task { await viewModel.sendDictation() } },
+                            onMicDown: { Task { await viewModel.startVoice() } },
+                            onMicUp: { Task { await viewModel.stopVoice() } },
                             powerMode: viewModel.isInWakeMode ? .wake : .standby,
                             onPowerTap: { Task { await viewModel.handlePowerTap() } },
                             onPowerLongPress: {
@@ -165,7 +166,10 @@ struct RemoteView: View {
                 if sidePanel == .sniffLog {
                     RemoteSidePanelSniffLog(
                         entries: viewModel.sniffLog,
-                        onClear: viewModel.clearSniffLog
+                        onClear: viewModel.clearSniffLog,
+                        probes: RemoteViewModel.bixbyProbes,
+                        onProbe: { probe in Task { await viewModel.runProbe(probe) } },
+                        onSendText: { Task { await viewModel.sendTestText() } }
                     )
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .transition(.move(edge: .trailing).combined(with: .opacity))

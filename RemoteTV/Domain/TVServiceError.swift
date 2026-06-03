@@ -20,6 +20,13 @@ enum TVServiceError: Error, Sendable, Equatable {
     case appLaunchFailure(String)
     /// No MAC address is on file for this TV yet — user must connect at least once while the TV is on.
     case macAddressUnknown
+    /// The TV never sent `ms.voiceApp.recording` after the voice key — Bixby didn't
+    /// start listening (older firmware, or the voice key didn't take).
+    case voiceNotReady
+    /// Microphone access was denied — user must enable it in Settings.
+    case microphoneDenied
+    /// The microphone capture engine failed to start.
+    case microphoneFailure(String)
 }
 
 extension TVServiceError: LocalizedError {
@@ -37,6 +44,9 @@ extension TVServiceError: LocalizedError {
         case .deviceInfoFailure(let detail): "Could not read TV info: \(detail)"
         case .appLaunchFailure(let detail): "Could not launch app: \(detail)"
         case .macAddressUnknown: "Connect to the TV at least once (while it's on) to capture its MAC."
+        case .voiceNotReady: "The TV didn't start listening for voice. Try again."
+        case .microphoneDenied: "Microphone access is off. Enable it in Settings → RemoteTV."
+        case .microphoneFailure(let detail): "Couldn't start the microphone: \(detail)"
         }
     }
 }

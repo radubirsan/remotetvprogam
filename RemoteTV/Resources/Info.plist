@@ -31,6 +31,8 @@
 	</array>
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>RemoteTV uses local network access to find and control your Samsung TV.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>RemoteTV uses the microphone to send voice commands to your Samsung TV's assistant.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

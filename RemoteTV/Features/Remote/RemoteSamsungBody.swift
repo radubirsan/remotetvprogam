@@ -22,9 +22,11 @@ struct RemoteSamsungBody: View {
     let onCommand: (TVCommand) async -> Void
     let onLiveTV: () async -> Void
     let onLaunchApp: (String) async -> Void
-    /// Mic button action — types a (currently fixed) phrase into the TV's focused
-    /// text field. Sync wrapper like `onPowerTap`; the parent bridges to the async VM.
-    let onMic: () -> Void
+    /// Hold-to-talk mic. `onMicDown` fires when the finger lands (open Bixby + start
+    /// streaming), `onMicUp` when it lifts (stop + send end-of-stream marker). Sync
+    /// wrappers like `onPowerTap`; the parent bridges to the async VM.
+    let onMicDown: () -> Void
+    let onMicUp: () -> Void
     /// Power-button visual mode (green / amber ring). Parent picks this based on
     /// `RemoteViewModel.isInWakeMode`.
     let powerMode: PowerButton.Mode
@@ -74,14 +76,9 @@ struct RemoteSamsungBody: View {
             }
             .position(x: Self.width / 2, y: 50)
 
-            // Mic — types a phrase into the TV's focused text field (SendInputString).
-            CircleButton(size: 70, accessibilityLabel: "Send voice text to TV") {
-                onMic()
-            } content: {
-                Image(systemName: "mic")
-                    .font(.system(size: 25, weight: .regular))
-            }
-            .position(x: 265, y: 71)
+            // Mic — hold to talk to Bixby (streams audio while held).
+            HoldToTalkMic(size: 70, onDown: onMicDown, onUp: onMicUp)
+                .position(x: 265, y: 71)
 
             // ROW 2: Settings/123 (under power). Opens the modal `NumberPadView` so
             // the user can tap a channel number — each digit dispatches `KEY_<n>` to
@@ -269,5 +266,53 @@ struct RemoteSamsungBody: View {
 
     private func fire(_ command: TVCommand) {
         Task { await onCommand(command) }
+    }
+}
+
+/// Press-and-hold mic button. Fires `onDown` the instant the finger lands and `onUp`
+/// when it lifts, so the parent can stream voice for exactly as long as the user holds
+/// — mirroring the physical remote's "hold the mic button and talk" gesture. Turns red
+/// and shrinks slightly while held. Uses a zero-distance `DragGesture` (like
+/// ``PowerButton``) because a plain `Button` only reports a completed tap, not the
+/// down/up edges we need.
+private struct HoldToTalkMic: View {
+    let size: CGFloat
+    let onDown: () -> Void
+    let onUp: () -> Void
+
+    @State private var pressing = false
+    @State private var hapticTrigger = 0
+
+    var body: some View {
+        ZStack {
+            Circle().fill(RemoteTheme.buttonFace)
+                .overlay(Circle().stroke(Color.white.opacity(0.05), lineWidth: 0.5))
+                .shadow(color: .black.opacity(0.5), radius: 3, y: 2)
+            Image(systemName: pressing ? "mic.fill" : "mic")
+                .font(.system(size: 25, weight: .regular))
+                .foregroundStyle(pressing ? Color.red : RemoteTheme.iconColor)
+        }
+        .frame(width: size, height: size)
+        .scaleEffect(pressing ? 0.94 : 1)
+        .animation(.easeOut(duration: 0.12), value: pressing)
+        .contentShape(.circle)
+        .gesture(
+            DragGesture(minimumDistance: 0)
+                .onChanged { _ in
+                    guard !pressing else { return }
+                    pressing = true
+                    hapticTrigger &+= 1
+                    onDown()
+                }
+                .onEnded { _ in
+                    guard pressing else { return }
+                    pressing = false
+                    onUp()
+                }
+        )
+        .sensoryFeedback(.impact(weight: .medium), trigger: hapticTrigger)
+        .accessibilityElement()
+        .accessibilityAddTraits(.isButton)
+        .accessibilityLabel("Hold to talk to Bixby")
     }
 }

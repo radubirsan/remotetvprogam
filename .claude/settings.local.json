@@ -17,7 +17,8 @@
       "Bash(perl -e 'alarm 6; exec @ARGV' dns-sd -B _samsungmsf._tcp local.)",
       "Bash(perl -e 'alarm 5; exec @ARGV' dns-sd -B _airplay._tcp local.)",
       "WebSearch",
-      "WebFetch(domain:github.com)"
+      "WebFetch(domain:github.com)",
+      "Bash(awk '/struct CircleButton/,/^}/' RemoteSamsungStyle.swift)"
     ]
   }
 }

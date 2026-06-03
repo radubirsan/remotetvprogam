@@ -32,6 +32,26 @@ private final class FakeTVService: TVService {
         sentTexts.append(text)
     }
 
+    var sentRawKeys: [(code: String, hold: Bool)] = []
+    func sendRawKey(_ keyCode: String, hold: Bool) async throws {
+        if let error = sendError { throw error }
+        sentRawKeys.append((keyCode, hold))
+    }
+
+    var voiceSessionsBegun = 0
+    var voiceChunks: [Data] = []
+    var voiceSessionsEnded = 0
+    func beginVoiceSession() async throws {
+        if let error = sendError { throw error }
+        voiceSessionsBegun += 1
+    }
+    func sendVoiceChunk(_ pcm: Data) async throws {
+        voiceChunks.append(pcm)
+    }
+    func endVoiceSession() async {
+        voiceSessionsEnded += 1
+    }
+
     func launch(appID: String) async throws {
         if let error = launchError { throw error }
         launchedAppIDs.append(appID)

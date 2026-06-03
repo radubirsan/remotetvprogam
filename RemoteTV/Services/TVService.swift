@@ -20,6 +20,23 @@ protocol TVService: AnyObject {
     /// focus. Used by the voice/dictation affordance to push recognized text to a
     /// search box without per-letter key navigation.
     func sendText(_ text: String) async throws
+    /// Sends an arbitrary key code over the control channel — escape hatch for
+    /// experimenting with codes that aren't in ``TVCommand`` (e.g. probing for the
+    /// frame that opens Bixby). `hold == true` simulates a press-and-hold by sending
+    /// a `Press` frame, waiting, then `Release`. Outbound frames land in ``sniffLog``
+    /// so the caller can correlate them with the TV's response.
+    func sendRawKey(_ keyCode: String, hold: Bool) async throws
+    /// Opens the TV's voice assistant (Bixby) and waits until it's listening: sends the
+    /// `KEY_BT_VOICE` Press/Release toggle, then blocks until the TV reports
+    /// `ms.voiceApp.recording` (or throws ``TVServiceError/voiceNotReady`` on timeout).
+    /// Call ``sendVoiceChunk(_:)`` only after this returns.
+    func beginVoiceSession() async throws
+    /// Streams one chunk of microphone audio (raw PCM, 16-bit LE, mono, 16 kHz) to the
+    /// assistant as a binary control frame. Order matters — send chunks sequentially.
+    func sendVoiceChunk(_ pcm: Data) async throws
+    /// Ends the voice utterance: sends the empty end-of-stream marker and toggles the
+    /// mic back off. Best-effort; never throws.
+    func endVoiceSession() async
     /// Launches a Tizen app by ID. Works for both hard-coded shortcuts (``TVApp``) and
     /// dynamically discovered apps from ``requestInstalledApps()``.
     func launch(appID: String) async throws
