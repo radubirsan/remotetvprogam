@@ -243,6 +243,51 @@ final class RemoteViewModel {
         }
     }
 
+    /// A YouTube "radio" link to cast as a demo target. Carries a video id, an auto-radio
+    /// playlist, and a start offset — the three things YouTube's DIAL launch honours.
+    static let youtubeCastURL = "https://www.youtube.com/watch?v=qUundAa9j4M&list=RDqUundAa9j4M&start_radio=1&t=2649s"
+
+    /// Casts the YouTube link to the TV's YouTube app over the Lounge protocol — the same
+    /// path the cast icon uses, so the app opens straight to that video/playlist at the right
+    /// timestamp (not just YouTube's home screen). Parses the watch URL into its video id,
+    /// playlist, and start offset and hands them to the service's full DIAL+Lounge flow.
+    func castYouTube() async {
+        guard let parsed = Self.parseYouTube(from: Self.youtubeCastURL) else {
+            lastError = "Could not parse the YouTube URL"
+            return
+        }
+        do {
+            try await service.castYouTubeVideo(
+                videoId: parsed.videoId,
+                listId: parsed.listId,
+                startSeconds: parsed.startSeconds
+            )
+            lastError = nil
+        } catch let error as TVServiceError {
+            lastError = error.errorDescription
+        } catch {
+            lastError = error.localizedDescription
+        }
+    }
+
+    /// Splits a `youtube.com/watch?...` URL into the pieces the Lounge `setPlaylist` command
+    /// needs: `v` (video id, required), `list` (playlist, optional), and `t` (start time —
+    /// any trailing `s` stripped to bare seconds). Returns `nil` if there's no video id.
+    static func parseYouTube(from urlString: String) -> (videoId: String, listId: String?, startSeconds: Int)? {
+        guard let items = URLComponents(string: urlString)?.queryItems else { return nil }
+        func value(_ name: String) -> String? {
+            items.first { $0.name == name }?.value.flatMap { $0.isEmpty ? nil : $0 }
+        }
+        guard let videoId = value("v") else { return nil }
+        let listId = value("list")
+        var startSeconds = 0
+        if let t = value("t") {
+            let digits = t.hasSuffix("s") ? String(t.dropLast()) : t
+            startSeconds = Int(digits) ?? 0
+        }
+        return (videoId, listId, startSeconds)
+    }
+
     /// "Get me back to live TV" — a compound action that works from inside apps that would
     /// otherwise swallow `KEY_TV`. First sends `KEY_EXIT` (apps generally let this bubble
     /// up to Tizen), waits for the app to tear down, then selects the tuner with `KEY_TV`.

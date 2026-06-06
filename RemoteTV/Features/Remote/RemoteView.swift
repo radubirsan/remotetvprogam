@@ -113,7 +113,10 @@ struct RemoteView: View {
 
                 HStack(spacing: 0) {
                 if sidePanel == .shortcuts {
-                    RemoteSidePanelShortcuts(onLaunch: viewModel.launchApp)
+                    RemoteSidePanelShortcuts(
+                        onLaunch: viewModel.launchApp,
+                        onCastYouTube: { await viewModel.castYouTube() }
+                    )
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                         .transition(.move(edge: .leading).combined(with: .opacity))
                 }

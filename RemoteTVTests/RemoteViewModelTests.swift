@@ -57,6 +57,12 @@ private final class FakeTVService: TVService {
         launchedAppIDs.append(appID)
     }
 
+    var castedYouTubeVideos: [(videoId: String, listId: String?, startSeconds: Int)] = []
+    func castYouTubeVideo(videoId: String, listId: String?, startSeconds: Int) async throws {
+        if let error = launchError { throw error }
+        castedYouTubeVideos.append((videoId, listId, startSeconds))
+    }
+
     func requestInstalledApps() async throws -> [InstalledApp] {
         try installedAppsResult.get()
     }
@@ -202,6 +208,40 @@ struct RemoteViewModelTests {
         await vm.reconnectIfNeeded()
 
         #expect(service.reconnectCallCount == 1)
+    }
+
+    @Test func parseYouTubeExtractsVideoListAndTime() {
+        let parsed = RemoteViewModel.parseYouTube(
+            from: "https://www.youtube.com/watch?v=qUundAa9j4M&list=RDqUundAa9j4M&start_radio=1&t=2649s"
+        )
+        #expect(parsed?.videoId == "qUundAa9j4M")
+        #expect(parsed?.listId == "RDqUundAa9j4M")
+        #expect(parsed?.startSeconds == 2649)
+    }
+
+    @Test func parseYouTubeOmitsMissingKeys() {
+        let parsed = RemoteViewModel.parseYouTube(from: "https://www.youtube.com/watch?v=abc123")
+        #expect(parsed?.videoId == "abc123")
+        #expect(parsed?.listId == nil)
+        #expect(parsed?.startSeconds == 0)
+    }
+
+    @Test func parseYouTubeNilWithoutVideoId() {
+        #expect(RemoteViewModel.parseYouTube(from: "https://www.youtube.com/feed/trending") == nil)
+    }
+
+    @Test func castYouTubeForwardsParsedVideoToService() async {
+        let service = FakeTVService()
+        service.state = .connected
+        let vm = RemoteViewModel(device: makeDevice(), service: service)
+
+        await vm.castYouTube()
+
+        #expect(service.castedYouTubeVideos.count == 1)
+        #expect(service.castedYouTubeVideos.first?.videoId == "qUundAa9j4M")
+        #expect(service.castedYouTubeVideos.first?.listId == "RDqUundAa9j4M")
+        #expect(service.castedYouTubeVideos.first?.startSeconds == 2649)
+        #expect(vm.lastError == nil)
     }
 
     @Test func reconnectIfNeededClearsLastErrorOnRecovery() async {

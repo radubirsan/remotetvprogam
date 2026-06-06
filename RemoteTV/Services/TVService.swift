@@ -40,6 +40,12 @@ protocol TVService: AnyObject {
     /// Launches a Tizen app by ID. Works for both hard-coded shortcuts (``TVApp``) and
     /// dynamically discovered apps from ``requestInstalledApps()``.
     func launch(appID: String) async throws
+    /// Casts a specific YouTube video to the TV's YouTube app. Launches the app via DIAL,
+    /// reads the `screenId` it publishes, and drives playback over YouTube's private Lounge
+    /// API — the same path Chromecast and the phone app use, so it opens the exact video
+    /// (optionally a playlist + start offset) with no on-TV pairing code. The Lounge API is
+    /// undocumented and can break if Google changes it.
+    func castYouTubeVideo(videoId: String, listId: String?, startSeconds: Int) async throws
     /// Returns the apps the TV has installed, out of the curated catalog in
     /// ``KnownTVApps``. Implementations probe `GET /api/v2/applications/<id>` per ID since
     /// `ed.installedApp.get` is no-op'd on recent Tizen builds.

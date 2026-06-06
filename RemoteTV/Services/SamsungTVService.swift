@@ -287,6 +287,105 @@ final class SamsungTVService: TVService {
         }
     }
 
+    /// Candidate DIAL "Application-URL" bases for Samsung TVs, most-likely first. The real
+    /// base is normally discovered via SSDP (the `Application-URL` response header on the
+    /// device-description fetch), but SSDP is deliberately *not* used in this app — it forces
+    /// the multicast entitlement and was ripped out of discovery. So instead we probe the
+    /// handful of bases Samsung has actually shipped, GETting `<base>/YouTube` until one
+    /// returns the app-state document:
+    ///   * `:8080/ws/app/`  — singular "app", port 8080 (common on 2018–2021 Tizen; the one
+    ///                        that answers on our test set)
+    ///   * `/ws/app/`       — singular, port 80 (some firmware / reverse-engineering writeups)
+    ///   * `:8080/ws/apps/` — plural, port 8080 (textbook DIAL path; some firmware)
+    /// Used only for the screenId state GET now — YouTube is foregrounded via the plain
+    /// app-launch REST, not DIAL, to avoid triggering Samsung Multi View.
+    private func dialBaseURLs(ip: String) -> [String] {
+        [
+            "http://\(ip):8080/ws/app",
+            "http://\(ip)/ws/app",
+            "http://\(ip):8080/ws/apps",
+        ]
+    }
+
+    /// Casts a specific YouTube video (optionally a playlist + start offset) to the TV's
+    /// YouTube app, the way Chromecast and the phone app do it:
+    ///   1. DIAL-launch YouTube (opens the app, satisfies the Origin/CSRF check).
+    ///   2. Read the `screenId` the app publishes in its DIAL `additionalData`.
+    ///   3. Drive playback over the private YouTube **Lounge** API (token → bind → setPlaylist).
+    ///
+    /// The Lounge API is undocumented and can break if Google changes it. Every stage logs to
+    /// the sniff log so a failure points at exactly which step broke.
+    func castYouTubeVideo(videoId: String, listId: String?, startSeconds: Int) async throws {
+        guard state == .connected, currentDevice != nil else {
+            throw TVServiceError.notConnected
+        }
+
+        // Foreground YouTube via the plain REST **app-launch** (port 8001), NOT a DIAL launch.
+        // On these Samsung sets a DIAL "cast" launch that arrives while another source (live TV,
+        // Netflix) is active makes the TV pop **Multi View** — YouTube and the old source side
+        // by side. The normal app-launch opens YouTube fullscreen, single-view, with no cast
+        // semantics; Lounge then plays the video inside that already-foreground app. (The
+        // screenId still comes from the DIAL *state* document below — a GET, which doesn't
+        // trigger Multi View.)
+        try await launch(appID: TVApp.youtube.appID)
+
+        let screenId = try await fetchYouTubeScreenId()
+
+        appendSniff(.info, "Lounge: connecting (screenId=\(screenId.prefix(12))…)")
+        let client = YouTubeLoungeClient(senderName: "RemoteTV")
+        do {
+            try await client.play(screenId: screenId, videoId: videoId, listId: listId, startSeconds: startSeconds)
+            appendSniff(.info, "Lounge: setPlaylist sent (v=\(videoId), t=\(startSeconds))")
+        } catch {
+            appendSniff(.info, "Lounge error: \(error)")
+            throw TVServiceError.appLaunchFailure("Lounge: \(error)")
+        }
+    }
+
+    /// Reads the YouTube app's `screenId` from its DIAL `<additionalData>`. YouTube registers
+    /// its screen with the TV's DIAL/MDX service whenever it's running, regardless of how it
+    /// was launched — so we just GET the DIAL state document (across the candidate bases) and
+    /// scrape the id. The app populates it a beat after launch, so we poll. GET is sent
+    /// *without* an Origin header — only state-changing POSTs are CSRF-gated, and a stray
+    /// Origin could itself trip a 403.
+    private func fetchYouTubeScreenId() async throws -> String {
+        guard let device = currentDevice else { throw TVServiceError.notConnected }
+        let bases = dialBaseURLs(ip: device.ip)
+        for attempt in 1...10 {
+            for base in bases {
+                guard let url = URL(string: "\(base)/YouTube") else { continue }
+                var request = URLRequest(url: url)
+                request.httpMethod = "GET"
+                request.timeoutInterval = 4
+                if let (data, response) = try? await URLSession.shared.data(for: request),
+                   let http = response as? HTTPURLResponse, http.statusCode == 200,
+                   let xml = String(data: data, encoding: .utf8) {
+                    if let screenId = Self.firstRegexMatch(in: xml, pattern: "<screenId>([^<]+)</screenId>") {
+                        appendSniff(.inbound, "DIAL YouTube screenId=\(screenId)")
+                        return screenId
+                    }
+                    if attempt == 1 {
+                        appendSniff(.inbound, "DIAL YouTube state (no screenId yet): \(xml.prefix(220))")
+                    }
+                }
+            }
+            try? await Task.sleep(for: .milliseconds(800))
+        }
+        throw TVServiceError.appLaunchFailure("No YouTube screenId in DIAL additionalData")
+    }
+
+    /// First capture group of `pattern` in `string`, or `nil`. Small shared regex helper for
+    /// scraping the DIAL XML and Lounge responses without a full parser. `nonisolated` because
+    /// it's a pure function called from the nonisolated ``YouTubeLoungeClient``.
+    nonisolated static func firstRegexMatch(in string: String, pattern: String) -> String? {
+        guard let regex = try? NSRegularExpression(pattern: pattern) else { return nil }
+        let range = NSRange(string.startIndex..., in: string)
+        guard let match = regex.firstMatch(in: string, range: range),
+              match.numberOfRanges > 1,
+              let group = Range(match.range(at: 1), in: string) else { return nil }
+        return String(string[group])
+    }
+
     /// Probes each ID in ``KnownTVApps/catalog`` via `GET /api/v2/applications/<id>` in
     /// parallel. A 200 means the app is installed; anything else (404, timeout) means it
     /// isn't. The TV's response body usually carries the canonical display name, which we
@@ -742,5 +841,165 @@ final class SamsungTVService: TVService {
 
     private struct AppInfo: Decodable {
         let name: String?
+    }
+}
+
+/// Minimal client for YouTube's private **Lounge** API — the cloud protocol the YouTube
+/// phone app and Chromecast use to control the YouTube-on-TV app. It is undocumented and
+/// **can break whenever Google changes it**. The wire format here is derived from the
+/// `casttube` (pychromecast) and `ytcast` projects.
+///
+/// Given a `screenId` (read from the TV's DIAL `additionalData`), ``play(screenId:videoId:listId:startSeconds:)``
+/// runs the three-step handshake — fetch a lounge token, open a bind session to obtain the
+/// `SID`/`gsessionid`, then send a `setPlaylist` command — to start a specific video on the
+/// screen, no on-TV pairing code required.
+struct YouTubeLoungeClient: Sendable {
+    enum LoungeError: Error, CustomStringConvertible {
+        case http(stage: String, status: Int, body: String)
+        case missingToken
+        case missingSessionIds
+        case badResponse
+
+        var description: String {
+            switch self {
+            case let .http(stage, status, body): return "\(stage) HTTP \(status) \(body)"
+            case .missingToken:      return "no loungeToken in response"
+            case .missingSessionIds: return "no SID/gsessionid in bind response"
+            case .badResponse:       return "unexpected response"
+            }
+        }
+    }
+
+    /// Name shown on the TV's "connected device" indicator.
+    let senderName: String
+
+    private static let tokenURL = URL(string: "https://www.youtube.com/api/lounge/pairing/get_lounge_token_batch")!
+    private static let bindURL = "https://www.youtube.com/api/lounge/bc/bind"
+    private static let origin = "https://www.youtube.com"
+    // A desktop UA — the Lounge endpoint is pickier when the UA looks like an unknown client.
+    private static let userAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.45 Safari/537.36"
+
+    func play(screenId: String, videoId: String, listId: String?, startSeconds: Int) async throws {
+        let token = try await loungeToken(screenId: screenId)
+        let session = try await sessionIds(loungeToken: token)
+        try await setPlaylist(
+            loungeToken: token,
+            session: session,
+            videoId: videoId,
+            listId: listId,
+            startSeconds: startSeconds
+        )
+    }
+
+    // MARK: - Steps
+
+    /// `POST get_lounge_token_batch` with `screen_ids=<id>` → `screens[0].loungeToken`.
+    private func loungeToken(screenId: String) async throws -> String {
+        var request = URLRequest(url: Self.tokenURL)
+        request.httpMethod = "POST"
+        request.timeoutInterval = 15
+        applyCommonHeaders(&request, formEncoded: true)
+        request.httpBody = Self.formBody(["screen_ids": screenId])
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+        try Self.requireOK(response, data, stage: "lounge token")
+        guard
+            let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+            let screens = json["screens"] as? [[String: Any]],
+            let token = screens.first?["loungeToken"] as? String, !token.isEmpty
+        else { throw LoungeError.missingToken }
+        return token
+    }
+
+    /// Opens a bind session (RID=1, all params in the query string, empty body) and scrapes
+    /// the `SID` (`"c","…"`) and `gsessionid` (`"S","…"`) out of the chunked response.
+    private func sessionIds(loungeToken: String) async throws -> (sid: String, gsession: String) {
+        var components = URLComponents(string: Self.bindURL)!
+        components.queryItems = [
+            .init(name: "CVER", value: "1"),
+            .init(name: "RID", value: "1"),
+            .init(name: "VER", value: "8"),
+            .init(name: "app", value: "youtube-desktop"),
+            .init(name: "device", value: "REMOTE_CONTROL"),
+            .init(name: "id", value: "remote"),
+            .init(name: "loungeIdToken", value: loungeToken),
+            .init(name: "name", value: senderName),
+        ]
+        var request = URLRequest(url: components.url!)
+        request.httpMethod = "POST"
+        request.timeoutInterval = 15
+        applyCommonHeaders(&request, formEncoded: false)
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+        try Self.requireOK(response, data, stage: "bind")
+        let body = String(data: data, encoding: .utf8) ?? ""
+        guard
+            let sid = SamsungTVService.firstRegexMatch(in: body, pattern: "\"c\",\"([^\"]+)\""),
+            let gsession = SamsungTVService.firstRegexMatch(in: body, pattern: "\"S\",\"([^\"]+)\"")
+        else { throw LoungeError.missingSessionIds }
+        return (sid, gsession)
+    }
+
+    /// `POST bc/bind?SID=…&gsessionid=…` (RID=2) with the `setPlaylist` command in the form
+    /// body. `req0_listId` is included for a radio/playlist mix; `req0_videoIds` carries the
+    /// single id so playback starts even when no list is given.
+    private func setPlaylist(
+        loungeToken: String,
+        session: (sid: String, gsession: String),
+        videoId: String,
+        listId: String?,
+        startSeconds: Int
+    ) async throws {
+        var components = URLComponents(string: Self.bindURL)!
+        components.queryItems = [
+            .init(name: "CVER", value: "1"),
+            .init(name: "RID", value: "2"),
+            .init(name: "SID", value: session.sid),
+            .init(name: "VER", value: "8"),
+            .init(name: "gsessionid", value: session.gsession),
+            .init(name: "loungeIdToken", value: loungeToken),
+        ]
+        var fields = [
+            "count": "1",
+            "req0__sc": "setPlaylist",
+            "req0_videoId": videoId,
+            "req0_currentTime": String(startSeconds),
+            "req0_currentIndex": "0",
+            "req0_videoIds": videoId,
+        ]
+        if let listId, !listId.isEmpty { fields["req0_listId"] = listId }
+
+        var request = URLRequest(url: components.url!)
+        request.httpMethod = "POST"
+        request.timeoutInterval = 15
+        applyCommonHeaders(&request, formEncoded: true)
+        request.httpBody = Self.formBody(fields)
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+        try Self.requireOK(response, data, stage: "setPlaylist")
+    }
+
+    // MARK: - Helpers
+
+    private func applyCommonHeaders(_ request: inout URLRequest, formEncoded: Bool) {
+        request.setValue(Self.origin, forHTTPHeaderField: "Origin")
+        request.setValue(Self.userAgent, forHTTPHeaderField: "User-Agent")
+        if formEncoded {
+            request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
+        }
+    }
+
+    private static func formBody(_ fields: [String: String]) -> Data {
+        var components = URLComponents()
+        components.queryItems = fields.map { URLQueryItem(name: $0.key, value: $0.value) }
+        return (components.percentEncodedQuery ?? "").data(using: .utf8) ?? Data()
+    }
+
+    private static func requireOK(_ response: URLResponse, _ data: Data, stage: String) throws {
+        guard let http = response as? HTTPURLResponse else { throw LoungeError.badResponse }
+        guard http.statusCode == 200 else {
+            throw LoungeError.http(stage: stage, status: http.statusCode,
+                                   body: String(data: data.prefix(160), encoding: .utf8) ?? "")
+        }
     }
 }

@@ -18,7 +18,15 @@
       "Bash(perl -e 'alarm 5; exec @ARGV' dns-sd -B _airplay._tcp local.)",
       "WebSearch",
       "WebFetch(domain:github.com)",
-      "Bash(awk '/struct CircleButton/,/^}/' RemoteSamsungStyle.swift)"
+      "Bash(awk '/struct CircleButton/,/^}/' RemoteSamsungStyle.swift)",
+      "Bash(xcodebuild build *)",
+      "Bash(xcodebuild test *)",
+      "WebFetch(domain:gist.github.com)",
+      "WebFetch(domain:www.gabriel.urdhr.fr)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash(gh api *)",
+      "Bash(curl -s \"https://api.github.com/repos/MarcoLucidi01/ytcast/contents/youtube\")",
+      "Bash(curl *)"
     ]
   }
 }
