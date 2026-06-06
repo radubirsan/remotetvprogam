@@ -71,7 +71,7 @@ final class SamsungTVService: TVService {
         let (storedToken, mac) = await resolveStoredToken(for: device)
 
         do {
-            try await performHandshake(device: device, token: storedToken, mac: mac)
+            try await handshakeWithRetry(device: device, token: storedToken, mac: mac)
         } catch TVServiceError.tokenRejected where storedToken != nil {
             // Stored token was stale — wipe under every key it was written
             // under (IP + MAC) and re-pair. Re-resolve MAC fresh from the
@@ -81,7 +81,7 @@ final class SamsungTVService: TVService {
             await deleteToken(for: device, mac: mac)
             let retryMAC = await freshMAC(for: device) ?? mac
             do {
-                try await performHandshake(device: device, token: nil, mac: retryMAC)
+                try await handshakeWithRetry(device: device, token: nil, mac: retryMAC)
             } catch {
                 state = .failed(mapError(error))
                 throw error
@@ -89,6 +89,45 @@ final class SamsungTVService: TVService {
         } catch {
             state = .failed(mapError(error))
             throw error
+        }
+    }
+
+    /// Runs the handshake, retrying a few times on *transient* network failures. At cold
+    /// launch the WebSocket can fire microseconds before iOS has brought the local-network
+    /// path up, failing instantly with `-1009`/`ENETDOWN` — which left the status indicator
+    /// grey until the user relaunched (the "every second run" bug). Token/auth failures are
+    /// **not** retried here: they propagate so `connect()`'s re-pair path handles them.
+    private func handshakeWithRetry(device: TVDevice, token: String?, mac: String?) async throws {
+        let maxAttempts = 4
+        var attempt = 1
+        while true {
+            do {
+                try await performHandshake(device: device, token: token, mac: mac)
+                return
+            } catch let error where attempt < maxAttempts && Self.isTransientNetworkError(error) {
+                appendSniff(.info, "connect attempt \(attempt) failed (network not ready) — retrying")
+                await teardown()
+                state = .connecting
+                try? await Task.sleep(for: .milliseconds(600))
+                attempt += 1
+            }
+        }
+    }
+
+    /// True for errors that mean "the network path wasn't ready", not "the TV said no".
+    /// These are worth a quick retry; auth/protocol failures (which arrive as
+    /// ``TVServiceError``, not `URLError`) are not and fall through to `.failed`.
+    private static func isTransientNetworkError(_ error: Error) -> Bool {
+        guard let urlError = error as? URLError else { return false }
+        switch urlError.code {
+        case .notConnectedToInternet,   // -1009 — ENETDOWN, the launch-race symptom
+             .networkConnectionLost,    // -1005
+             .cannotConnectToHost,      // -1004 — TV NIC still coming up
+             .timedOut,                 // -1001
+             .cannotFindHost:           // -1003
+            return true
+        default:
+            return false
         }
     }
 
@@ -705,12 +744,11 @@ final class SamsungTVService: TVService {
 
     private func awaitHandshake(on task: URLSessionWebSocketTask) async throws -> HandshakeResult {
         while true {
-            let message: URLSessionWebSocketTask.Message
-            do {
-                message = try await task.receive()
-            } catch {
-                throw TVServiceError.webSocketFailure(String(describing: error))
-            }
+            // Let a receive() failure propagate *raw* (don't stringify it). At cold launch
+            // this is typically a transient "network path not ready" error (-1009/ENETDOWN);
+            // connect() inspects the URLError code to decide whether to retry. mapError() still
+            // turns it into a readable message for the final, give-up case.
+            let message = try await task.receive()
             recordInbound(message)
             guard let data = messageData(from: message) else { continue }
             if let result = parseHandshake(data) {
