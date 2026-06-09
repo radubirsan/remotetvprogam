@@ -71,6 +71,7 @@
 		B2000000000000000000F058 /* EPGGuide.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F058 /* EPGGuide.swift */; };
 		B2000000000000000000F059 /* EPGClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F059 /* EPGClient.swift */; };
 		B2000000000000000000F05E /* MicrophoneCaptureService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F05E /* MicrophoneCaptureService.swift */; };
+		B2000000000000000000F05F /* NetworkMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F05F /* NetworkMonitor.swift */; };
 		B2000000000000000000F05A /* EPGViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F05A /* EPGViewModel.swift */; };
 		B2000000000000000000F05B /* RemoteSidePanelEPG.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F05B /* RemoteSidePanelEPG.swift */; };
 		B2000000000000000000F05C /* NowOnTVPill.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F05C /* NowOnTVPill.swift */; };
@@ -175,6 +176,7 @@
 		A2000000000000000000F058 /* EPGGuide.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EPGGuide.swift; sourceTree = "<group>"; };
 		A2000000000000000000F059 /* EPGClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EPGClient.swift; sourceTree = "<group>"; };
 		A2000000000000000000F05E /* MicrophoneCaptureService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MicrophoneCaptureService.swift; sourceTree = "<group>"; };
+		A2000000000000000000F05F /* NetworkMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkMonitor.swift; sourceTree = "<group>"; };
 		A2000000000000000000F05A /* EPGViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EPGViewModel.swift; sourceTree = "<group>"; };
 		A2000000000000000000F05B /* RemoteSidePanelEPG.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteSidePanelEPG.swift; sourceTree = "<group>"; };
 		A2000000000000000000F05C /* NowOnTVPill.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NowOnTVPill.swift; sourceTree = "<group>"; };
@@ -298,6 +300,7 @@
 				A2000000000000000000F026 /* FileRememberedTVsStore.swift */,
 				A2000000000000000000F059 /* EPGClient.swift */,
 				A2000000000000000000F05E /* MicrophoneCaptureService.swift */,
+				A2000000000000000000F05F /* NetworkMonitor.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -532,6 +535,7 @@
 				B2000000000000000000F058 /* EPGGuide.swift in Sources */,
 				B2000000000000000000F059 /* EPGClient.swift in Sources */,
 				B2000000000000000000F05E /* MicrophoneCaptureService.swift in Sources */,
+				B2000000000000000000F05F /* NetworkMonitor.swift in Sources */,
 				B2000000000000000000F05A /* EPGViewModel.swift in Sources */,
 				B2000000000000000000F05B /* RemoteSidePanelEPG.swift in Sources */,
 				B2000000000000000000F05C /* NowOnTVPill.swift in Sources */,

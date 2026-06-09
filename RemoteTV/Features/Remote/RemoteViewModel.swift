@@ -245,7 +245,8 @@ final class RemoteViewModel {
 
     /// A YouTube "radio" link to cast as a demo target. Carries a video id, an auto-radio
     /// playlist, and a start offset — the three things YouTube's DIAL launch honours.
-    static let youtubeCastURL = "https://www.youtube.com/watch?v=qUundAa9j4M&list=RDqUundAa9j4M&start_radio=1&t=2649s"
+    static let youtubeCastURL = "https://www.youtube.com/watch?v=wL8DVHuWI7Y&list=RDqUundAa9j4M&index=3"
+    //static let youtubeCastURL = "https://www.youtube.com/watch?v=qUundAa9j4M&list=RDqUundAa9j4M&start_radio=1&t=2649s"
 
     /// Casts the YouTube link to the TV's YouTube app over the Lounge protocol — the same
     /// path the cast icon uses, so the app opens straight to that video/playlist at the right
