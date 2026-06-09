@@ -24,21 +24,56 @@ struct RootView: View {
     /// show Discovery. Stored as `String` (not `Data?`) so the value stays trivially
     /// human-readable in `defaults read` while still round-tripping through `Codable`.
     @AppStorage("lastRemoteDeviceJSON") private var lastRemoteDeviceJSON: String = ""
+    /// Set once the first-run setup wizard has been completed (or skipped).
+    @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
+    /// Flipped by the gear menu's "Setup guide" to replay onboarding on demand. Cleared when
+    /// the wizard finishes. Kept in `@AppStorage` so a deep child (the Remote toolbar) can
+    /// request it without threading a closure all the way up.
+    @AppStorage("onboardingReplayRequested") private var onboardingReplayRequested = false
 
     /// Watches the phone's network path. When Wi-Fi is off (so the LAN TV is unreachable),
     /// we cover the whole app with ``WiFiRequiredView`` rather than letting the remote look
     /// silently broken — the exact confusion that prompted this.
     @State private var networkMonitor = NetworkMonitor()
 
+    /// Show the wizard on a true first run (no TV set up yet) or whenever a replay is asked for.
+    private var showOnboarding: Bool {
+        onboardingReplayRequested || (!hasCompletedOnboarding && decodedDevice == nil)
+    }
+
     var body: some View {
-        content
-            .overlay {
-                if !networkMonitor.isOnLocalNetwork {
-                    WiFiRequiredView()
-                        .transition(.opacity)
-                }
+        Group {
+            if showOnboarding {
+                OnboardingView(
+                    service: service,
+                    discovery: discovery,
+                    rememberedTVsStore: rememberedTVsStore,
+                    isReplay: onboardingReplayRequested,
+                    onFinished: finishOnboarding
+                )
+            } else {
+                content
             }
-            .animation(.easeInOut(duration: 0.25), value: networkMonitor.isOnLocalNetwork)
+        }
+        .overlay {
+            // Suppress the global Wi-Fi takeover during onboarding — its network step
+            // handles connectivity itself, and two overlays fighting looks broken.
+            if !showOnboarding && !networkMonitor.isOnLocalNetwork {
+                WiFiRequiredView()
+                    .transition(.opacity)
+            }
+        }
+        .animation(.easeInOut(duration: 0.25), value: networkMonitor.isOnLocalNetwork)
+        .animation(.snappy, value: showOnboarding)
+    }
+
+    /// Wizard completion. A non-nil device is the freshly-paired TV → make it active and open
+    /// the remote. Nil means finished/skipped without a new pairing → keep whatever was active
+    /// (replay) or fall through to Discovery (first run).
+    private func finishOnboarding(_ device: TVDevice?) {
+        if let device { persistActiveDevice(device) }
+        hasCompletedOnboarding = true
+        onboardingReplayRequested = false
     }
 
     @ViewBuilder

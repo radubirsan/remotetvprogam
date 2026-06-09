@@ -31,6 +31,9 @@ struct RemoteView: View {
     /// Persisted across launches; default is no side panel so first-run users see
     /// the remote at full size.
     @AppStorage("remoteSidePanel") private var sidePanel: SidePanelMode = .none
+    /// Set by the "Setup guide" menu item to replay onboarding; ``RootView`` watches the
+    /// same key and presents the wizard over the remote.
+    @AppStorage("onboardingReplayRequested") private var onboardingReplayRequested = false
     /// Drives the modal `PowerOnHelpSheet` that the power button's long-press in
     /// wake mode presents — explains why a magic packet might not be reaching the
     /// TV (Network Standby disabled, MAC missing, etc.).
@@ -229,6 +232,9 @@ struct RemoteView: View {
 
                     Divider()
 
+                    Button("Setup guide", systemImage: "sparkles") {
+                        onboardingReplayRequested = true
+                    }
                     Button("Disconnect & switch mode", systemImage: "arrow.left.arrow.right") {
                         Task {
                             await viewModel.disconnect()
