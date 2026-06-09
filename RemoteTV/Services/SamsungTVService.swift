@@ -26,10 +26,14 @@ final class SamsungTVService: TVService {
     /// feel snappy when the user uses the physical remote to standby/wake the TV,
     /// long enough not to flood the TV's tiny HTTP server.
     private let infoPollInterval: Duration = .seconds(6)
+    /// How often the foreground heartbeat pings the socket to keep it warm and catch a
+    /// silently-dropped connection before the user presses a button.
+    private let heartbeatInterval: Duration = .seconds(15)
     private var session: URLSession?
     private var webSocketTask: URLSessionWebSocketTask?
     private var receiveTask: Task<Void, Never>?
     private var infoPollTask: Task<Void, Never>?
+    private var heartbeatTask: Task<Void, Never>?
     private var trustDelegate: SamsungTrustDelegate?
     private var currentDevice: TVDevice?
     /// The token that authenticated the live socket, and the MAC we've already
@@ -572,6 +576,32 @@ final class SamsungTVService: TVService {
         }
     }
 
+    /// Foreground keepalive. Samsung TVs (and NATs in between) silently drop an idle
+    /// remote-control socket without sending a close frame, which the parked `receive()`
+    /// loop wouldn't notice until the next send — so the first key press after a long idle
+    /// would fail. Pinging every ``heartbeatInterval`` keeps the socket warm and, if a pong
+    /// doesn't come back, kicks a reconnect *before* the user touches a button.
+    ///
+    /// The reconnect runs in its own detached `Task` on purpose: `connect()` calls
+    /// `teardown()`, which cancels *this* heartbeat task — doing the reconnect inline would
+    /// run `connect()` inside a cancelled task and abort its `Task.sleep`/receive mid-flight.
+    /// We hand it off and `return`; a successful reconnect starts a fresh heartbeat.
+    private func startHeartbeat() {
+        heartbeatTask?.cancel()
+        heartbeatTask = Task { [weak self] in
+            while !Task.isCancelled {
+                try? await Task.sleep(for: self?.heartbeatInterval ?? .seconds(15))
+                guard let self else { return }
+                guard !Task.isCancelled, self.state == .connected else { continue }
+                if await self.isSocketAlive() == false, let device = self.currentDevice {
+                    self.appendSniff(.info, "heartbeat: no pong — reconnecting")
+                    Task { [weak self] in try? await self?.connect(to: device) }
+                    return
+                }
+            }
+        }
+    }
+
     private func refreshTVInfo(for device: TVDevice, persistRememberedTV: Bool) async {
         guard let deviceInfoService else { return }
         let info = try? await deviceInfoService.fetch(ip: device.ip)
@@ -635,6 +665,7 @@ final class SamsungTVService: TVService {
             state = .connected
             startReceiveLoop(on: task)
             startInfoPolling(for: device)
+            startHeartbeat()
         case .unauthorized:
             await teardown()
             throw TVServiceError.tokenRejected
@@ -827,6 +858,8 @@ final class SamsungTVService: TVService {
         appendSniff(.info, "ws closed code=\(code.rawValue) normal=\(normal)")
         infoPollTask?.cancel()
         infoPollTask = nil
+        heartbeatTask?.cancel()
+        heartbeatTask = nil
         tvPowerState = .unknown
         if normal {
             state = .disconnected
@@ -840,6 +873,8 @@ final class SamsungTVService: TVService {
         receiveTask = nil
         infoPollTask?.cancel()
         infoPollTask = nil
+        heartbeatTask?.cancel()
+        heartbeatTask = nil
         tvPowerState = .unknown
         currentToken = nil
         currentMAC = nil
