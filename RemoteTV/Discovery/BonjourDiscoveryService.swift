@@ -33,6 +33,12 @@ actor BonjourDiscoveryService: TVDiscoveryService {
     /// the Local Network permission prompt is up. The first subsequent `.ready` means
     /// the user just tapped Allow and we should re-issue the PTR query.
     private var hasObservedWaiting: Bool = false
+    /// IPs already emitted onto the stream (from Bonjour *or* the subnet scan) so the two
+    /// discovery paths never double-yield the same TV. The consumer also dedupes by IP, but
+    /// gating here keeps the stream clean.
+    private var yieldedIPs: Set<String> = []
+    /// Drives the direct subnet scan. Cancelled on `stop()`.
+    private var subnetScanTask: Task<Void, Never>?
 
     init(serviceType: String = "_samsungmsf._tcp") {
         self.serviceType = serviceType
@@ -49,8 +55,10 @@ actor BonjourDiscoveryService: TVDiscoveryService {
     func start() async {
         await stop()
         seenIdentifiers = []
+        yieldedIPs = []
         hasFoundResults = false
         hasObservedWaiting = false
+        startSubnetScan()
 
         // On a fresh install, iOS does not always show the Local Network permission prompt
         // just because `NWBrowser` is browsing — the browser can stay in `.ready` while
@@ -96,13 +104,14 @@ actor BonjourDiscoveryService: TVDiscoveryService {
         browser.start(queue: queue)
     }
 
-    /// Two-step proactive re-query schedule that fires only when no results have
-    /// arrived yet. The fresh-install failure mode is well-defined: `NWBrowser`
-    /// transitions to `.waiting` while the Local Network permission prompt is up,
-    /// drops the in-flight PTR query, then settles in `.ready` once the user taps
-    /// Allow — but it never re-broadcasts. We reissue at `+3s` and `+7s` so a TV
-    /// that didn't happen to send an unsolicited announcement during the prompt
-    /// window still gets surfaced before the empty-state timer fires.
+    /// Two-step proactive re-query schedule for the fresh-install case: `NWBrowser` goes
+    /// `.waiting` while the Local Network prompt is up, drops the in-flight PTR query, then
+    /// settles `.ready` once the user taps Allow — but never re-broadcasts. We reissue at `+3s`
+    /// and `+7s` so a TV that didn't announce during the prompt window still surfaces.
+    ///
+    /// We deliberately keep this gentle (and stop once results arrive): restarting `NWBrowser`
+    /// tears down the live listener, so churning it actually *misses* unsolicited announcements
+    /// from late TVs. Fast multi-TV discovery is instead handled by the direct subnet scan.
     private func scheduleProactiveRequery() {
         requeryTask = Task { [weak self] in
             for delay: Duration in [.seconds(3), .seconds(7)] {
@@ -162,6 +171,8 @@ actor BonjourDiscoveryService: TVDiscoveryService {
     func stop() async {
         requeryTask?.cancel()
         requeryTask = nil
+        subnetScanTask?.cancel()
+        subnetScanTask = nil
         browser?.cancel()
         browser = nil
         for resolver in resolvers {
@@ -224,12 +235,100 @@ actor BonjourDiscoveryService: TVDiscoveryService {
         connection.cancel()
         resolvers.removeAll { $0 === connection }
         guard let ip else { return }
-        continuation?.yield(DiscoveredTV(
+        emit(DiscoveredTV(
             ip: ip,
             friendlyName: metadata.friendlyName,
             modelName: metadata.modelName,
             udn: metadata.udn
         ))
+    }
+
+    /// Yields a TV onto the stream once per IP, regardless of which discovery path found it.
+    private func emit(_ tv: DiscoveredTV) {
+        guard !yieldedIPs.contains(tv.ip) else { return }
+        yieldedIPs.insert(tv.ip)
+        continuation?.yield(tv)
+    }
+
+    // MARK: - Subnet scan
+
+    /// Directly probes every host on the phone's /24 for a Samsung TV by GETting
+    /// `http://<ip>:8001/api/v2/` — the same REST endpoint the app already uses for device
+    /// info. This is plain **unicast HTTP** (no multicast entitlement, unlike SSDP) and finds
+    /// every reachable TV in a few seconds, covering the case mDNS surfaces a second TV slowly
+    /// or not at all. Runs alongside Bonjour; results are deduped by IP in ``emit(_:)``.
+    private func startSubnetScan() {
+        subnetScanTask = Task { [weak self] in
+            guard let self else { return }
+            guard let base = Self.localSubnetBaseV4() else {
+                NSLog("BonjourDiscoveryService: no IPv4 /24 to scan")
+                return
+            }
+            await withTaskGroup(of: Void.self) { group in
+                var inFlight = 0
+                for host in 1...254 {
+                    if inFlight >= 48 {
+                        await group.next()
+                        inFlight -= 1
+                    }
+                    let ip = "\(base).\(host)"
+                    group.addTask { await self.probeForTV(ip: ip) }
+                    inFlight += 1
+                }
+            }
+        }
+    }
+
+    private func probeForTV(ip: String) async {
+        guard let url = URL(string: "http://\(ip):8001/api/v2/") else { return }
+        var request = URLRequest(url: url)
+        request.timeoutInterval = 1.5
+        guard
+            let (data, response) = try? await URLSession.shared.data(for: request),
+            let http = response as? HTTPURLResponse, http.statusCode == 200,
+            let info = try? JSONDecoder().decode(APIV2Response.self, from: data),
+            let device = info.device
+        else { return }
+        emit(DiscoveredTV(
+            ip: ip,
+            friendlyName: Self.nonEmpty(device.name ?? "") ?? "Samsung TV",
+            modelName: Self.nonEmpty(device.modelName ?? "") ?? "Samsung TV",
+            udn: Self.nonEmpty(device.id ?? "") ?? ip
+        ))
+    }
+
+    /// The phone's Wi-Fi (`en0`) IPv4 address reduced to its `/24` prefix (e.g. `192.168.1`),
+    /// or `nil` when not on Wi-Fi. Uses `getifaddrs` since `NWPathMonitor` doesn't expose the
+    /// numeric address.
+    nonisolated private static func localSubnetBaseV4() -> String? {
+        var ifaddrPtr: UnsafeMutablePointer<ifaddrs>?
+        guard getifaddrs(&ifaddrPtr) == 0, let first = ifaddrPtr else { return nil }
+        defer { freeifaddrs(ifaddrPtr) }
+
+        var address: String?
+        for ptr in sequence(first: first, next: { $0.pointee.ifa_next }) {
+            let ifa = ptr.pointee
+            guard let addr = ifa.ifa_addr, addr.pointee.sa_family == UInt8(AF_INET) else { continue }
+            guard String(cString: ifa.ifa_name) == "en0" else { continue }
+            var host = [CChar](repeating: 0, count: Int(NI_MAXHOST))
+            guard getnameinfo(addr, socklen_t(addr.pointee.sa_len),
+                              &host, socklen_t(host.count), nil, 0, NI_NUMERICHOST) == 0 else { continue }
+            address = String(cString: host)
+            break
+        }
+        guard let ip = address else { return nil }
+        let parts = ip.split(separator: ".")
+        guard parts.count == 4 else { return nil }
+        return "\(parts[0]).\(parts[1]).\(parts[2])"
+    }
+
+    private struct APIV2Response: Decodable {
+        struct Device: Decodable {
+            let name: String?
+            let modelName: String?
+            let id: String?
+        }
+        let device: Device?
     }
 
     /// Parses the TXT record attached to a Bonjour result, falling back to sensible defaults

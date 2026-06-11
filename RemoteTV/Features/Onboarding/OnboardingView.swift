@@ -253,6 +253,14 @@ private struct FindTVStep: View {
                             .background(Color.white.opacity(0.07), in: RoundedRectangle(cornerRadius: 12))
                         }
                     }
+                    if vm.isSearching {
+                        HStack(spacing: 8) {
+                            ProgressView().controlSize(.small).tint(.white)
+                            Text("Searching for more TVs…")
+                                .font(.caption).foregroundStyle(.white.opacity(0.6))
+                        }
+                        .padding(.top, 2)
+                    }
                 }
                 manualEntry
             }

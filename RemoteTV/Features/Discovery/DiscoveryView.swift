@@ -101,6 +101,14 @@ struct DiscoveryView: View {
                             }
                             .buttonStyle(.plain)
                         }
+                        if viewModel.isSearching {
+                            HStack(spacing: 8) {
+                                ProgressView().controlSize(.small)
+                                Text("Searching for more TVs…")
+                                    .font(.footnote)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
                     }
                 } header: {
                     Text("Discovered")
