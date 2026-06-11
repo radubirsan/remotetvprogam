@@ -113,6 +113,21 @@ final class RemoteViewModel {
         }
     }
 
+    /// Pushes typed text to the TV's currently-focused text field via `SendInputString` — the
+    /// same transport voice dictation uses. No-ops on the TV unless a field has focus there
+    /// (e.g. a search box is open), so the on-screen ``KeyboardInputView`` tells the user to
+    /// open one first.
+    func sendKeyboardText(_ text: String) async {
+        do {
+            try await service.sendText(text)
+            lastError = nil
+        } catch let error as TVServiceError {
+            lastError = error.errorDescription
+        } catch {
+            lastError = error.localizedDescription
+        }
+    }
+
     /// Test phrase for the Sniff Log "Send text" button (`SendInputString` probe).
     static let dictationTestPhrase = "next channel"
 

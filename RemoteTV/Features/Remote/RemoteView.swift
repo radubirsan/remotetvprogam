@@ -38,6 +38,11 @@ struct RemoteView: View {
     /// wake mode presents — explains why a magic packet might not be reaching the
     /// TV (Network Standby disabled, MAC missing, etc.).
     @State private var showPowerOnHelp: Bool = false
+    /// Drives the push navigation to the full TV Guide screen (toolbar button + the
+    /// "Now on TV" pill both set this).
+    @State private var showTVGuide: Bool = false
+    /// Presents the on-screen keyboard relay from the gear menu.
+    @State private var showKeyboard: Bool = false
     /// Lets us auto-recover the WebSocket when the user unlocks the phone or returns
     /// from the app switcher — iOS suspends URLSession traffic in the background and
     /// the TV closes idle sockets, so the remote screen on resume needs an explicit
@@ -107,8 +112,8 @@ struct RemoteView: View {
                         channel: pinned,
                         programme: epgViewModel.pinnedNowPlaying,
                         onTap: {
-                            sidePanel = .tvGuide
                             epgViewModel.selectedChannelID = pinned.id
+                            showTVGuide = true
                         }
                     )
                     .transition(.opacity.combined(with: .move(edge: .top)))
@@ -181,14 +186,8 @@ struct RemoteView: View {
                     .transition(.move(edge: .trailing).combined(with: .opacity))
                 }
 
-                if sidePanel == .tvGuide {
-                    RemoteSidePanelEPG(
-                        vm: epgViewModel,
-                        onDispatchMacro: dispatchTuneMacro
-                    )
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .transition(.move(edge: .trailing).combined(with: .opacity))
-                }
+                // TV Guide is presented full-screen (see `.fullScreenCover` below), not as a
+                // side column — it's a browsing surface that wants the whole screen.
             }
             .animation(.snappy, value: sidePanel)
             }  // close outer VStack added for the NowOnTVPill
@@ -215,6 +214,14 @@ struct RemoteView: View {
                 )
             }
             ToolbarItem(placement: .topBarTrailing) {
+                Button {
+                    showTVGuide = true
+                } label: {
+                    Label("TV Guide", systemImage: "tv")
+                }
+                .accessibilityLabel("Open TV Guide")
+            }
+            ToolbarItem(placement: .topBarTrailing) {
                 Menu {
                     Picker("Input mode", selection: $inputMode) {
                         ForEach(RemoteInputMode.allCases) { mode in
@@ -232,6 +239,9 @@ struct RemoteView: View {
 
                     Divider()
 
+                    Button("Keyboard", systemImage: "keyboard") {
+                        showKeyboard = true
+                    }
                     Button("Setup guide", systemImage: "sparkles") {
                         onboardingReplayRequested = true
                     }
@@ -262,6 +272,18 @@ struct RemoteView: View {
         .sheet(isPresented: $showPowerOnHelp) {
             PowerOnHelpSheet()
                 .presentationDetents([.medium])
+        }
+        .sheet(isPresented: $showKeyboard) {
+            KeyboardInputView(
+                onType: { await viewModel.sendKeyboardText($0) },
+                onSubmit: { await viewModel.send(.enter) }
+            )
+        }
+        .navigationDestination(isPresented: $showTVGuide) {
+            RemoteSidePanelEPG(vm: epgViewModel, onDispatchMacro: dispatchTuneMacro)
+                .navigationTitle("TV Guide")
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbarBackground(.visible, for: .navigationBar)
         }
         }
     }

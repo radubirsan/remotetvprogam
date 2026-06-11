@@ -74,6 +74,8 @@
 		B2000000000000000000F05F /* NetworkMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F05F /* NetworkMonitor.swift */; };
 		B2000000000000000000F060 /* OnboardingViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F060 /* OnboardingViewModel.swift */; };
 		B2000000000000000000F061 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F061 /* OnboardingView.swift */; };
+		B2000000000000000000F062 /* MediaCastView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F062 /* MediaCastView.swift */; };
+		B2000000000000000000F063 /* KeyboardInputView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F063 /* KeyboardInputView.swift */; };
 		B2000000000000000000F05A /* EPGViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F05A /* EPGViewModel.swift */; };
 		B2000000000000000000F05B /* RemoteSidePanelEPG.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F05B /* RemoteSidePanelEPG.swift */; };
 		B2000000000000000000F05C /* NowOnTVPill.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F05C /* NowOnTVPill.swift */; };
@@ -181,6 +183,8 @@
 		A2000000000000000000F05F /* NetworkMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkMonitor.swift; sourceTree = "<group>"; };
 		A2000000000000000000F060 /* OnboardingViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingViewModel.swift; sourceTree = "<group>"; };
 		A2000000000000000000F061 /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
+		A2000000000000000000F062 /* MediaCastView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaCastView.swift; sourceTree = "<group>"; };
+		A2000000000000000000F063 /* KeyboardInputView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyboardInputView.swift; sourceTree = "<group>"; };
 		A2000000000000000000F05A /* EPGViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EPGViewModel.swift; sourceTree = "<group>"; };
 		A2000000000000000000F05B /* RemoteSidePanelEPG.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteSidePanelEPG.swift; sourceTree = "<group>"; };
 		A2000000000000000000F05C /* NowOnTVPill.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NowOnTVPill.swift; sourceTree = "<group>"; };
@@ -362,6 +366,8 @@
 				A2000000000000000000F05A /* EPGViewModel.swift */,
 				A2000000000000000000F05B /* RemoteSidePanelEPG.swift */,
 				A2000000000000000000F05C /* NowOnTVPill.swift */,
+				A2000000000000000000F062 /* MediaCastView.swift */,
+				A2000000000000000000F063 /* KeyboardInputView.swift */,
 			);
 			path = Remote;
 			sourceTree = "<group>";
@@ -552,6 +558,8 @@
 				B2000000000000000000F05F /* NetworkMonitor.swift in Sources */,
 				B2000000000000000000F060 /* OnboardingViewModel.swift in Sources */,
 				B2000000000000000000F061 /* OnboardingView.swift in Sources */,
+				B2000000000000000000F062 /* MediaCastView.swift in Sources */,
+				B2000000000000000000F063 /* KeyboardInputView.swift in Sources */,
 				B2000000000000000000F05A /* EPGViewModel.swift in Sources */,
 				B2000000000000000000F05B /* RemoteSidePanelEPG.swift in Sources */,
 				B2000000000000000000F05C /* NowOnTVPill.swift in Sources */,

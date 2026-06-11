@@ -49,6 +49,9 @@ final class SamsungTVService: TVService {
     private var voiceRecordingWaiter: CheckedContinuation<Void, Error>?
     /// Count of audio chunks sent in the current voice session — for console diagnosis.
     private var voiceChunkCount = 0
+    /// True from the moment a voice session opens until it ends. The heartbeat checks this so
+    /// a stray keepalive ping/reconnect can't tear Bixby down mid-utterance.
+    private var voiceSessionActive = false
 
     init(
         tokenStore: any TVTokenStore,
@@ -183,17 +186,25 @@ final class SamsungTVService: TVService {
         }
         // Step 1: toggle the voice key on (Press then Release, back-to-back).
         voiceChunkCount = 0
-        // Hold-to-talk: send only the Press here and KEEP it held while audio streams —
-        // this firmware treats an immediate Release as "mic button let go" and closes
-        // Bixby right after it opens. The matching Release is sent in endVoiceSession().
-        try await transmit(TVCommandEncoder.voiceKeyPayload(cmd: "Press"))
-        appendSniff(.info, "voice: opening Bixby, waiting for recording…")
-        // Step 2: block until the TV says it's listening.
+        // Suspend the heartbeat for the whole session — a keepalive-triggered reconnect would
+        // call teardown(), failing the recording waiter and closing Bixby.
+        voiceSessionActive = true
         do {
-            try await awaitVoiceRecording()
+            // Hold-to-talk: send only the Press here and KEEP it held while audio streams —
+            // this firmware treats an immediate Release as "mic button let go" and closes
+            // Bixby right after it opens. The matching Release is sent in endVoiceSession().
+            try await transmit(TVCommandEncoder.voiceKeyPayload(cmd: "Press"))
+            appendSniff(.info, "voice: opening Bixby, waiting for recording…")
+            // Step 2: block until the TV says it's listening.
+            do {
+                try await awaitVoiceRecording()
+            } catch {
+                // Don't leave the voice key stuck "held" if Bixby never came up.
+                try? await transmit(TVCommandEncoder.voiceKeyPayload(cmd: "Release"))
+                throw error
+            }
         } catch {
-            // Don't leave the voice key stuck "held" if Bixby never came up.
-            try? await transmit(TVCommandEncoder.voiceKeyPayload(cmd: "Release"))
+            voiceSessionActive = false
             throw error
         }
         appendSniff(.info, "voice: TV is recording")
@@ -217,6 +228,7 @@ final class SamsungTVService: TVService {
         try? await task.send(.data(TVCommandEncoder.voiceAudioFrame(pcm: Data([0, 0, 0, 0]))))
         try? await transmit(TVCommandEncoder.voiceKeyPayload(cmd: "Release"))
         appendSniff(.info, "voice: end-of-stream marker + Release sent after \(voiceChunkCount) chunks")
+        voiceSessionActive = false
     }
 
     /// Suspends until the receive loop sees `ms.voiceApp.recording`, or throws
@@ -520,29 +532,42 @@ final class SamsungTVService: TVService {
         try? await connect(to: device)
     }
 
-    /// Sends a single WebSocket ping and returns whether a pong arrived inside the
-    /// timeout. We can't trust `URLSessionWebSocketTask.closeCode` alone: it's `.invalid`
-    /// for the entire happy-path lifetime and only flips on a clean close, so a TCP
-    /// connection silently severed by iOS leaves it stuck at `.invalid`. The ping is
-    /// the only way to force a round-trip and learn the truth.
-    private func isSocketAlive() async -> Bool {
-        guard let task = webSocketTask else { return false }
-        return await withTaskGroup(of: Bool.self) { group in
+    private enum PingOutcome { case pong, noAnswer, failed }
+
+    /// Pings the socket and reports one of three outcomes: a pong came back (`pong`); the ping
+    /// reported a transport error, i.e. the socket is genuinely broken (`failed`); or neither
+    /// happened within `timeout` (`noAnswer`).
+    ///
+    /// The three-way distinction is load-bearing: **many Samsung TVs never answer WebSocket
+    /// pings**, so a `noAnswer` is NOT evidence the socket is dead. Conflating it with `failed`
+    /// made the heartbeat reconnect every 15s against a perfectly healthy connection — which
+    /// tore down in-flight Bixby voice sessions. We can't trust `closeCode` either: it stays
+    /// `.invalid` for the whole happy-path lifetime, so the ping's *error* is the only signal.
+    private func pingSocket(timeout: Duration = .seconds(2)) async -> PingOutcome {
+        guard let task = webSocketTask else { return .failed }
+        return await withTaskGroup(of: PingOutcome.self) { group in
             group.addTask {
-                await withCheckedContinuation { (cont: CheckedContinuation<Bool, Never>) in
+                await withCheckedContinuation { (cont: CheckedContinuation<PingOutcome, Never>) in
                     task.sendPing { error in
-                        cont.resume(returning: error == nil)
+                        cont.resume(returning: error == nil ? .pong : .failed)
                     }
                 }
             }
             group.addTask {
-                try? await Task.sleep(for: .seconds(2))
-                return false
+                try? await Task.sleep(for: timeout)
+                return .noAnswer
             }
-            let alive = await group.next() ?? false
+            let outcome = await group.next() ?? .noAnswer
             group.cancelAll()
-            return alive
+            return outcome
         }
+    }
+
+    /// True only when a pong came back. Used by ``reconnectIfNeeded()`` on foreground resume,
+    /// where a reconnect is cheap and expected — so a non-answering TV reconnecting once there
+    /// is acceptable (unlike the every-15s heartbeat, which must be stricter).
+    private func isSocketAlive() async -> Bool {
+        await pingSocket() == .pong
     }
 
     func forget(_ device: TVDevice) async {
@@ -592,9 +617,15 @@ final class SamsungTVService: TVService {
             while !Task.isCancelled {
                 try? await Task.sleep(for: self?.heartbeatInterval ?? .seconds(15))
                 guard let self else { return }
-                guard !Task.isCancelled, self.state == .connected else { continue }
-                if await self.isSocketAlive() == false, let device = self.currentDevice {
-                    self.appendSniff(.info, "heartbeat: no pong — reconnecting")
+                // Skip while connecting, or while a voice session is live (a reconnect would
+                // tear Bixby down mid-utterance).
+                guard !Task.isCancelled, self.state == .connected, !self.voiceSessionActive else { continue }
+                // Reconnect ONLY on a definite transport error. A missing pong (`noAnswer`) is
+                // not proof the socket is dead — many Samsung TVs simply don't answer pings —
+                // and reconnecting on it churns the connection every 15s. Genuine death still
+                // surfaces via the receive loop and the next send.
+                if await self.pingSocket() == .failed, let device = self.currentDevice {
+                    self.appendSniff(.info, "heartbeat: socket error — reconnecting")
                     Task { [weak self] in try? await self?.connect(to: device) }
                     return
                 }
@@ -880,6 +911,7 @@ final class SamsungTVService: TVService {
         currentMAC = nil
         // Don't leave a voice session waiter suspended across a disconnect.
         failVoiceRecordingWaiter()
+        voiceSessionActive = false
         webSocketTask?.cancel(with: .normalClosure, reason: nil)
         webSocketTask = nil
         session?.invalidateAndCancel()

@@ -106,6 +106,10 @@ struct RemoteSidePanelShortcuts: View {
                 .buttonStyle(.bordered)
                 .tint(.teal)
                 .accessibilityLabel(Text("Open a direct media file to AirPlay"))
+
+                // Pick a video or photos from the library and cast them to the TV (video via
+                // the player's AirPlay button; photos via Screen Mirroring).
+                MediaCastButton()
             }
 
             Spacer(minLength: 0)

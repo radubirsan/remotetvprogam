@@ -1,8 +1,8 @@
 import SwiftUI
 
-/// EPG side panel: shows what's on Romanian TV right now, with drill-in for a full
-/// per-channel daily schedule. Sits to the *right* of the remote (alongside the sniff
-/// log) — left side is reserved for app launchers.
+/// EPG screen: shows what's on Romanian TV right now, with drill-in for a full per-channel
+/// daily schedule. Pushed as its own screen from ``RemoteView``'s TV Guide toolbar button
+/// (it fills its frame; the navigation bar supplies the title and back button).
 ///
 /// Two-state internal layout driven by `vm.selectedChannelID`:
 ///   * `nil` → search-able list of all 360+ channels with current programme inline.
@@ -40,13 +40,6 @@ struct RemoteSidePanelEPG: View {
         }
         .padding(16)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .background(RemoteTheme.body.opacity(0.5))
-        .overlay(alignment: .leading) {
-            // Hairline separator; mirrors the trailing hairline on the left-side panels.
-            Rectangle()
-                .fill(Color.white.opacity(0.06))
-                .frame(width: 1)
-        }
         .colorScheme(.dark)
         .task {
             await vm.loadIfNeeded()
@@ -109,11 +102,8 @@ struct RemoteSidePanelEPG: View {
                         : "Pin as TV's current channel"
                 )
             } else {
-                Text("TV Guide")
-                    .font(.title3.bold())
-                    .lineLimit(1)
-                    .foregroundStyle(.white)
-
+                // List mode: the navigation bar supplies the "TV Guide" title, so the header
+                // just holds the trailing Refresh control.
                 Spacer()
             }
 
