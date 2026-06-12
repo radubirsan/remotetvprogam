@@ -237,10 +237,13 @@ struct RemoteViewModelTests {
 
         await vm.castYouTube()
 
+        // Assert against whatever the demo URL constant parses to, so editing the
+        // constant (it's swapped around while experimenting) doesn't break the test.
+        let expected = RemoteViewModel.parseYouTube(from: RemoteViewModel.youtubeCastURL)
         #expect(service.castedYouTubeVideos.count == 1)
-        #expect(service.castedYouTubeVideos.first?.videoId == "qUundAa9j4M")
-        #expect(service.castedYouTubeVideos.first?.listId == "RDqUundAa9j4M")
-        #expect(service.castedYouTubeVideos.first?.startSeconds == 2649)
+        #expect(service.castedYouTubeVideos.first?.videoId == expected?.videoId)
+        #expect(service.castedYouTubeVideos.first?.listId == expected?.listId)
+        #expect(service.castedYouTubeVideos.first?.startSeconds == expected?.startSeconds)
         #expect(vm.lastError == nil)
     }
 

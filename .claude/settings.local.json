@@ -26,7 +26,10 @@
       "WebFetch(domain:raw.githubusercontent.com)",
       "Bash(gh api *)",
       "Bash(curl -s \"https://api.github.com/repos/MarcoLucidi01/ytcast/contents/youtube\")",
-      "Bash(curl *)"
+      "Bash(curl *)",
+      "Bash(git -C /Users/as3/Desktop/RemoteTV/remotetvprogam log --oneline -15)",
+      "Bash(git mv *)",
+      "Bash(sed -n '1,10p' RemoteTV/Features/Remote/RemoteView.swift)"
     ]
   }
 }

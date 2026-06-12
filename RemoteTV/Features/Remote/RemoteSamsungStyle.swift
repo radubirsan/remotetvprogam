@@ -1,17 +1,17 @@
 //
 //  RemoteSamsungStyle.swift
-//  Another Remote
 //
-//  Original design — Samsung-style layout, scaled up for iOS HIG compliance.
-//  All interactive elements ≥ 44×44 pt minimum tappable area.
-//  Drop into an Xcode iOS project (iOS 16+, SwiftUI). iPhone 16 Pro target.
+//  Design atoms for the Samsung-style remote: the shared dark theme and the reusable
+//  button primitives (`CircleButton`, `Rocker`, `DPad`, `AppSlot`) composed by
+//  `RemoteSamsungBody` and reused by Onboarding. All interactive elements keep a
+//  ≥ 44×44 pt tappable area per the HIG.
 //
 
 import SwiftUI
 
 // MARK: - Theme
 
-public enum RemoteTheme {
+enum RemoteTheme {
     static let bg = LinearGradient(
         colors: [Color(red: 0.10, green: 0.10, blue: 0.11),
                  Color(red: 0.04, green: 0.04, blue: 0.04)],
@@ -222,165 +222,3 @@ struct AppSlot: View {
     }
 }
 
-// MARK: - Main view
-
-struct RemoteSamsungStyleView: View {
-    // Layout — scaled up to meet HIG 44×44 pt minimums on every tappable element.
-    // The remote body fills nearly the full iPhone width.
-    private let W: CGFloat   = 393
-    private let H: CGFloat   = 852
-    private let RW: CGFloat  = 340   // remote body width (was 220 — much bigger)
-    private let RH: CGFloat  = 760   // remote body height
-    private let RY: CGFloat  = 60
-
-    private var RX: CGFloat { (W - RW) / 2 }   // 26.5
-
-    var body: some View {
-        ZStack(alignment: .topLeading) {
-            RemoteTheme.bg.ignoresSafeArea()
-
-            // Settings gear — top-right of the screen, comfortably 44×44
-            Button {
-                // settings action
-            } label: {
-                Image(systemName: "gearshape")
-                    .font(.system(size: 18, weight: .regular))
-                    .foregroundStyle(Color(white: 0.6))
-                    .frame(width: 44, height: 44)
-                    .background(Color.white.opacity(0.04), in: Circle())
-            }
-            .buttonStyle(.hapticPress)
-            .accessibilityLabel("Settings")
-            .position(x: W - 32, y: 76)
-
-            // REMOTE BODY
-            ZStack(alignment: .topLeading) {
-                // Body shell
-                RoundedRectangle(cornerRadius: 56, style: .continuous)
-                    .fill(RemoteTheme.body)
-                    .frame(width: RW, height: RH)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 56, style: .continuous)
-                            .stroke(Color.white.opacity(0.05), lineWidth: 0.5)
-                    )
-                    .shadow(color: .black.opacity(0.6), radius: 22, y: 14)
-
-                // ROW 1: Power (left), MIC label (center), Mic (right)
-                CircleButton(size: 56, iconColor: RemoteTheme.powerRed,
-                             accessibilityLabel: "Power") {
-                    Image(systemName: "power")
-                        .font(.system(size: 22, weight: .heavy))
-                }
-                .position(x: 40 + 28, y: 36 + 28)
-
-                VStack(spacing: 3) {
-                    Circle().fill(Color(white: 0.16)).frame(width: 4, height: 4)
-                    Text("MIC")
-                        .font(.system(size: 10, weight: .bold))
-                        .tracking(1.2)
-                        .foregroundStyle(RemoteTheme.labelDim)
-                }
-                .position(x: RW / 2, y: 50)
-
-                CircleButton(size: 56, accessibilityLabel: "Voice") {
-                    Image(systemName: "mic")
-                        .font(.system(size: 20, weight: .regular))
-                }
-                .position(x: RW - 40 - 28, y: 36 + 28)
-
-                // ROW 2: Settings/123 (under power)
-                CircleButton(size: 56, accessibilityLabel: "Number pad") {
-                    VStack(spacing: 0) {
-                        Image(systemName: "gearshape")
-                            .font(.system(size: 13, weight: .regular))
-                        Text("123")
-                            .font(.system(size: 9, weight: .bold))
-                            .tracking(0.5)
-                    }
-                }
-                .position(x: 40 + 28, y: 110 + 28)
-
-                // D-PAD — large; outer 220 / inner 92 both well above 44 pt
-                DPad(outerSize: 220, innerSize: 96)
-                    .position(x: RW / 2, y: 200 + 110)
-
-                // ROW 4: Back / Home / Play-Pause
-                CircleButton(size: 56, accessibilityLabel: "Back") {
-                    Image(systemName: "arrow.uturn.backward")
-                        .font(.system(size: 19, weight: .semibold))
-                }
-                .position(x: 40 + 28, y: 470 + 28)
-
-                CircleButton(size: 64, accessibilityLabel: "Home") {
-                    Image(systemName: "house.fill")
-                        .font(.system(size: 22, weight: .regular))
-                }
-                .position(x: RW / 2, y: 466 + 32)
-
-                CircleButton(size: 56, accessibilityLabel: "Play or pause") {
-                    Image(systemName: "playpause.fill")
-                        .font(.system(size: 18, weight: .regular))
-                }
-                .position(x: RW - 40 - 28, y: 470 + 28)
-
-                // ROW 5: Volume rocker (left) — 120×52
-                Rocker(width: 120, height: 52,
-                       topLabel: "Volume down", bottomLabel: "Volume up") {
-                    Image(systemName: "minus").font(.system(size: 18, weight: .semibold))
-                } bottom: {
-                    Image(systemName: "plus").font(.system(size: 18, weight: .semibold))
-                }
-                .position(x: 40 + 60, y: 562 + 26)
-
-                // ROW 5: Channel rocker (right) — 120×52
-                Rocker(width: 120, height: 52,
-                       topLabel: "Channel up", bottomLabel: "Channel down") {
-                    Image(systemName: "chevron.up").font(.system(size: 16, weight: .semibold))
-                } bottom: {
-                    Image(systemName: "chevron.down").font(.system(size: 16, weight: .semibold))
-                }
-                .position(x: RW - 40 - 60, y: 562 + 26)
-
-                // CC/AD label under volume rocker (non-interactive)
-                HStack(spacing: 8) {
-                    Text("CC/AD")
-                    Image(systemName: "speaker.slash")
-                        .font(.system(size: 12, weight: .regular))
-                }
-                .font(.system(size: 10, weight: .bold))
-                .tracking(0.6)
-                .foregroundStyle(Color(white: 0.48))
-                .frame(width: 120)
-                .position(x: 40 + 60, y: 624)
-
-                // ROW 6: App slots — all 56 pt
-                AppSlot(size: 56, label: "APP", sublabel: "1", accessibilityName: "App 1")
-                    .position(x: 40 + 28, y: 656 + 28)
-
-                AppSlot(size: 64, label: "LIVE", sublabel: "TV", accessibilityName: "Live TV")
-                    .position(x: RW / 2, y: 652 + 32)
-
-                AppSlot(size: 56, label: "APP", sublabel: "2", accessibilityName: "App 2")
-                    .position(x: RW - 40 - 28, y: 656 + 28)
-
-                // Brand label
-                Text("ANOTHER REMOTE")
-                    .font(.system(size: 11, weight: .bold))
-                    .tracking(2)
-                    .foregroundStyle(RemoteTheme.labelDim)
-                    .frame(width: RW)
-                    .position(x: RW / 2, y: RH - 28)
-            }
-            .frame(width: RW, height: RH)
-            .offset(x: RX, y: RY)
-        }
-        .frame(width: W, height: H)
-    }
-}
-
-// MARK: - Preview
-
-#Preview {
-    RemoteSamsungStyleView()
-        .preferredColorScheme(.dark)
-}

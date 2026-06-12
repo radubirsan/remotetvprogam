@@ -28,9 +28,12 @@ RemoteTV/
                     TVConnectionMode, TVConnectionState, TVPowerState, TVServiceError,
                     TVApp, InstalledApp, KnownTVApps, SniffLogEntry).
                     EPG types: EPGGuide, EPGChannel, EPGProgramme, KnownChannelNumbers.
-  Discovery/        TVDiscoveryService protocol + BonjourDiscoveryService (NWBrowser).
+  Discovery/        TVDiscoveryService protocol + BonjourDiscoveryService (NWBrowser +
+                    direct subnet scan).
   Services/         Everything network/persistence:
-                      SamsungTVService       — WebSocket transport + pairing
+                      SamsungTVService       — WebSocket transport + pairing + heartbeat
+                      SamsungTVService+Voice — Bixby voice-session extension (see Bixby.md)
+                      YouTubeLoungeClient    — YouTube Lounge cast client (see YTCAST.md)
                       SamsungTrustDelegate   — accepts TV self-signed certs on :8002
                       SamsungDeviceInfoService — reads /api/v2/ to grab MAC
                       TVURLBuilder           — builds ws/wss URLs (includes token)
@@ -38,20 +41,33 @@ RemoteTV/
                       KeychainTVTokenStore   — pairing tokens in Keychain
                       FileRememberedTVsStore — remembered-TV JSON in Application Support
                       UDPBroadcastWakeService + MagicPacketBuilder — WoL
+                      MicrophoneCaptureService — 16 kHz mono PCM chunks for Bixby voice
+                      NetworkMonitor         — NWPathMonitor → "is the phone on Wi-Fi/LAN?"
                       EPGClient              — actor that fetches/caches the EPG JSON dump
   Features/
     Discovery/      DiscoveryView + DiscoveryViewModel + TVListRow.
     Remote/         RemoteView + RemoteViewModel; RemoteSamsungBody is the redesigned
-                    canvas. Per-section button groups (DPadSection, VolumeSection,
-                    ChannelSection, BottomActionsSection, TrackpadSection, NumberPadView,
+                    canvas, composed from the design atoms (RemoteTheme, CircleButton,
+                    Rocker, DPad, AppSlot) in RemoteSamsungStyle.swift. Per-section button
+                    groups (DPadSection, VolumeSection, ChannelSection,
+                    BottomActionsSection, TrackpadSection, NumberPadView,
                     CommercialMuteSection, …) + side panels (SidePanelMode +
                     RemoteSidePanel{EPG,Shortcuts,InstalledApps,SniffLog}). EPGViewModel
                     drives the EPG panel; NowOnTVPill shows the pinned channel's show.
+                    MediaCastView = photo/video/YouTube casting screen;
+                    KeyboardInputView = typed-text input over SendInputString.
+    Onboarding/     First-run wizard: OnboardingView (host + progress dots) +
+                    OnboardingViewModel + one Onboarding*Step.swift file per step,
+                    sharing OnboardingStepScaffold.
   Resources/        Info.plist, RemoteTV.entitlements, Localizable.xcstrings, Assets.xcassets.
 RemoteTVTests/      Swift Testing target — one file per SUT.
 TVScheduel/         Standalone SwiftPM package: Romanian XMLTV → JSON grabber (see below).
 .github/workflows/  epg-update.yml — daily CI that publishes guide.json to `epg-data` branch.
 PLAN.md             Long-form design doc; useful for "why" but can drift from code.
+Bixby.md            Wire protocol notes for the Bixby voice streaming path.
+YTCAST.md           Wire protocol notes for the YouTube DIAL + Lounge cast path.
+SmartThingsAPI.md   Notes on the cloud API (not used by the app; reference only).
+TODO.md / HANDOFF.md  Scratch planning docs; can drift — this file is the live map.
 ```
 
 View models are `@MainActor @Observable` and owned via `@State`. Services are injected via
@@ -71,6 +87,15 @@ Bonjour/mDNS via `NWBrowser` browsing `_samsungmsf._tcp`. The TXT record carries
 `fn` (friendly name), `md` (model). Each browse result is resolved through a short-lived
 `NWConnection` pinned to IPv4 (Samsung's remote APIs won't accept an IPv6 link-local
 literal as a WebSocket host). The resolved IP is passed up as a `DiscoveredTV`.
+
+Two reliability layers sit on top of the browser (added for the fresh-install and
+multi-TV cases):
+- A **proactive re-query** at +3s/+7s — `NWBrowser` drops its in-flight PTR query while
+  the Local Network prompt is up and never re-broadcasts after the user taps Allow.
+  Deliberately gentle (and stops once results arrive): *restarting* the browser tears
+  down the live listener and misses late unsolicited announcements.
+- A **direct subnet scan** that probes the local /24 for port 8001, so a second TV that
+  doesn't answer mDNS still surfaces. Both paths dedupe by IP before yielding.
 
 `DiscoveryViewModel` merges live stream results with `RememberedTV` records on disk:
 matched by UDN first, then by IP. Live → `.available`, remembered-but-missing → `.off`
@@ -98,6 +123,56 @@ matched by UDN first, then by IP. Live → `.available`, remembered-but-missing 
 `RemoteViewModel.connect()` is called from `RemoteView.task`. Do not move the `connect()`
 call out of `.task` without understanding why it's there — the previous bug where power
 and DPad did nothing was *exactly* that connect never ran.
+
+Token persistence is **dual-keyed** (IP + MAC): the IP-keyed Keychain slot is checked
+first, and a miss falls back to the MAC slot — this is what stops a DHCP lease rotation
+from re-prompting the pairing popup. The info-poll back-fills the MAC slot if the MAC
+wasn't known at handshake time. Connects also retry up to 4× on *transient* network
+errors (`SamsungTVService.isTransientNetworkError`) because at cold launch the socket
+can fire before iOS brings the local-network path up.
+
+### Heartbeat & reconnect
+
+While connected, `SamsungTVService` pings the socket every 15s (`startHeartbeat`) —
+Samsung TVs/NATs silently drop idle sockets without a close frame, so without this the
+first key press after a long idle failed. Two subtleties are load-bearing:
+- **A missing pong is NOT a dead socket.** Many Samsung TVs simply never answer pings,
+  so the heartbeat reconnects only on a definite transport *error* (`PingOutcome.failed`),
+  never on `noAnswer` — conflating them churned the connection every 15s.
+- The reconnect runs in a detached `Task` on purpose: `connect()` → `teardown()` cancels
+  the heartbeat task itself, so reconnecting inline would cancel its own `connect`.
+
+The heartbeat also skips while `voiceSessionActive` so a keepalive can't tear Bixby down
+mid-utterance. Separately, `reconnectIfNeeded()` (scene-phase hook) re-handshakes on
+foregrounding when iOS killed the socket while suspended.
+
+### Bixby voice (hold-to-talk)
+
+`SamsungTVService+Voice.swift` + `MicrophoneCaptureService`; protocol notes in `Bixby.md`.
+Flow: send `KEY_BT_VOICE` **Press and keep it held** (an immediate Release closes Bixby on
+this firmware), wait for the TV's `ms.voiceApp.recording` event, stream 16 kHz mono PCM
+chunks as binary frames, then send an empty end-of-stream marker + the Release.
+`RemoteViewModel.startVoice()` warms the mic engine *before* opening Bixby so audio can
+start the instant the TV is ready.
+
+### YouTube casting (Lounge)
+
+`castYouTubeVideo` opens a specific video in the TV's YouTube app the way Chromecast
+does; notes in `YTCAST.md`. Three steps: (1) foreground YouTube via the plain REST
+app-launch — **not** a DIAL launch, which pops Multi View when another source is active;
+(2) scrape the `screenId` from the DIAL state document (GET only, polled, no Origin
+header); (3) drive playback via `YouTubeLoungeClient` (token → bind → setPlaylist). The
+Lounge API is undocumented Google internals and can break without notice — every stage
+logs to the sniff log so failures point at the broken step.
+
+### Onboarding
+
+`Features/Onboarding/` is a first-run wizard (welcome → Wi-Fi check → find TV → pair →
+success → test → optimize), also replayable from the gear menu (`isReplay`). It reuses
+the real services; the pair step just awaits `service.connect`. Pairing defaults to
+`.secure` (wss:8002) since that's every 2019+ model. `RootView` decides when to show it
+and receives the paired `TVDevice` via `onFinished`. `NetworkMonitor` also drives a
+"join the TV's Wi-Fi" overlay in `RootView` whenever the phone has no Wi-Fi/wired path.
 
 ### App launching & installed app detection
 
@@ -184,6 +259,15 @@ varies by region/tier, so the map is a sensible default, not ground truth.
 - Dedupe key inside `DiscoveryViewModel` is **IP, not UDN** — some Samsung TVs omit `u`
   from the TXT record, and using UDN caused duplicate rows.
 - `@AppStorage("lastConnectionMode")` persists plain/secure. Don't change the key.
+- **Error surfacing**: view models set their error string from `error.displayMessage`
+  (extension on `Error` in `TVServiceError.swift` — curated `TVServiceError` copy when
+  it is one, `localizedDescription` otherwise). `RemoteViewModel` funnels service calls
+  through its `perform(_:)` helper; don't reintroduce per-call-site catch pairs.
+- `SamsungTVService` is split across files: voice methods live in the
+  `SamsungTVService+Voice.swift` extension, so the stored voice state and the few
+  members it needs (`webSocketTask`, `transmit`, `appendSniff`, `messageData`) are
+  internal rather than private. Keep new members private unless an extension file
+  genuinely needs them.
 
 ## Xcode project file — adding new Swift files
 
@@ -195,9 +279,12 @@ varies by region/tier, so the map is a sensible default, not ground truth.
 3. The file's containing `PBXGroup` (e.g., the `Remote` group) — add `A2…F0xx`
 4. The app target's `PBXSourcesBuildPhase` — add `B2…F0xx`
 
-Grep for an existing sibling file (e.g. `VolumeSection`) to copy the pattern. Currently
-the highest used suffix is `F05D`. Suffixes `F040`–`F042` are retired (they belonged to
-the removed DIAL feature); don't reuse them.
+Grep for an existing sibling file (e.g. `VolumeSection`) to copy the pattern. Test files
+use `D2…F0XX` build-file UUIDs and go in the test target's group + Sources phase instead.
+Currently the highest used suffix is `F071`. Suffixes `F040`–`F042` are retired (they
+belonged to the removed DIAL feature); don't reuse them. (`RemoteSamsungStyle.swift` is
+the one exception to the deterministic-UUID scheme — it kept its Xcode-generated UUID
+when it was moved into `Features/Remote/`.)
 
 `TVScheduel/` files do NOT go in the pbxproj — that package builds with SwiftPM, not Xcode.
 
@@ -277,10 +364,10 @@ Prefer the Xcode MCP tools over shelling out:
 
 ## Tests
 
-App (Swift Testing, runs on a simulator):
+App (Swift Testing, runs on a simulator — pick any installed iPhone simulator):
 
 ```
-xcodebuild test -project RemoteTV.xcodeproj -scheme RemoteTV -destination 'platform=iOS Simulator,name=iPhone 15'
+xcodebuild test -project RemoteTV.xcodeproj -scheme RemoteTV -destination 'platform=iOS Simulator,name=iPhone 17'
 ```
 
 EPG package (SwiftPM, no simulator needed):
@@ -291,5 +378,11 @@ cd TVScheduel && swift test
 
 Unit-tested surfaces: `TVCommandEncoder`, `TVURLBuilder`, `KeychainTVTokenStore`,
 `FileRememberedTVsStore`, `MagicPacketBuilder`, `RemoteViewModel`, `DiscoveryViewModel`
-(including the pure `makeRows` merge logic), `TrackpadGestureMapper`; and in `TVScheduel/`:
-`XMLTVParser`, `XMLTVDate`.
+(including the pure `makeRows` merge logic), `TrackpadGestureMapper`, `EPGViewModel`
+(tune macro + channel filtering), `EPGClient` (cache layering via `file://` sources),
+`OnboardingViewModel` (select → pair flow), `SamsungTVService.isTransientNetworkError` +
+`firstRegexMatch`; and in `TVScheduel/`: `XMLTVParser`, `XMLTVDate`.
+
+Still untested (needs heavier mocks): the heartbeat ping classification, the voice
+continuation lifecycle, `BonjourDiscoveryService`, `MicrophoneCaptureService`, and the
+live `YouTubeLoungeClient` HTTP flow.

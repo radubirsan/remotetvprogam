@@ -29,6 +29,16 @@ enum TVServiceError: Error, Sendable, Equatable {
     case microphoneFailure(String)
 }
 
+extension Error {
+    /// The message a view model should surface for this error: the curated
+    /// ``TVServiceError`` copy when it is one, `localizedDescription` otherwise.
+    /// Collapses the `catch TVServiceError / catch everything-else` pair that used
+    /// to be copy-pasted around every `try await service.…` call site.
+    var displayMessage: String {
+        (self as? TVServiceError)?.errorDescription ?? localizedDescription
+    }
+}
+
 extension TVServiceError: LocalizedError {
     var errorDescription: String? {
         switch self {

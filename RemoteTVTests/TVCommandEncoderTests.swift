@@ -1,5 +1,5 @@
 import Foundation
-//import Testing
+import Testing
 @testable import RemoteTV
 
 struct TVCommandEncoderTests {

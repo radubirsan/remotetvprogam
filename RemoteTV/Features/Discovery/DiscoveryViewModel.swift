@@ -176,10 +176,8 @@ final class DiscoveryViewModel {
         do {
             try await wakeService.wake(mac: mac, ip: row.ip)
             await refresh()
-        } catch let error as TVServiceError {
-            errorMessage = error.errorDescription
         } catch {
-            errorMessage = error.localizedDescription
+            errorMessage = error.displayMessage
         }
     }
 

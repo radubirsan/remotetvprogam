@@ -170,8 +170,11 @@ struct DiscoveryViewModelLifecycleTests {
         #expect(vm.rows.first?.status == .off)
         #expect(vm.isSearching == true)
 
+        // start() itself stops any previous scan first, so count relative — the user's
+        // stop() must add exactly one more.
+        let stopsAfterStart = discovery.stopCount
         await vm.stop()
-        #expect(discovery.stopCount == 1)
+        #expect(discovery.stopCount == stopsAfterStart + 1)
         #expect(vm.isSearching == false)
     }
 

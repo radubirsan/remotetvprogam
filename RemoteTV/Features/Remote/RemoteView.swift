@@ -1,8 +1,8 @@
 import SwiftUI
 
-/// Samsung-style remote screen. Lays out the same fixed dark canvas as
-/// `RemoteSamsungStyleView` and uniformly scales it via `GeometryReader` so the
-/// design fills any device without distortion.
+/// Samsung-style remote screen. Lays out a fixed dark canvas (composed from the
+/// design atoms in `RemoteSamsungStyle.swift`) and uniformly scales it via
+/// `GeometryReader` so the design fills any device without distortion.
 ///
 /// The screen is split into up to two columns by an `HStack`:
 /// * **Left column** — the optional Installed Apps panel (when ``SidePanelMode/installedApps``).

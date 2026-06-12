@@ -34,7 +34,7 @@ struct RemoteSidePanelShortcuts: View {
     /// A public, reliably-streamable demo clip. AirPlay needs a *playable media*
     /// URL (HLS/MP4), not a web page — swap this for any direct video URL to send
     /// your own content to the TV.
-    static let airplayDemoURL = "https://test-videos.co.uk/vids/bigbuckbunny/mp4/h264/1080/Big_Buck_Bunny_1080_10s_30MB.mp4"
+    static let airplayDemoURL = "https://archive.org/download/big-trouble-little-china/Big%20Trouble%20In%20Little%20China%20720p.mp4"
 
     /// Drives the full-screen AirPlay player covers.
     @State private var showAirPlayFile = false

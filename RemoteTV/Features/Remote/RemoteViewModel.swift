@@ -88,29 +88,27 @@ final class RemoteViewModel {
         service.clearSniffLog()
     }
 
+    /// Runs one service call, clearing ``lastError`` on success and surfacing the error's
+    /// `displayMessage` on failure. Every fire-and-report action below funnels through here
+    /// so they all report identically.
+    private func perform(_ action: () async throws -> Void) async {
+        do {
+            try await action()
+            lastError = nil
+        } catch {
+            lastError = error.displayMessage
+        }
+    }
+
     /// Kicks off the WebSocket handshake. Called from ``RemoteView``'s `.task` so the connect
     /// attempt starts the moment the user pushes into the remote — the `StatusPill` animates
     /// through `.connecting` → `.awaitingPairing` → `.connected` as the service drives state.
     func connect() async {
-        do {
-            try await service.connect(to: device)
-            lastError = nil
-        } catch let error as TVServiceError {
-            lastError = error.errorDescription
-        } catch {
-            lastError = error.localizedDescription
-        }
+        await perform { try await service.connect(to: device) }
     }
 
     func send(_ command: TVCommand) async {
-        do {
-            try await service.send(command)
-            lastError = nil
-        } catch let error as TVServiceError {
-            lastError = error.errorDescription
-        } catch {
-            lastError = error.localizedDescription
-        }
+        await perform { try await service.send(command) }
     }
 
     /// Pushes typed text to the TV's currently-focused text field via `SendInputString` — the
@@ -118,14 +116,7 @@ final class RemoteViewModel {
     /// (e.g. a search box is open), so the on-screen ``KeyboardInputView`` tells the user to
     /// open one first.
     func sendKeyboardText(_ text: String) async {
-        do {
-            try await service.sendText(text)
-            lastError = nil
-        } catch let error as TVServiceError {
-            lastError = error.errorDescription
-        } catch {
-            lastError = error.localizedDescription
-        }
+        await perform { try await service.sendText(text) }
     }
 
     /// Test phrase for the Sniff Log "Send text" button (`SendInputString` probe).
@@ -166,14 +157,10 @@ final class RemoteViewModel {
             voicePumpTask = Task { [weak self] in
                 await self?.pumpVoice(stream)
             }
-        } catch let error as TVServiceError {
+        } catch {
             microphone.stop()   // tear the warmed engine back down on failure
             print("[RemoteTV] voice: startVoice failed — \(error)")
-            lastError = error.errorDescription
-        } catch {
-            microphone.stop()
-            print("[RemoteTV] voice: startVoice failed — \(error)")
-            lastError = error.localizedDescription
+            lastError = error.displayMessage
         }
     }
 
@@ -224,38 +211,17 @@ final class RemoteViewModel {
     /// it can be fired manually right after the BT_VOICE button. The readable text and
     /// the wire frame both land in ``sniffLog``.
     func sendTestText() async {
-        do {
-            try await service.sendText(Self.dictationTestPhrase)
-            lastError = nil
-        } catch let error as TVServiceError {
-            lastError = error.errorDescription
-        } catch {
-            lastError = error.localizedDescription
-        }
+        await perform { try await service.sendText(Self.dictationTestPhrase) }
     }
 
     /// Fires one ``BixbyProbe`` at the TV. Surfaces failures on ``lastError`` like the
     /// other send paths; the sent frame and any TV response appear in ``sniffLog``.
     func runProbe(_ probe: BixbyProbe) async {
-        do {
-            try await service.sendRawKey(probe.keyCode, hold: probe.hold)
-            lastError = nil
-        } catch let error as TVServiceError {
-            lastError = error.errorDescription
-        } catch {
-            lastError = error.localizedDescription
-        }
+        await perform { try await service.sendRawKey(probe.keyCode, hold: probe.hold) }
     }
 
     func launchApp(appID: String) async {
-        do {
-            try await service.launch(appID: appID)
-            lastError = nil
-        } catch let error as TVServiceError {
-            lastError = error.errorDescription
-        } catch {
-            lastError = error.localizedDescription
-        }
+        await perform { try await service.launch(appID: appID) }
     }
 
     /// A YouTube "radio" link to cast as a demo target. Carries a video id, an auto-radio
@@ -272,17 +238,12 @@ final class RemoteViewModel {
             lastError = "Could not parse the YouTube URL"
             return
         }
-        do {
+        await perform {
             try await service.castYouTubeVideo(
                 videoId: parsed.videoId,
                 listId: parsed.listId,
                 startSeconds: parsed.startSeconds
             )
-            lastError = nil
-        } catch let error as TVServiceError {
-            lastError = error.errorDescription
-        } catch {
-            lastError = error.localizedDescription
         }
     }
 
@@ -430,14 +391,8 @@ final class RemoteViewModel {
         isLoadingInstalledApps = true
         defer { isLoadingInstalledApps = false }
 
-        do {
-            let apps = try await service.requestInstalledApps()
-            installedApps = apps
-            lastError = nil
-        } catch let error as TVServiceError {
-            lastError = error.errorDescription
-        } catch {
-            lastError = error.localizedDescription
+        await perform {
+            installedApps = try await service.requestInstalledApps()
         }
     }
 

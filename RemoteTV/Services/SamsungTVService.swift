@@ -30,7 +30,9 @@ final class SamsungTVService: TVService {
     /// silently-dropped connection before the user presses a button.
     private let heartbeatInterval: Duration = .seconds(15)
     private var session: URLSession?
-    private var webSocketTask: URLSessionWebSocketTask?
+    /// Internal (not private) so the voice extension in `SamsungTVService+Voice.swift`
+    /// can stream binary frames over the live socket.
+    var webSocketTask: URLSessionWebSocketTask?
     private var receiveTask: Task<Void, Never>?
     private var infoPollTask: Task<Void, Never>?
     private var heartbeatTask: Task<Void, Never>?
@@ -44,14 +46,17 @@ final class SamsungTVService: TVService {
     /// rotation would strand it and re-prompt for pairing. `nil` while disconnected.
     private var currentToken: String?
     private var currentMAC: String?
+    // Voice-session state. Stored here because extensions can't add stored instance
+    // properties; every method that touches these lives in `SamsungTVService+Voice.swift`
+    // (which is also why they're internal rather than private).
     /// Resumed when the TV reports `ms.voiceApp.recording` after we open Bixby.
     /// Only one voice session is in flight at a time, so a single optional suffices.
-    private var voiceRecordingWaiter: CheckedContinuation<Void, Error>?
+    var voiceRecordingWaiter: CheckedContinuation<Void, Error>?
     /// Count of audio chunks sent in the current voice session — for console diagnosis.
-    private var voiceChunkCount = 0
+    var voiceChunkCount = 0
     /// True from the moment a voice session opens until it ends. The heartbeat checks this so
     /// a stray keepalive ping/reconnect can't tear Bixby down mid-utterance.
-    private var voiceSessionActive = false
+    var voiceSessionActive = false
 
     init(
         tokenStore: any TVTokenStore,
@@ -124,7 +129,8 @@ final class SamsungTVService: TVService {
     /// True for errors that mean "the network path wasn't ready", not "the TV said no".
     /// These are worth a quick retry; auth/protocol failures (which arrive as
     /// ``TVServiceError``, not `URLError`) are not and fall through to `.failed`.
-    private static func isTransientNetworkError(_ error: Error) -> Bool {
+    /// `nonisolated` because it's a pure classification — also lets tests call it directly.
+    nonisolated static func isTransientNetworkError(_ error: Error) -> Bool {
         guard let urlError = error as? URLError else { return false }
         switch urlError.code {
         case .notConnectedToInternet,   // -1009 — ENETDOWN, the launch-race symptom
@@ -162,9 +168,10 @@ final class SamsungTVService: TVService {
     }
 
     /// Sends one already-encoded control frame over the live socket and mirrors it
-    /// into the sniff log. Shared by ``send(_:)``, ``sendText(_:)``, and
-    /// ``sendRawKey(_:hold:)`` so they all guard, log, and transmit identically.
-    private func transmit(_ data: Data) async throws {
+    /// into the sniff log. Shared by ``send(_:)``, ``sendText(_:)``,
+    /// ``sendRawKey(_:hold:)``, and the voice extension so they all guard, log, and
+    /// transmit identically.
+    func transmit(_ data: Data) async throws {
         guard state == .connected, let task = webSocketTask else {
             throw TVServiceError.notConnected
         }
@@ -175,107 +182,13 @@ final class SamsungTVService: TVService {
         try await task.send(.string(text))
     }
 
-    // MARK: - Voice (Bixby) streaming — see Bixby.md
-
-    /// How long to wait for the TV's `ms.voiceApp.recording` after opening Bixby.
-    private let voiceRecordingTimeout: Duration = .seconds(4)
-
-    func beginVoiceSession() async throws {
-        guard state == .connected, webSocketTask != nil else {
-            throw TVServiceError.notConnected
-        }
-        // Step 1: toggle the voice key on (Press then Release, back-to-back).
-        voiceChunkCount = 0
-        // Suspend the heartbeat for the whole session — a keepalive-triggered reconnect would
-        // call teardown(), failing the recording waiter and closing Bixby.
-        voiceSessionActive = true
-        do {
-            // Hold-to-talk: send only the Press here and KEEP it held while audio streams —
-            // this firmware treats an immediate Release as "mic button let go" and closes
-            // Bixby right after it opens. The matching Release is sent in endVoiceSession().
-            try await transmit(TVCommandEncoder.voiceKeyPayload(cmd: "Press"))
-            appendSniff(.info, "voice: opening Bixby, waiting for recording…")
-            // Step 2: block until the TV says it's listening.
-            do {
-                try await awaitVoiceRecording()
-            } catch {
-                // Don't leave the voice key stuck "held" if Bixby never came up.
-                try? await transmit(TVCommandEncoder.voiceKeyPayload(cmd: "Release"))
-                throw error
-            }
-        } catch {
-            voiceSessionActive = false
-            throw error
-        }
-        appendSniff(.info, "voice: TV is recording")
-    }
-
-    func sendVoiceChunk(_ pcm: Data) async throws {
-        guard state == .connected, let task = webSocketTask else {
-            throw TVServiceError.notConnected
-        }
-        // Step 3: one binary frame per chunk.
-        let frame = TVCommandEncoder.voiceAudioFrame(pcm: pcm)
-        try await task.send(.data(frame))
-        voiceChunkCount += 1
-        appendSniff(.outbound, "voice audio chunk #\(voiceChunkCount): \(pcm.count) PCM bytes (\(frame.count)-byte frame)")
-    }
-
-    func endVoiceSession() async {
-        guard state == .connected, let task = webSocketTask else { return }
-        // Step 4: empty end-of-stream marker, then Release the (held-down) voice key —
-        // the Release is what tells Bixby the user "let go" and to process the utterance.
-        try? await task.send(.data(TVCommandEncoder.voiceAudioFrame(pcm: Data([0, 0, 0, 0]))))
-        try? await transmit(TVCommandEncoder.voiceKeyPayload(cmd: "Release"))
-        appendSniff(.info, "voice: end-of-stream marker + Release sent after \(voiceChunkCount) chunks")
-        voiceSessionActive = false
-    }
-
-    /// Suspends until the receive loop sees `ms.voiceApp.recording`, or throws
-    /// ``TVServiceError/voiceNotReady`` after ``voiceRecordingTimeout``. Single-shot:
-    /// whichever of event/timeout fires first resumes the continuation and clears it.
-    private func awaitVoiceRecording() async throws {
-        let timeout = voiceRecordingTimeout
-        try await withCheckedThrowingContinuation { (cont: CheckedContinuation<Void, Error>) in
-            voiceRecordingWaiter = cont
-            Task { [weak self] in
-                try? await Task.sleep(for: timeout)
-                self?.failVoiceRecordingWaiter()
-            }
-        }
-    }
-
-    private func resumeVoiceRecordingWaiter() {
-        voiceRecordingWaiter?.resume()
-        voiceRecordingWaiter = nil
-    }
-
-    private func failVoiceRecordingWaiter() {
-        voiceRecordingWaiter?.resume(throwing: TVServiceError.voiceNotReady)
-        voiceRecordingWaiter = nil
-    }
-
-    /// Parses an inbound frame for voice lifecycle events and reacts. Called from the
-    /// receive loop alongside ``recordInbound(_:)``.
-    private func handleVoiceEvent(_ message: URLSessionWebSocketTask.Message) {
-        guard let data = messageData(from: message),
-              let envelope = try? JSONDecoder().decode(EventEnvelope.self, from: data),
-              let event = envelope.event else { return }
-        switch event {
-        case "ms.voiceApp.recording":
-            resumeVoiceRecordingWaiter()
-        case "ms.voiceApp.hide":
-            appendSniff(.info, "voice: TV finished (ms.voiceApp.hide)")
-        default:
-            break
-        }
-    }
+    // Voice (Bixby) streaming lives in `SamsungTVService+Voice.swift` — see Bixby.md.
 
     func clearSniffLog() {
         sniffLog.removeAll()
     }
 
-    private func appendSniff(_ direction: SniffLogEntry.Direction, _ text: String) {
+    func appendSniff(_ direction: SniffLogEntry.Direction, _ text: String) {
         sniffLog.append(SniffLogEntry(direction: direction, text: text))
         if sniffLog.count > sniffLogLimit {
             sniffLog.removeFirst(sniffLog.count - sniffLogLimit)
@@ -323,13 +236,13 @@ final class SamsungTVService: TVService {
         request.httpMethod = "POST"
         request.timeoutInterval = 5
 
-        NSLog("[Launch] POST \(url.absoluteString)")
+        appendSniff(.outbound, "launch POST \(url.absoluteString)")
 
         do {
             let (data, response) = try await URLSession.shared.data(for: request)
             if let http = response as? HTTPURLResponse {
                 let body = String(data: data.prefix(200), encoding: .utf8) ?? "<binary>"
-                NSLog("[Launch] \(appID): HTTP \(http.statusCode) body=\(body)")
+                appendSniff(.inbound, "launch \(appID): HTTP \(http.statusCode) body=\(body)")
                 if !(200..<300).contains(http.statusCode) {
                     throw TVServiceError.appLaunchFailure("HTTP \(http.statusCode)")
                 }
@@ -337,7 +250,7 @@ final class SamsungTVService: TVService {
         } catch let error as TVServiceError {
             throw error
         } catch {
-            NSLog("[Launch] \(appID): error=\(error.localizedDescription)")
+            appendSniff(.info, "launch \(appID): error=\(error.localizedDescription)")
             throw TVServiceError.appLaunchFailure(error.localizedDescription)
         }
     }
@@ -415,7 +328,7 @@ final class SamsungTVService: TVService {
                 if let (data, response) = try? await URLSession.shared.data(for: request),
                    let http = response as? HTTPURLResponse, http.statusCode == 200,
                    let xml = String(data: data, encoding: .utf8) {
-                    if let screenId = Self.firstRegexMatch(in: xml, pattern: "<screenId>([^<]+)</screenId>") {
+                    if let screenId = firstRegexMatch(in: xml, pattern: "<screenId>([^<]+)</screenId>") {
                         appendSniff(.inbound, "DIAL YouTube screenId=\(screenId)")
                         return screenId
                     }
@@ -427,18 +340,6 @@ final class SamsungTVService: TVService {
             try? await Task.sleep(for: .milliseconds(800))
         }
         throw TVServiceError.appLaunchFailure("No YouTube screenId in DIAL additionalData")
-    }
-
-    /// First capture group of `pattern` in `string`, or `nil`. Small shared regex helper for
-    /// scraping the DIAL XML and Lounge responses without a full parser. `nonisolated` because
-    /// it's a pure function called from the nonisolated ``YouTubeLoungeClient``.
-    nonisolated static func firstRegexMatch(in string: String, pattern: String) -> String? {
-        guard let regex = try? NSRegularExpression(pattern: pattern) else { return nil }
-        let range = NSRange(string.startIndex..., in: string)
-        guard let match = regex.firstMatch(in: string, range: range),
-              match.numberOfRanges > 1,
-              let group = Range(match.range(at: 1), in: string) else { return nil }
-        return String(string[group])
     }
 
     /// Probes each ID in ``KnownTVApps/catalog`` via `GET /api/v2/applications/<id>` in
@@ -837,7 +738,7 @@ final class SamsungTVService: TVService {
         }
     }
 
-    private func messageData(from message: URLSessionWebSocketTask.Message) -> Data? {
+    func messageData(from message: URLSessionWebSocketTask.Message) -> Data? {
         switch message {
         case .data(let data): data
         case .string(let text): Data(text.utf8)
@@ -931,10 +832,6 @@ final class SamsungTVService: TVService {
         case timeout
     }
 
-    private struct EventEnvelope: Decodable {
-        let event: String?
-    }
-
     private struct ConnectEnvelope: Decodable {
         let event: String
         let data: EnvelopeData?
@@ -946,165 +843,5 @@ final class SamsungTVService: TVService {
 
     private struct AppInfo: Decodable {
         let name: String?
-    }
-}
-
-/// Minimal client for YouTube's private **Lounge** API — the cloud protocol the YouTube
-/// phone app and Chromecast use to control the YouTube-on-TV app. It is undocumented and
-/// **can break whenever Google changes it**. The wire format here is derived from the
-/// `casttube` (pychromecast) and `ytcast` projects.
-///
-/// Given a `screenId` (read from the TV's DIAL `additionalData`), ``play(screenId:videoId:listId:startSeconds:)``
-/// runs the three-step handshake — fetch a lounge token, open a bind session to obtain the
-/// `SID`/`gsessionid`, then send a `setPlaylist` command — to start a specific video on the
-/// screen, no on-TV pairing code required.
-struct YouTubeLoungeClient: Sendable {
-    enum LoungeError: Error, CustomStringConvertible {
-        case http(stage: String, status: Int, body: String)
-        case missingToken
-        case missingSessionIds
-        case badResponse
-
-        var description: String {
-            switch self {
-            case let .http(stage, status, body): return "\(stage) HTTP \(status) \(body)"
-            case .missingToken:      return "no loungeToken in response"
-            case .missingSessionIds: return "no SID/gsessionid in bind response"
-            case .badResponse:       return "unexpected response"
-            }
-        }
-    }
-
-    /// Name shown on the TV's "connected device" indicator.
-    let senderName: String
-
-    private static let tokenURL = URL(string: "https://www.youtube.com/api/lounge/pairing/get_lounge_token_batch")!
-    private static let bindURL = "https://www.youtube.com/api/lounge/bc/bind"
-    private static let origin = "https://www.youtube.com"
-    // A desktop UA — the Lounge endpoint is pickier when the UA looks like an unknown client.
-    private static let userAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.45 Safari/537.36"
-
-    func play(screenId: String, videoId: String, listId: String?, startSeconds: Int) async throws {
-        let token = try await loungeToken(screenId: screenId)
-        let session = try await sessionIds(loungeToken: token)
-        try await setPlaylist(
-            loungeToken: token,
-            session: session,
-            videoId: videoId,
-            listId: listId,
-            startSeconds: startSeconds
-        )
-    }
-
-    // MARK: - Steps
-
-    /// `POST get_lounge_token_batch` with `screen_ids=<id>` → `screens[0].loungeToken`.
-    private func loungeToken(screenId: String) async throws -> String {
-        var request = URLRequest(url: Self.tokenURL)
-        request.httpMethod = "POST"
-        request.timeoutInterval = 15
-        applyCommonHeaders(&request, formEncoded: true)
-        request.httpBody = Self.formBody(["screen_ids": screenId])
-
-        let (data, response) = try await URLSession.shared.data(for: request)
-        try Self.requireOK(response, data, stage: "lounge token")
-        guard
-            let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-            let screens = json["screens"] as? [[String: Any]],
-            let token = screens.first?["loungeToken"] as? String, !token.isEmpty
-        else { throw LoungeError.missingToken }
-        return token
-    }
-
-    /// Opens a bind session (RID=1, all params in the query string, empty body) and scrapes
-    /// the `SID` (`"c","…"`) and `gsessionid` (`"S","…"`) out of the chunked response.
-    private func sessionIds(loungeToken: String) async throws -> (sid: String, gsession: String) {
-        var components = URLComponents(string: Self.bindURL)!
-        components.queryItems = [
-            .init(name: "CVER", value: "1"),
-            .init(name: "RID", value: "1"),
-            .init(name: "VER", value: "8"),
-            .init(name: "app", value: "youtube-desktop"),
-            .init(name: "device", value: "REMOTE_CONTROL"),
-            .init(name: "id", value: "remote"),
-            .init(name: "loungeIdToken", value: loungeToken),
-            .init(name: "name", value: senderName),
-        ]
-        var request = URLRequest(url: components.url!)
-        request.httpMethod = "POST"
-        request.timeoutInterval = 15
-        applyCommonHeaders(&request, formEncoded: false)
-
-        let (data, response) = try await URLSession.shared.data(for: request)
-        try Self.requireOK(response, data, stage: "bind")
-        let body = String(data: data, encoding: .utf8) ?? ""
-        guard
-            let sid = SamsungTVService.firstRegexMatch(in: body, pattern: "\"c\",\"([^\"]+)\""),
-            let gsession = SamsungTVService.firstRegexMatch(in: body, pattern: "\"S\",\"([^\"]+)\"")
-        else { throw LoungeError.missingSessionIds }
-        return (sid, gsession)
-    }
-
-    /// `POST bc/bind?SID=…&gsessionid=…` (RID=2) with the `setPlaylist` command in the form
-    /// body. `req0_listId` is included for a radio/playlist mix; `req0_videoIds` carries the
-    /// single id so playback starts even when no list is given.
-    private func setPlaylist(
-        loungeToken: String,
-        session: (sid: String, gsession: String),
-        videoId: String,
-        listId: String?,
-        startSeconds: Int
-    ) async throws {
-        var components = URLComponents(string: Self.bindURL)!
-        components.queryItems = [
-            .init(name: "CVER", value: "1"),
-            .init(name: "RID", value: "2"),
-            .init(name: "SID", value: session.sid),
-            .init(name: "VER", value: "8"),
-            .init(name: "gsessionid", value: session.gsession),
-            .init(name: "loungeIdToken", value: loungeToken),
-        ]
-        var fields = [
-            "count": "1",
-            "req0__sc": "setPlaylist",
-            "req0_videoId": videoId,
-            "req0_currentTime": String(startSeconds),
-            "req0_currentIndex": "0",
-            "req0_videoIds": videoId,
-        ]
-        if let listId, !listId.isEmpty { fields["req0_listId"] = listId }
-
-        var request = URLRequest(url: components.url!)
-        request.httpMethod = "POST"
-        request.timeoutInterval = 15
-        applyCommonHeaders(&request, formEncoded: true)
-        request.httpBody = Self.formBody(fields)
-
-        let (data, response) = try await URLSession.shared.data(for: request)
-        try Self.requireOK(response, data, stage: "setPlaylist")
-    }
-
-    // MARK: - Helpers
-
-    private func applyCommonHeaders(_ request: inout URLRequest, formEncoded: Bool) {
-        request.setValue(Self.origin, forHTTPHeaderField: "Origin")
-        request.setValue(Self.userAgent, forHTTPHeaderField: "User-Agent")
-        if formEncoded {
-            request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
-        }
-    }
-
-    private static func formBody(_ fields: [String: String]) -> Data {
-        var components = URLComponents()
-        components.queryItems = fields.map { URLQueryItem(name: $0.key, value: $0.value) }
-        return (components.percentEncodedQuery ?? "").data(using: .utf8) ?? Data()
-    }
-
-    private static func requireOK(_ response: URLResponse, _ data: Data, stage: String) throws {
-        guard let http = response as? HTTPURLResponse else { throw LoungeError.badResponse }
-        guard http.statusCode == 200 else {
-            throw LoungeError.http(stage: stage, status: http.statusCode,
-                                   body: String(data: data.prefix(160), encoding: .utf8) ?? "")
-        }
     }
 }
