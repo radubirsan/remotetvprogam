@@ -113,10 +113,14 @@ struct RootView: View {
             let json = String(data: data, encoding: .utf8)
         else { return }
         lastRemoteDeviceJSON = json
+        // Mirror into the App Group suite so the Control Center controls (which run in a
+        // separate process) can target the current TV — including its MAC for Wake-on-LAN.
+        SharedStorage.setLastRemoteDeviceJSON(json)
     }
 
     private func clearActiveDevice() {
         lastRemoteDeviceJSON = ""
+        SharedStorage.setLastRemoteDeviceJSON("")
     }
 }
 

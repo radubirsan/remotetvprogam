@@ -44,6 +44,11 @@ RemoteTV/
                       MicrophoneCaptureService — 16 kHz mono PCM chunks for Bixby voice
                       NetworkMonitor         — NWPathMonitor → "is the phone on Wi-Fi/LAN?"
                       EPGClient              — actor that fetches/caches the EPG JSON dump
+  Intents/          App Intents (Siri / Shortcuts / Spotlight / Action button):
+                      TVIntentsController    — shared backend; resolves last TV + connects
+                      TVControlIntents       — power, mute, volume, open app, tune intents
+                      TVChannelEntity / TVAppEntity — static entity catalogs
+                      RemoteTVAppShortcuts   — zero-setup Siri phrases
   Features/
     Discovery/      DiscoveryView + DiscoveryViewModel + TVListRow.
     Remote/         RemoteView + RemoteViewModel; RemoteSamsungBody is the redesigned
@@ -165,6 +170,68 @@ header); (3) drive playback via `YouTubeLoungeClient` (token → bind → setPla
 Lounge API is undocumented Google internals and can break without notice — every stage
 logs to the sniff log so failures point at the broken step.
 
+### App Intents (Siri / Shortcuts)
+
+`RemoteTV/Intents/` exposes six intents: Toggle TV Power, Mute, Adjust Volume (direction
++ steps), Open App on TV, Change Channel (up/down), and Tune to Channel. All run
+**in-process, in the background**
+(no app open): iOS launches the app, `RemoteTVApp.init` registers `TVIntentsController`
+with `AppDependencyManager`, and intents resolve it via `@Dependency`. Registration MUST
+stay in `init` — `@Dependency` traps if unregistered, and background intent launches run
+`init` but no scene.
+
+The controller wraps the **same `SamsungTVService` instance the UI uses**, so an intent
+fired while the app is open reuses the live socket. Cold launches read the last device
+from the `lastRemoteDeviceJSON` UserDefaults slot (same key as `RootView`'s
+`@AppStorage`) and connect with the shared Keychain token. Power mirrors the UI's
+wake-mode logic: `KEY_POWER` when reachable, Wake-on-LAN magic packet when not (or when
+the TV reports standby). Macros pace keys at the same 120 ms the UI uses
+(`TVIntentsController.interKeyDelay` ↔ `RemoteView.tuneInterKeyDelay` — keep in sync).
+
+Intents resolve their backend through `TVIntentsController.resolve()`, NOT `@Dependency`:
+the app sets `TVIntentsController.shared` in `init` (live service, reused by in-app/Siri
+intents), and `resolve()` returns that when present or builds a standalone stack from
+shared storage otherwise. This is what lets the SAME intents run in the Control Center
+widget extension's process, where `AppDependencyManager` is never populated and
+`@Dependency` would trap. Don't reintroduce `@Dependency` here.
+
+Entity catalogs are static on purpose (channels from `KnownChannelNumbers`, apps from
+`TVApp` + `KnownTVApps` deduped): resolution must work with the TV off and without
+network. `RemoteTVAppShortcuts` phrase rules, learned the hard way:
+- Nothing that matches Siri's built-in home-control vocabulary ("turn on/off the TV") —
+  it routes to HomeKit before app phrases and prompts HomeKit setup.
+- App-name-first forms ("<app> power") are the most reliable; `INAlternativeAppNames`
+  registers "Cobalt" because "RemoteTV" transcribes as ordinary TV vocabulary.
+- Parameter values must be IN the phrase as `\(\.$param)` — two static phrases
+  ("channel up"/"channel down") would both run the intent with its default.
+- Entity-backed phrase parameters need the `updateAppShortcutParameters()` call in
+  `RemoteTVApp.init`; vocabulary re-indexes on app (re)install.
+
+### Control Center / Lock Screen control
+
+`RemoteTVExtension/` is a **widget-extension target** (controls can't be vended from an app
+target). It uses an Xcode **file-system synchronized group**, so it compiles whatever is in
+that folder — the app's networking stack is NOT a member. The control there is therefore
+**fully self-contained**: `WakeTVControl` + `WakeTVControlIntent` reproduce the Wake-on-LAN
+magic packet + UDP send inline (mirroring `MagicPacketBuilder` / `UDPBroadcastWakeService`)
+and read the target TV from the App Group. No app-target code is shared into the extension —
+that's deliberate, because sharing the WebSocket stack across the sync-group boundary would
+need a local Swift package.
+
+- **App Group** (`group.com.remotetv.RemoteTV`): the app mirror-writes `lastRemoteDeviceJSON`
+  into the shared suite (`RootView` → `SharedStorage`); the extension reads it (same group id
+  + key, inlined in `RemoteTVExtensionControl.swift`). Must be enabled on BOTH targets in
+  Xcode (Signing & Capabilities) for sharing to actually work; until then the control shows a
+  "no TV configured" dialog (graceful, no crash).
+- Wake needs only the MAC (carried in the device JSON), so no Keychain sharing is required.
+
+Scope note: this is **wake/power-on only**. A full power *toggle* (KEY_POWER when the TV is
+on) and **Mute** need the live WebSocket + pairing token, i.e. the app's `SamsungTVService`.
+Giving the extension that without duplicating ~30 files means extracting Domain + Services +
+Intents into a local Swift package both targets link — a deliberate follow-up, not done yet.
+The app-side scaffolding for it already exists and is harmless if unused: `SharedStorage`,
+`TVIntentsController.resolve()` / `makeStandalone()`, and `KeychainTVTokenStore(accessGroup:)`.
+
 ### Onboarding
 
 `Features/Onboarding/` is a first-run wizard (welcome → Wi-Fi check → find TV → pair →
@@ -281,7 +348,7 @@ varies by region/tier, so the map is a sensible default, not ground truth.
 
 Grep for an existing sibling file (e.g. `VolumeSection`) to copy the pattern. Test files
 use `D2…F0XX` build-file UUIDs and go in the test target's group + Sources phase instead.
-Currently the highest used suffix is `F071`. Suffixes `F040`–`F042` are retired (they
+Currently the highest used suffix is `F078`. Suffixes `F040`–`F042` are retired (they
 belonged to the removed DIAL feature); don't reuse them. (`RemoteSamsungStyle.swift` is
 the one exception to the deterministic-UUID scheme — it kept its Xcode-generated UUID
 when it was moved into `Features/Remote/`.)
@@ -350,6 +417,10 @@ owner/name changes, update that constant.
   permission prompt.
 - `NSAppTransportSecurity.NSAllowsArbitraryLoads = true` so the WebSocket can open against
   a plain `ws://` TV without ATS blocking it.
+- `INAlternativeAppNames` registers "Cobalt" as a Siri alias for the app — "RemoteTV"
+  transcribes poorly ("remote TV" is ordinary TV vocabulary), so App Shortcut phrases
+  match far more reliably via the alias ("Cobalt power"). Candidate for becoming the
+  real display name at App Store time.
 
 ## Running
 
@@ -381,7 +452,8 @@ Unit-tested surfaces: `TVCommandEncoder`, `TVURLBuilder`, `KeychainTVTokenStore`
 (including the pure `makeRows` merge logic), `TrackpadGestureMapper`, `EPGViewModel`
 (tune macro + channel filtering), `EPGClient` (cache layering via `file://` sources),
 `OnboardingViewModel` (select → pair flow), `SamsungTVService.isTransientNetworkError` +
-`firstRegexMatch`; and in `TVScheduel/`: `XMLTVParser`, `XMLTVDate`.
+`firstRegexMatch`, `TVIntentsController` (connect-on-demand + power/wake fallback),
+`TVChannelEntity`/`TVAppEntity` catalogs; and in `TVScheduel/`: `XMLTVParser`, `XMLTVDate`.
 
 Still untested (needs heavier mocks): the heartbeat ping classification, the voice
 continuation lifecycle, `BonjourDiscoveryService`, `MicrophoneCaptureService`, and the

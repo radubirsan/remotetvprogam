@@ -341,9 +341,17 @@ final class RemoteViewModel {
     /// Pure dispatch path — no UI state side effects. Returns the outcome so callers
     /// can present feedback their own way (the view model itself surfaces it via
     /// `lastError`, but a unit test can assert on the outcome directly).
+    ///
+    /// MAC resolution prefers the one carried on the `device` (donated by Discovery /
+    /// persisted in the device JSON), falling back to the remembered-TVs store — matching
+    /// the Siri / Control Center path in `TVIntentsController.togglePower`. Either source
+    /// alone is enough, so a wake still works when one of them is empty.
     func sendWake() async -> RemoteWakeOutcome {
         guard let wakeService else { return .wakeServiceMissing }
-        let mac: String? = await rememberedTVsStore?.get(ip: device.ip)?.mac
+        var mac = device.mac
+        if mac == nil || mac?.isEmpty == true {
+            mac = await rememberedTVsStore?.get(ip: device.ip)?.mac
+        }
         guard let mac, !mac.isEmpty else { return .macUnknown }
         do {
             try await wakeService.wake(mac: mac, ip: device.ip)

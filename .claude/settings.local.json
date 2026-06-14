@@ -29,7 +29,9 @@
       "Bash(curl *)",
       "Bash(git -C /Users/as3/Desktop/RemoteTV/remotetvprogam log --oneline -15)",
       "Bash(git mv *)",
-      "Bash(sed -n '1,10p' RemoteTV/Features/Remote/RemoteView.swift)"
+      "Bash(sed -n '1,10p' RemoteTV/Features/Remote/RemoteView.swift)",
+      "Bash(plutil -lint RemoteTV/Resources/Info.plist)",
+      "Bash(plutil *)"
     ]
   }
 }

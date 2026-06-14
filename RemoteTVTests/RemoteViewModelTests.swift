@@ -84,10 +84,33 @@ private final class FakeTVService: TVService {
     }
 }
 
+private final class FakeWakeService: WakeOnLANService, @unchecked Sendable {
+    private let lock = NSLock()
+    private var _calls: [(mac: String, ip: String?)] = []
+    var calls: [(mac: String, ip: String?)] { lock.withLock { _calls } }
+
+    func wake(mac: String, ip: String?) async throws {
+        lock.withLock { _calls.append((mac, ip)) }
+    }
+}
+
+private actor InMemoryRememberedStore: RememberedTVsStore {
+    private var records: [RememberedTV]
+    init(_ records: [RememberedTV] = []) { self.records = records }
+    func all() async -> [RememberedTV] { records }
+    func get(ip: String) async -> RememberedTV? { records.first { $0.ip == ip } }
+    func upsert(_ tv: RememberedTV) async throws {}
+    func delete(ip: String) async throws {}
+}
+
 @MainActor
 struct RemoteViewModelTests {
-    private func makeDevice() -> TVDevice {
-        TVDevice(ip: "192.168.1.42", name: "Living Room", mode: .plain)
+    private func makeDevice(mac: String? = nil) -> TVDevice {
+        TVDevice(ip: "192.168.1.42", name: "Living Room", mode: .plain, mac: mac)
+    }
+
+    private func remembered(mac: String?) -> RememberedTV {
+        RememberedTV(ip: "192.168.1.42", friendlyName: "Living Room", modelName: "UN55", mac: mac, udn: nil)
     }
 
     @Test func sendForwardsCommandToService() async {
@@ -245,6 +268,61 @@ struct RemoteViewModelTests {
         #expect(service.castedYouTubeVideos.first?.listId == expected?.listId)
         #expect(service.castedYouTubeVideos.first?.startSeconds == expected?.startSeconds)
         #expect(vm.lastError == nil)
+    }
+
+    @Test func sendWakePrefersDeviceMAC() async {
+        let wake = FakeWakeService()
+        // Device carries a MAC; the remembered store has a *different* one — the device's
+        // should win (it's the one Discovery donated for this session).
+        let vm = RemoteViewModel(
+            device: makeDevice(mac: "aa:bb:cc:dd:ee:ff"),
+            service: FakeTVService(),
+            wakeService: wake,
+            rememberedTVsStore: InMemoryRememberedStore([remembered(mac: "11:22:33:44:55:66")])
+        )
+
+        let outcome = await vm.sendWake()
+
+        #expect(outcome == .sent)
+        #expect(wake.calls.first?.mac == "aa:bb:cc:dd:ee:ff")
+    }
+
+    @Test func sendWakeFallsBackToRememberedStoreMAC() async {
+        let wake = FakeWakeService()
+        let vm = RemoteViewModel(
+            device: makeDevice(mac: nil),
+            service: FakeTVService(),
+            wakeService: wake,
+            rememberedTVsStore: InMemoryRememberedStore([remembered(mac: "11:22:33:44:55:66")])
+        )
+
+        let outcome = await vm.sendWake()
+
+        #expect(outcome == .sent)
+        #expect(wake.calls.first?.mac == "11:22:33:44:55:66")
+    }
+
+    @Test func sendWakeReturnsMacUnknownWhenNeitherSourceHasIt() async {
+        let wake = FakeWakeService()
+        let vm = RemoteViewModel(
+            device: makeDevice(mac: nil),
+            service: FakeTVService(),
+            wakeService: wake,
+            rememberedTVsStore: InMemoryRememberedStore([remembered(mac: nil)])
+        )
+
+        let outcome = await vm.sendWake()
+
+        #expect(outcome == .macUnknown)
+        #expect(wake.calls.isEmpty)
+    }
+
+    @Test func sendWakeReturnsServiceMissingWithoutWakeService() async {
+        let vm = RemoteViewModel(device: makeDevice(mac: "aa:bb:cc:dd:ee:ff"), service: FakeTVService())
+
+        let outcome = await vm.sendWake()
+
+        #expect(outcome == .wakeServiceMissing)
     }
 
     @Test func reconnectIfNeededClearsLastErrorOnRecovery() async {

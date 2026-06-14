@@ -1,3 +1,4 @@
+import AppIntents
 import SwiftUI
 
 @main
@@ -12,14 +13,31 @@ struct RemoteTVApp: App {
         let tokenStore = KeychainTVTokenStore()
         let rememberedTVsStore = FileRememberedTVsStore()
         let deviceInfo = SamsungDeviceInfoService()
-        _service = State(initialValue: SamsungTVService(
+        let service = SamsungTVService(
             tokenStore: tokenStore,
             rememberedTVsStore: rememberedTVsStore,
             deviceInfoService: deviceInfo
-        ))
+        )
+        let wakeService = UDPBroadcastWakeService()
+        _service = State(initialValue: service)
         self.rememberedTVsStore = rememberedTVsStore
-        self.wakeService = UDPBroadcastWakeService()
+        self.wakeService = wakeService
         self.discoveryService = BonjourDiscoveryService()
+
+        // Back the App Intents (Siri / Shortcuts / Control Center) with the SAME service
+        // instance the UI uses, so an intent fired while the app is open reuses the live
+        // socket instead of opening a second one. `TVIntentsController.resolve()` returns
+        // this when running in the app process; the Control Center extension has its own
+        // process and falls back to a standalone stack built from shared storage.
+        TVIntentsController.shared = TVIntentsController(
+            service: service,
+            wakeService: wakeService,
+            rememberedTVsStore: rememberedTVsStore
+        )
+        // (Re)index the Siri vocabulary for parameterized App Shortcut phrases — the
+        // "open <app>" phrase resolves against the TVAppEntity catalog, and entity-backed
+        // parameters aren't indexed automatically the way AppEnums are.
+        RemoteTVAppShortcuts.updateAppShortcutParameters()
         
         Task {
              let epg = EPGClient(configuration: .init(sourceURL:
