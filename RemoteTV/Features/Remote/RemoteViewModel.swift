@@ -1,5 +1,6 @@
 import Foundation
 import Observation
+import RemoteTVCore
 
 /// What happened the last time the user pressed the power button while the
 /// view model was in "wake" mode. Surfaced on `RemoteViewModel.lastError` for the

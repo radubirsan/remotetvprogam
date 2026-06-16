@@ -1,4 +1,5 @@
 import AppIntents
+import RemoteTVCore
 
 /// A launchable Tizen app exposed to Siri / Shortcuts. Combines the dedicated shortcut
 /// apps (``TVApp``) with the probe catalog (``KnownTVApps``), deduped. Static by design —

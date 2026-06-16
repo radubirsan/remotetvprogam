@@ -1,3 +1,4 @@
+import RemoteTVCore
 import SwiftUI
 
 /// EPG screen: shows what's on Romanian TV right now, with drill-in for a full per-channel

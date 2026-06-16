@@ -1,3 +1,4 @@
+import RemoteTVCore
 import SwiftUI
 
 /// Virtual trackpad. A drag is classified by ``TrackpadGestureMapper`` as either a tap

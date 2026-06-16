@@ -1,3 +1,4 @@
+import RemoteTVCore
 import SwiftUI
 
 /// Which auxiliary panel is currently surfaced beside the remote in ``RemoteView``.

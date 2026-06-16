@@ -1,5 +1,6 @@
 import Foundation
 import Testing
+import RemoteTVCore
 @testable import RemoteTV
 
 @MainActor

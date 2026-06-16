@@ -1,3 +1,4 @@
+import RemoteTVCore
 import SwiftUI
 
 /// First-run setup wizard (and the gear-menu "Setup guide" replay). Full-screen, dark,

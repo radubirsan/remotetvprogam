@@ -1,5 +1,6 @@
 import Foundation
 import Testing
+@testable import RemoteTVCore
 @testable import RemoteTV
 
 /// Tests for the pure helpers in the Samsung service layer: the transient-network

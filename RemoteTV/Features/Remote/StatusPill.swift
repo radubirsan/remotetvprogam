@@ -1,3 +1,4 @@
+import RemoteTVCore
 import SwiftUI
 
 struct StatusPill: View {

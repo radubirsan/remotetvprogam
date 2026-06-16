@@ -1,3 +1,4 @@
+import RemoteTVCore
 import SwiftUI
 
 /// Samsung-style remote screen. Lays out a fixed dark canvas (composed from the

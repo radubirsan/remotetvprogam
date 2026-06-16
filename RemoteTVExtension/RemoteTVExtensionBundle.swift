@@ -12,6 +12,12 @@ import WidgetKit
 @main
 struct RemoteTVExtensionBundle: WidgetBundle {
     var body: some Widget {
-        WakeTVControl()
+        TVPowerControl()
+        TVMuteControl()
+        TVVolumeUpControl()
+        TVVolumeDownControl()
+        TVChannelUpControl()
+        TVChannelDownControl()
+        OpenRemoteTVAppControl()
     }
 }

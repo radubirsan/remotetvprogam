@@ -1,5 +1,6 @@
 import Foundation
 import Observation
+import RemoteTVCore
 
 /// Drives the first-run setup wizard: network check → find TV → pair → success →
 /// test → optimize. Re-used for the "Setup guide" replay from the gear menu (`isReplay`).

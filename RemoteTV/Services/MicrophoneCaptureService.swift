@@ -3,6 +3,7 @@
 // capturing the (non-Sendable) input buffer there is safe. Suppresses that warning.
 @preconcurrency import AVFoundation
 import Foundation
+import RemoteTVCore
 
 /// Captures microphone audio and emits it as the raw PCM chunks the Samsung Bixby
 /// voice protocol expects: signed 16-bit little-endian, mono, 16 kHz. See `Bixby.md`.

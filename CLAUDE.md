@@ -12,6 +12,12 @@ network, opens a WebSocket control channel, and sends key-code commands.
   down-target.
 - **SwiftUI only.** No UIKit unless requested.
 - **No third-party frameworks.** Everything is Foundation + Network.framework + SwiftUI.
+- **`RemoteTVCore/` is a local Swift package = the shared "engine"** (TV-control domain
+  types + the whole networking/persistence stack + `TVIntentsController` + `SharedStorage`).
+  The app, the `RemoteTVExtension` widget extension, and the test target all link it, so the
+  engine has one source of truth and the Control Center controls can drive the real
+  `SamsungTVService`. Pure Foundation/Security/Darwin/Observation — no SwiftUI/UIKit and no
+  AppIntents *conformances* (intent/entity types stay per-target). See "Shared engine package".
 - Tests use **Swift Testing** (`@Test`, `#expect`), not XCTest.
 - **`TVScheduel/` is a separate SwiftPM package** (the EPG grabber), not part of the Xcode
   project. It targets `swift-tools-version 5.9` / macOS 13 and is deliberately written to
@@ -24,31 +30,25 @@ network, opens a WebSocket control channel, and sends key-code commands.
 RemoteTV/
   App/              RemoteTVApp.swift — composition root, builds concrete services.
                     RootView.swift   — switches Discovery ⇄ Remote on @AppStorage state.
-  Domain/           Value types (DiscoveredTV, RememberedTV, TVDevice, TVCommand,
-                    TVConnectionMode, TVConnectionState, TVPowerState, TVServiceError,
-                    TVApp, InstalledApp, KnownTVApps, SniffLogEntry).
-                    EPG types: EPGGuide, EPGChannel, EPGProgramme, KnownChannelNumbers.
+  Domain/           App/UI-only value types: DiscoveredTV + the EPG types (EPGGuide,
+                    EPGChannel, EPGProgramme, KnownChannelNumbers). The TV-control value
+                    types (TVDevice, TVCommand, TVConnection*, TVPowerState, TVServiceError,
+                    RememberedTV, TVApp, InstalledApp, KnownTVApps, SniffLogEntry) moved to
+                    the RemoteTVCore package.
   Discovery/        TVDiscoveryService protocol + BonjourDiscoveryService (NWBrowser +
                     direct subnet scan).
-  Services/         Everything network/persistence:
-                      SamsungTVService       — WebSocket transport + pairing + heartbeat
-                      SamsungTVService+Voice — Bixby voice-session extension (see Bixby.md)
-                      YouTubeLoungeClient    — YouTube Lounge cast client (see YTCAST.md)
-                      SamsungTrustDelegate   — accepts TV self-signed certs on :8002
-                      SamsungDeviceInfoService — reads /api/v2/ to grab MAC
-                      TVURLBuilder           — builds ws/wss URLs (includes token)
-                      TVCommandEncoder       — JSON body for a key press
-                      KeychainTVTokenStore   — pairing tokens in Keychain
-                      FileRememberedTVsStore — remembered-TV JSON in Application Support
-                      UDPBroadcastWakeService + MagicPacketBuilder — WoL
-                      MicrophoneCaptureService — 16 kHz mono PCM chunks for Bixby voice
-                      NetworkMonitor         — NWPathMonitor → "is the phone on Wi-Fi/LAN?"
-                      EPGClient              — actor that fetches/caches the EPG JSON dump
-  Intents/          App Intents (Siri / Shortcuts / Spotlight / Action button):
-                      TVIntentsController    — shared backend; resolves last TV + connects
+  Services/         App-only services: EPGClient (EPG JSON fetch/cache), NetworkMonitor
+                    (Wi-Fi/LAN path), MicrophoneCaptureService (Bixby mic). The networking/
+                    persistence ENGINE — SamsungTVService [+Voice], YouTubeLoungeClient, the
+                    stores, UDPBroadcastWakeService/MagicPacketBuilder, TVURLBuilder,
+                    TVCommandEncoder, SamsungTrustDelegate, SamsungDeviceInfoService — moved
+                    to the RemoteTVCore package.
+  Intents/          App-side App Intents (Siri / Shortcuts / Spotlight / Action button):
                       TVControlIntents       — power, mute, volume, open app, tune intents
                       TVChannelEntity / TVAppEntity — static entity catalogs
                       RemoteTVAppShortcuts   — zero-setup Siri phrases
+                    (TVIntentsController + SharedStorage — the shared backend — live in
+                    RemoteTVCore so the widget extension can reuse them.)
   Features/
     Discovery/      DiscoveryView + DiscoveryViewModel + TVListRow.
     Remote/         RemoteView + RemoteViewModel; RemoteSamsungBody is the redesigned
@@ -65,6 +65,11 @@ RemoteTV/
                     OnboardingViewModel + one Onboarding*Step.swift file per step,
                     sharing OnboardingStepScaffold.
   Resources/        Info.plist, RemoteTV.entitlements, Localizable.xcstrings, Assets.xcassets.
+RemoteTVCore/       Local Swift package — the shared engine (Domain control types + Services
+                    networking/persistence + TVIntentsController + SharedStorage). Linked by
+                    the app, the RemoteTVExtension widget extension, and the test target.
+RemoteTVExtension/  Widget-extension target (Xcode synchronized folder). Control Center / Lock
+                    Screen controls (TV Power, Mute) built on RemoteTVCore.
 RemoteTVTests/      Swift Testing target — one file per SUT.
 TVScheduel/         Standalone SwiftPM package: Romanian XMLTV → JSON grabber (see below).
 .github/workflows/  epg-update.yml — daily CI that publishes guide.json to `epg-data` branch.
@@ -207,30 +212,56 @@ network. `RemoteTVAppShortcuts` phrase rules, learned the hard way:
 - Entity-backed phrase parameters need the `updateAppShortcutParameters()` call in
   `RemoteTVApp.init`; vocabulary re-indexes on app (re)install.
 
-### Control Center / Lock Screen control
+### Shared engine package (`RemoteTVCore`)
 
-`RemoteTVExtension/` is a **widget-extension target** (controls can't be vended from an app
-target). It uses an Xcode **file-system synchronized group**, so it compiles whatever is in
-that folder — the app's networking stack is NOT a member. The control there is therefore
-**fully self-contained**: `WakeTVControl` + `WakeTVControlIntent` reproduce the Wake-on-LAN
-magic packet + UDP send inline (mirroring `MagicPacketBuilder` / `UDPBroadcastWakeService`)
-and read the target TV from the App Group. No app-target code is shared into the extension —
-that's deliberate, because sharing the WebSocket stack across the sync-group boundary would
-need a local Swift package.
+The networking/persistence engine lives in a local Swift package so the app AND the widget
+extension share one copy:
+- **Contents:** the TV-control Domain value types, the whole Services stack (`SamsungTVService`
+  [+Voice], `YouTubeLoungeClient`, the stores, WoL, URL/command builders, trust delegate,
+  device-info), plus `TVIntentsController` and `SharedStorage`.
+- **NOT in the package:** SwiftUI/UIKit, the Features/UI layer, Discovery, EPG, NetworkMonitor,
+  MicrophoneCaptureService, and — deliberately — every `AppIntent`/`AppEntity`/`ControlWidget`
+  *conformance*. Intent types stay per-target (app's Siri intents in `RemoteTV/Intents/`, the
+  extension's control intents in `RemoteTVExtension/`) so each target's AppIntents metadata is
+  generated from its own types — no cross-module duplicate-registration surprises.
+- **Linkage:** linked by the app, the extension, and the test target. Xcode builds it as one
+  shared framework (auto-dynamic, since two targets in the app consume it), so the engine is
+  embedded once and shared — not duplicated per binary.
+- **Public surface:** everything the app/extension call is `public` (value types have explicit
+  `public init`s; `@Observable` props are `public private(set)`). Internal-only helpers
+  (`SamsungTVService.isTransientNetworkError`, the free `firstRegexMatch`) stay internal —
+  tests reach them via `@testable import RemoteTVCore`.
+- **Adding engine files:** SwiftPM auto-discovers everything under
+  `RemoteTVCore/Sources/RemoteTVCore/` — just drop the `.swift` in (Domain/Services/Intents
+  subfolders), no pbxproj edit. Mark the API `public`. (App/extension UI files still follow
+  the pbxproj / synchronized-folder rules below.)
 
+### Control Center / Lock Screen controls
+
+`RemoteTVExtension/` is the **widget-extension target** (controls can't be vended from an app
+target; it's an Xcode file-system synchronized folder). It links `RemoteTVCore` and vends seven
+`ControlWidget`s — **TV Power**, **Mute**, **Volume Up/Down**, **Channel Up/Down**, and
+**Open RemoteTV** — whose intents call `TVIntentsController.resolve()` on the real engine.
+Channel taps send a single key; Volume Up sends **2** `.volumeUp` and Volume Down sends **3**
+`.volumeDown` per press (via the paced `send(macro:)`). **Open RemoteTV** is an
+`openAppWhenRun = true` intent (no engine call) that just foregrounds the app. In the extension process `shared` is nil, so `resolve()` returns
+`makeStandalone()`, which builds a fresh `SamsungTVService` from shared storage. Power toggles
+`KEY_POWER` when reachable and falls back to Wake-on-LAN when the TV is off; Mute opens a fresh
+socket and sends `KEY_MUTE`.
+
+Cross-process state still rides on the same two capabilities (must be enabled on BOTH targets
+in Xcode Signing & Capabilities):
 - **App Group** (`group.com.remotetv.RemoteTV`): the app mirror-writes `lastRemoteDeviceJSON`
-  into the shared suite (`RootView` → `SharedStorage`); the extension reads it (same group id
-  + key, inlined in `RemoteTVExtensionControl.swift`). Must be enabled on BOTH targets in
-  Xcode (Signing & Capabilities) for sharing to actually work; until then the control shows a
-  "no TV configured" dialog (graceful, no crash).
-- Wake needs only the MAC (carried in the device JSON), so no Keychain sharing is required.
-
-Scope note: this is **wake/power-on only**. A full power *toggle* (KEY_POWER when the TV is
-on) and **Mute** need the live WebSocket + pairing token, i.e. the app's `SamsungTVService`.
-Giving the extension that without duplicating ~30 files means extracting Domain + Services +
-Intents into a local Swift package both targets link — a deliberate follow-up, not done yet.
-The app-side scaffolding for it already exists and is harmless if unused: `SharedStorage`,
-`TVIntentsController.resolve()` / `makeStandalone()`, and `KeychainTVTokenStore(accessGroup:)`.
+  (`RootView` → `SharedStorage`); the extension reads it to know which TV to target (and its
+  MAC for WoL). Until enabled, controls degrade to a "no TV configured" dialog (no crash).
+- **Pairing token** for **Mute** (it opens a socket, which needs the token): shared via the
+  App Group, NOT Keychain Sharing. The app's token store is
+  `MirroringTokenStore(primary: KeychainTVTokenStore(), mirror: AppGroupTokenStore())` — Keychain
+  stays authoritative but every token is mirrored into the App Group; the extension's
+  `makeStandalone()` reads it via `AppGroupTokenStore`. So only the **App Group** capability is
+  needed (no Keychain Sharing). After enabling it, **connect from the app once** so the token
+  mirrors; until then Mute re-triggers the TV's pairing popup. (Power-via-WoL needs only the MAC,
+  so it never needed the token. `SharedStorage.keychainAccessGroup` is now unused.)
 
 ### Onboarding
 
@@ -338,8 +369,17 @@ varies by region/tier, so the map is a sensible default, not ground truth.
 
 ## Xcode project file — adding new Swift files
 
-`RemoteTV.xcodeproj/project.pbxproj` uses deterministic UUIDs (`A2…F0XX` for file refs,
-`B2…F0XX` for Sources build files). To add a new source file, insert four entries:
+**First decide which target the file belongs to:**
+- **Engine** (domain types, networking, persistence, the intents backend) → drop it under
+  `RemoteTVCore/Sources/RemoteTVCore/` and mark its API `public`. SwiftPM auto-discovers it —
+  **no pbxproj edit.**
+- **Widget-extension** file → put it in `RemoteTVExtension/` (Xcode synchronized folder —
+  auto-included, no pbxproj edit) and link against `RemoteTVCore`.
+- **App UI / Features / app-side intents** → the app target uses explicit pbxproj membership
+  (below).
+
+For an **app-target** file: `project.pbxproj` uses deterministic UUIDs (`A2…F0XX` for file
+refs, `B2…F0XX` for Sources build files). Insert four entries:
 
 1. `PBXBuildFile` section — `B2000000000000000000F0xx /* Foo.swift in Sources */`
 2. `PBXFileReference` section — `A2000000000000000000F0xx /* Foo.swift */`
@@ -348,12 +388,15 @@ varies by region/tier, so the map is a sensible default, not ground truth.
 
 Grep for an existing sibling file (e.g. `VolumeSection`) to copy the pattern. Test files
 use `D2…F0XX` build-file UUIDs and go in the test target's group + Sources phase instead.
-Currently the highest used suffix is `F078`. Suffixes `F040`–`F042` are retired (they
-belonged to the removed DIAL feature); don't reuse them. (`RemoteSamsungStyle.swift` is
-the one exception to the deterministic-UUID scheme — it kept its Xcode-generated UUID
-when it was moved into `Features/Remote/`.)
+Currently the highest used suffix is `F078`. Suffixes `F040`–`F042` (removed DIAL feature)
+and `F072`/`F079` (`TVIntentsController`/`SharedStorage`, which moved to `RemoteTVCore`) are
+retired; don't reuse them. (`RemoteSamsungStyle.swift` is the one exception to the
+deterministic-UUID scheme — it kept its Xcode-generated UUID when moved into
+`Features/Remote/`.) The local-package wiring uses `AA…`/`AB…`/`AC…` UUIDs
+(`XCLocalSwiftPackageReference` / `XCSwiftPackageProductDependency` / the `… in Frameworks`
+build files on the app, extension, and test targets).
 
-`TVScheduel/` files do NOT go in the pbxproj — that package builds with SwiftPM, not Xcode.
+Neither `RemoteTVCore/` nor `TVScheduel/` files go in the pbxproj — both build with SwiftPM.
 
 ## Gotchas — things that have been tried and rejected
 

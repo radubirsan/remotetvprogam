@@ -31,7 +31,15 @@
       "Bash(git mv *)",
       "Bash(sed -n '1,10p' RemoteTV/Features/Remote/RemoteView.swift)",
       "Bash(plutil -lint RemoteTV/Resources/Info.plist)",
-      "Bash(plutil *)"
+      "Bash(plutil *)",
+      "Bash(swift build *)",
+      "Bash(echo \"---exit: $?---\")",
+      "Bash(grep -v '^$')",
+      "Bash(python3 -)",
+      "Bash(awk 'NR>=1 && /Begin PBXFrameworksBuildPhase/,/End PBXFrameworksBuildPhase/' RemoteTV.xcodeproj/project.pbxproj)",
+      "Bash(xcodebuild -project RemoteTV.xcodeproj -list)",
+      "Bash(xcodebuild build-for-testing *)",
+      "Bash(xcodebuild clean *)"
     ]
   }
 }

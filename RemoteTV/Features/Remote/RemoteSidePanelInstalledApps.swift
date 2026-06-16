@@ -1,3 +1,4 @@
+import RemoteTVCore
 import SwiftUI
 
 /// Side-panel rendering of the installed-apps loader. Used when the user opens the

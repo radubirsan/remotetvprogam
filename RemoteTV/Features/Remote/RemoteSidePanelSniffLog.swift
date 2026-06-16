@@ -1,3 +1,4 @@
+import RemoteTVCore
 import SwiftUI
 
 /// Side-panel rendering of the WebSocket sniff log. Used when the user opens the

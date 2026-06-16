@@ -1,4 +1,5 @@
 import AppIntents
+import RemoteTVCore
 import SwiftUI
 
 @main
@@ -10,7 +11,13 @@ struct RemoteTVApp: App {
     private let discoveryService: BonjourDiscoveryService
 
     init() {
-        let tokenStore = KeychainTVTokenStore()
+        // Keychain stays the authoritative token store, but mirror every token into the
+        // App Group so the Control Center extension (which can't read this app's Keychain)
+        // can authenticate too — otherwise its Mute control re-triggers the TV pairing popup.
+        let tokenStore = MirroringTokenStore(
+            primary: KeychainTVTokenStore(),
+            mirror: AppGroupTokenStore()
+        )
         let rememberedTVsStore = FileRememberedTVsStore()
         let deviceInfo = SamsungDeviceInfoService()
         let service = SamsungTVService(

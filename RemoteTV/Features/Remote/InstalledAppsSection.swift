@@ -1,3 +1,4 @@
+import RemoteTVCore
 import SwiftUI
 
 /// On-demand list of apps detected on the TV. The first tap of "Load Installed Apps" fires

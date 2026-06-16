@@ -1,4 +1,5 @@
 import AppIntents
+import RemoteTVCore
 
 // The control intents Siri / Shortcuts / Spotlight / the Action button / Control Center
 // can run. All run in-process without opening the app (`openAppWhenRun` defaults to false).

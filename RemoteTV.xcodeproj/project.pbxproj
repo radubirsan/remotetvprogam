@@ -11,19 +11,10 @@
 		36C1F87E2FDDDAE30058B7ED /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 36C1F87D2FDDDAE30058B7ED /* WidgetKit.framework */; };
 		36C1F8802FDDDAE30058B7ED /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 36C1F87F2FDDDAE30058B7ED /* SwiftUI.framework */; };
 		36C1F8912FDDDAE40058B7ED /* RemoteTVExtensionExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 36C1F87B2FDDDAE30058B7ED /* RemoteTVExtensionExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		AC000000000000000000F001 /* RemoteTVCore in Frameworks */ = {isa = PBXBuildFile; productRef = AB000000000000000000F001 /* RemoteTVCore */; };
+		AC000000000000000000F002 /* RemoteTVCore in Frameworks */ = {isa = PBXBuildFile; productRef = AB000000000000000000F002 /* RemoteTVCore */; };
+		AC000000000000000000F003 /* RemoteTVCore in Frameworks */ = {isa = PBXBuildFile; productRef = AB000000000000000000F003 /* RemoteTVCore */; };
 		B2000000000000000000F001 /* RemoteTVApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F001 /* RemoteTVApp.swift */; };
-		B2000000000000000000F002 /* TVCommand.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F002 /* TVCommand.swift */; };
-		B2000000000000000000F003 /* TVConnectionMode.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F003 /* TVConnectionMode.swift */; };
-		B2000000000000000000F004 /* TVConnectionState.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F004 /* TVConnectionState.swift */; };
-		B2000000000000000000F005 /* TVDevice.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F005 /* TVDevice.swift */; };
-		B2000000000000000000F006 /* TVServiceError.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F006 /* TVServiceError.swift */; };
-		B2000000000000000000F007 /* TVService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F007 /* TVService.swift */; };
-		B2000000000000000000F008 /* TVTokenStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F008 /* TVTokenStore.swift */; };
-		B2000000000000000000F009 /* TVCommandEncoder.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F009 /* TVCommandEncoder.swift */; };
-		B2000000000000000000F00A /* TVURLBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F00A /* TVURLBuilder.swift */; };
-		B2000000000000000000F00B /* SamsungTrustDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F00B /* SamsungTrustDelegate.swift */; };
-		B2000000000000000000F00C /* KeychainTVTokenStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F00C /* KeychainTVTokenStore.swift */; };
-		B2000000000000000000F00D /* SamsungTVService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F00D /* SamsungTVService.swift */; };
 		B2000000000000000000F010 /* RemoteView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F010 /* RemoteView.swift */; };
 		B2000000000000000000F011 /* RemoteViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F011 /* RemoteViewModel.swift */; };
 		B2000000000000000000F012 /* RemoteButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F012 /* RemoteButton.swift */; };
@@ -32,13 +23,6 @@
 		B2000000000000000000F015 /* BottomActionsSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F015 /* BottomActionsSection.swift */; };
 		B2000000000000000000F016 /* StatusPill.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F016 /* StatusPill.swift */; };
 		B2000000000000000000F017 /* RemoteToolbarMenu.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F017 /* RemoteToolbarMenu.swift */; };
-		B2000000000000000000F020 /* RememberedTV.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F020 /* RememberedTV.swift */; };
-		B2000000000000000000F021 /* MagicPacketBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F021 /* MagicPacketBuilder.swift */; };
-		B2000000000000000000F022 /* WakeOnLANService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F022 /* WakeOnLANService.swift */; };
-		B2000000000000000000F023 /* UDPBroadcastWakeService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F023 /* UDPBroadcastWakeService.swift */; };
-		B2000000000000000000F024 /* SamsungDeviceInfoService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F024 /* SamsungDeviceInfoService.swift */; };
-		B2000000000000000000F025 /* RememberedTVsStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F025 /* RememberedTVsStore.swift */; };
-		B2000000000000000000F026 /* FileRememberedTVsStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F026 /* FileRememberedTVsStore.swift */; };
 		B2000000000000000000F029 /* DiscoveredTV.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F029 /* DiscoveredTV.swift */; };
 		B2000000000000000000F02D /* TVDiscoveryService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F02D /* TVDiscoveryService.swift */; };
 		B2000000000000000000F02F /* DiscoveryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F02F /* DiscoveryView.swift */; };
@@ -47,12 +31,8 @@
 		B2000000000000000000F037 /* BonjourDiscoveryService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F037 /* BonjourDiscoveryService.swift */; };
 		B2000000000000000000F038 /* ChannelSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F038 /* ChannelSection.swift */; };
 		B2000000000000000000F039 /* CommercialMuteSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F039 /* CommercialMuteSection.swift */; };
-		B2000000000000000000F03A /* TVApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F03A /* TVApp.swift */; };
 		B2000000000000000000F03C /* AppsSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F03C /* AppsSection.swift */; };
-		B2000000000000000000F03D /* InstalledApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F03D /* InstalledApp.swift */; };
 		B2000000000000000000F03E /* InstalledAppsSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F03E /* InstalledAppsSection.swift */; };
-		B2000000000000000000F03F /* KnownTVApps.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F03F /* KnownTVApps.swift */; };
-		B2000000000000000000F043 /* SniffLogEntry.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F043 /* SniffLogEntry.swift */; };
 		B2000000000000000000F044 /* SniffLogSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F044 /* SniffLogSection.swift */; };
 		B2000000000000000000F045 /* TrackpadGestureMapper.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F045 /* TrackpadGestureMapper.swift */; };
 		B2000000000000000000F046 /* TrackpadSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F046 /* TrackpadSection.swift */; };
@@ -64,7 +44,6 @@
 		B2000000000000000000F04D /* RemoteSidePanelInstalledApps.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F04D /* RemoteSidePanelInstalledApps.swift */; };
 		B2000000000000000000F04E /* RemoteSidePanelSniffLog.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F04E /* RemoteSidePanelSniffLog.swift */; };
 		B2000000000000000000F04F /* RemoteSidePanelShortcuts.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F04F /* RemoteSidePanelShortcuts.swift */; };
-		B2000000000000000000F050 /* TVPowerState.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F050 /* TVPowerState.swift */; };
 		B2000000000000000000F051 /* HapticPressStyle.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F051 /* HapticPressStyle.swift */; };
 		B2000000000000000000F052 /* PowerButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F052 /* PowerButton.swift */; };
 		B2000000000000000000F053 /* NumberPadView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F053 /* NumberPadView.swift */; };
@@ -84,8 +63,6 @@
 		B2000000000000000000F061 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F061 /* OnboardingView.swift */; };
 		B2000000000000000000F062 /* MediaCastView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F062 /* MediaCastView.swift */; };
 		B2000000000000000000F063 /* KeyboardInputView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F063 /* KeyboardInputView.swift */; };
-		B2000000000000000000F064 /* YouTubeLoungeClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F064 /* YouTubeLoungeClient.swift */; };
-		B2000000000000000000F065 /* SamsungTVService+Voice.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F065 /* SamsungTVService+Voice.swift */; };
 		B2000000000000000000F066 /* OnboardingStepScaffold.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F066 /* OnboardingStepScaffold.swift */; };
 		B2000000000000000000F067 /* OnboardingWelcomeStep.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F067 /* OnboardingWelcomeStep.swift */; };
 		B2000000000000000000F068 /* OnboardingNetworkStep.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F068 /* OnboardingNetworkStep.swift */; };
@@ -94,12 +71,10 @@
 		B2000000000000000000F06B /* OnboardingSuccessStep.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F06B /* OnboardingSuccessStep.swift */; };
 		B2000000000000000000F06C /* OnboardingTestStep.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F06C /* OnboardingTestStep.swift */; };
 		B2000000000000000000F06D /* OnboardingOptimizeStep.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F06D /* OnboardingOptimizeStep.swift */; };
-		B2000000000000000000F072 /* TVIntentsController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F072 /* TVIntentsController.swift */; };
 		B2000000000000000000F073 /* TVChannelEntity.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F073 /* TVChannelEntity.swift */; };
 		B2000000000000000000F074 /* TVAppEntity.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F074 /* TVAppEntity.swift */; };
 		B2000000000000000000F075 /* TVControlIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F075 /* TVControlIntents.swift */; };
 		B2000000000000000000F076 /* RemoteTVAppShortcuts.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F076 /* RemoteTVAppShortcuts.swift */; };
-		B2000000000000000000F079 /* SharedStorage.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F079 /* SharedStorage.swift */; };
 		C2000000000000000000F018 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F018 /* Assets.xcassets */; };
 		C2000000000000000000F019 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F019 /* Localizable.xcstrings */; };
 		D2000000000000000000F01B /* TVCommandEncoderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F01B /* TVCommandEncoderTests.swift */; };
@@ -154,19 +129,8 @@
 		36C1F87B2FDDDAE30058B7ED /* RemoteTVExtensionExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = RemoteTVExtensionExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		36C1F87D2FDDDAE30058B7ED /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
 		36C1F87F2FDDDAE30058B7ED /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
+		36C1F8EF2FDF344F0058B7ED /* RemoteTVExtensionExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = RemoteTVExtensionExtension.entitlements; sourceTree = "<group>"; };
 		A2000000000000000000F001 /* RemoteTVApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteTVApp.swift; sourceTree = "<group>"; };
-		A2000000000000000000F002 /* TVCommand.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TVCommand.swift; sourceTree = "<group>"; };
-		A2000000000000000000F003 /* TVConnectionMode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TVConnectionMode.swift; sourceTree = "<group>"; };
-		A2000000000000000000F004 /* TVConnectionState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TVConnectionState.swift; sourceTree = "<group>"; };
-		A2000000000000000000F005 /* TVDevice.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TVDevice.swift; sourceTree = "<group>"; };
-		A2000000000000000000F006 /* TVServiceError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TVServiceError.swift; sourceTree = "<group>"; };
-		A2000000000000000000F007 /* TVService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TVService.swift; sourceTree = "<group>"; };
-		A2000000000000000000F008 /* TVTokenStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TVTokenStore.swift; sourceTree = "<group>"; };
-		A2000000000000000000F009 /* TVCommandEncoder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TVCommandEncoder.swift; sourceTree = "<group>"; };
-		A2000000000000000000F00A /* TVURLBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TVURLBuilder.swift; sourceTree = "<group>"; };
-		A2000000000000000000F00B /* SamsungTrustDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SamsungTrustDelegate.swift; sourceTree = "<group>"; };
-		A2000000000000000000F00C /* KeychainTVTokenStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainTVTokenStore.swift; sourceTree = "<group>"; };
-		A2000000000000000000F00D /* SamsungTVService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SamsungTVService.swift; sourceTree = "<group>"; };
 		A2000000000000000000F010 /* RemoteView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteView.swift; sourceTree = "<group>"; };
 		A2000000000000000000F011 /* RemoteViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteViewModel.swift; sourceTree = "<group>"; };
 		A2000000000000000000F012 /* RemoteButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteButton.swift; sourceTree = "<group>"; };
@@ -182,13 +146,6 @@
 		A2000000000000000000F01C /* TVURLBuilderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TVURLBuilderTests.swift; sourceTree = "<group>"; };
 		A2000000000000000000F01D /* TVTokenStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TVTokenStoreTests.swift; sourceTree = "<group>"; };
 		A2000000000000000000F01E /* RemoteViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteViewModelTests.swift; sourceTree = "<group>"; };
-		A2000000000000000000F020 /* RememberedTV.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RememberedTV.swift; sourceTree = "<group>"; };
-		A2000000000000000000F021 /* MagicPacketBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MagicPacketBuilder.swift; sourceTree = "<group>"; };
-		A2000000000000000000F022 /* WakeOnLANService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WakeOnLANService.swift; sourceTree = "<group>"; };
-		A2000000000000000000F023 /* UDPBroadcastWakeService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UDPBroadcastWakeService.swift; sourceTree = "<group>"; };
-		A2000000000000000000F024 /* SamsungDeviceInfoService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SamsungDeviceInfoService.swift; sourceTree = "<group>"; };
-		A2000000000000000000F025 /* RememberedTVsStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RememberedTVsStore.swift; sourceTree = "<group>"; };
-		A2000000000000000000F026 /* FileRememberedTVsStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileRememberedTVsStore.swift; sourceTree = "<group>"; };
 		A2000000000000000000F027 /* MagicPacketBuilderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MagicPacketBuilderTests.swift; sourceTree = "<group>"; };
 		A2000000000000000000F028 /* RememberedTVsStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RememberedTVsStoreTests.swift; sourceTree = "<group>"; };
 		A2000000000000000000F029 /* DiscoveredTV.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiscoveredTV.swift; sourceTree = "<group>"; };
@@ -201,12 +158,8 @@
 		A2000000000000000000F037 /* BonjourDiscoveryService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BonjourDiscoveryService.swift; sourceTree = "<group>"; };
 		A2000000000000000000F038 /* ChannelSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChannelSection.swift; sourceTree = "<group>"; };
 		A2000000000000000000F039 /* CommercialMuteSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommercialMuteSection.swift; sourceTree = "<group>"; };
-		A2000000000000000000F03A /* TVApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TVApp.swift; sourceTree = "<group>"; };
 		A2000000000000000000F03C /* AppsSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppsSection.swift; sourceTree = "<group>"; };
-		A2000000000000000000F03D /* InstalledApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InstalledApp.swift; sourceTree = "<group>"; };
 		A2000000000000000000F03E /* InstalledAppsSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InstalledAppsSection.swift; sourceTree = "<group>"; };
-		A2000000000000000000F03F /* KnownTVApps.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KnownTVApps.swift; sourceTree = "<group>"; };
-		A2000000000000000000F043 /* SniffLogEntry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SniffLogEntry.swift; sourceTree = "<group>"; };
 		A2000000000000000000F044 /* SniffLogSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SniffLogSection.swift; sourceTree = "<group>"; };
 		A2000000000000000000F045 /* TrackpadGestureMapper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrackpadGestureMapper.swift; sourceTree = "<group>"; };
 		A2000000000000000000F046 /* TrackpadSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrackpadSection.swift; sourceTree = "<group>"; };
@@ -219,7 +172,6 @@
 		A2000000000000000000F04D /* RemoteSidePanelInstalledApps.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteSidePanelInstalledApps.swift; sourceTree = "<group>"; };
 		A2000000000000000000F04E /* RemoteSidePanelSniffLog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteSidePanelSniffLog.swift; sourceTree = "<group>"; };
 		A2000000000000000000F04F /* RemoteSidePanelShortcuts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteSidePanelShortcuts.swift; sourceTree = "<group>"; };
-		A2000000000000000000F050 /* TVPowerState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TVPowerState.swift; sourceTree = "<group>"; };
 		A2000000000000000000F051 /* HapticPressStyle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HapticPressStyle.swift; sourceTree = "<group>"; };
 		A2000000000000000000F052 /* PowerButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PowerButton.swift; sourceTree = "<group>"; };
 		A2000000000000000000F053 /* NumberPadView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NumberPadView.swift; sourceTree = "<group>"; };
@@ -239,8 +191,6 @@
 		A2000000000000000000F061 /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
 		A2000000000000000000F062 /* MediaCastView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaCastView.swift; sourceTree = "<group>"; };
 		A2000000000000000000F063 /* KeyboardInputView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyboardInputView.swift; sourceTree = "<group>"; };
-		A2000000000000000000F064 /* YouTubeLoungeClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = YouTubeLoungeClient.swift; sourceTree = "<group>"; };
-		A2000000000000000000F065 /* SamsungTVService+Voice.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SamsungTVService+Voice.swift"; sourceTree = "<group>"; };
 		A2000000000000000000F066 /* OnboardingStepScaffold.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingStepScaffold.swift; sourceTree = "<group>"; };
 		A2000000000000000000F067 /* OnboardingWelcomeStep.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingWelcomeStep.swift; sourceTree = "<group>"; };
 		A2000000000000000000F068 /* OnboardingNetworkStep.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingNetworkStep.swift; sourceTree = "<group>"; };
@@ -253,14 +203,12 @@
 		A2000000000000000000F06F /* OnboardingViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingViewModelTests.swift; sourceTree = "<group>"; };
 		A2000000000000000000F070 /* SamsungTVServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SamsungTVServiceTests.swift; sourceTree = "<group>"; };
 		A2000000000000000000F071 /* EPGClientTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EPGClientTests.swift; sourceTree = "<group>"; };
-		A2000000000000000000F072 /* TVIntentsController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TVIntentsController.swift; sourceTree = "<group>"; };
 		A2000000000000000000F073 /* TVChannelEntity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TVChannelEntity.swift; sourceTree = "<group>"; };
 		A2000000000000000000F074 /* TVAppEntity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TVAppEntity.swift; sourceTree = "<group>"; };
 		A2000000000000000000F075 /* TVControlIntents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TVControlIntents.swift; sourceTree = "<group>"; };
 		A2000000000000000000F076 /* RemoteTVAppShortcuts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteTVAppShortcuts.swift; sourceTree = "<group>"; };
 		A2000000000000000000F077 /* TVIntentsControllerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TVIntentsControllerTests.swift; sourceTree = "<group>"; };
 		A2000000000000000000F078 /* TVIntentEntitiesTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TVIntentEntitiesTests.swift; sourceTree = "<group>"; };
-		A2000000000000000000F079 /* SharedStorage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedStorage.swift; sourceTree = "<group>"; };
 		C1000000000000000000F001 /* RemoteTV.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = RemoteTV.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		C1000000000000000000F002 /* RemoteTVTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = RemoteTVTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -284,6 +232,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				AC000000000000000000F002 /* RemoteTVCore in Frameworks */,
 				36C1F8802FDDDAE30058B7ED /* SwiftUI.framework in Frameworks */,
 				36C1F87E2FDDDAE30058B7ED /* WidgetKit.framework in Frameworks */,
 			);
@@ -293,6 +242,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				AC000000000000000000F001 /* RemoteTVCore in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -300,6 +250,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				AC000000000000000000F003 /* RemoteTVCore in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -318,6 +269,7 @@
 		B1000000000000000000F001 = {
 			isa = PBXGroup;
 			children = (
+				36C1F8EF2FDF344F0058B7ED /* RemoteTVExtensionExtension.entitlements */,
 				B1000000000000000000F003 /* RemoteTV */,
 				B1000000000000000000F004 /* RemoteTVTests */,
 				36C1F8812FDDDAE30058B7ED /* RemoteTVExtension */,
@@ -383,18 +335,7 @@
 		B1000000000000000000F006 /* Domain */ = {
 			isa = PBXGroup;
 			children = (
-				A2000000000000000000F002 /* TVCommand.swift */,
-				A2000000000000000000F003 /* TVConnectionMode.swift */,
-				A2000000000000000000F004 /* TVConnectionState.swift */,
-				A2000000000000000000F005 /* TVDevice.swift */,
-				A2000000000000000000F006 /* TVServiceError.swift */,
-				A2000000000000000000F020 /* RememberedTV.swift */,
 				A2000000000000000000F029 /* DiscoveredTV.swift */,
-				A2000000000000000000F03A /* TVApp.swift */,
-				A2000000000000000000F03D /* InstalledApp.swift */,
-				A2000000000000000000F03F /* KnownTVApps.swift */,
-				A2000000000000000000F043 /* SniffLogEntry.swift */,
-				A2000000000000000000F050 /* TVPowerState.swift */,
 				A2000000000000000000F056 /* EPGChannel.swift */,
 				A2000000000000000000F057 /* EPGProgramme.swift */,
 				A2000000000000000000F058 /* EPGGuide.swift */,
@@ -406,24 +347,9 @@
 		B1000000000000000000F007 /* Services */ = {
 			isa = PBXGroup;
 			children = (
-				A2000000000000000000F007 /* TVService.swift */,
-				A2000000000000000000F008 /* TVTokenStore.swift */,
-				A2000000000000000000F009 /* TVCommandEncoder.swift */,
-				A2000000000000000000F00A /* TVURLBuilder.swift */,
-				A2000000000000000000F00B /* SamsungTrustDelegate.swift */,
-				A2000000000000000000F00C /* KeychainTVTokenStore.swift */,
-				A2000000000000000000F00D /* SamsungTVService.swift */,
-				A2000000000000000000F021 /* MagicPacketBuilder.swift */,
-				A2000000000000000000F022 /* WakeOnLANService.swift */,
-				A2000000000000000000F023 /* UDPBroadcastWakeService.swift */,
-				A2000000000000000000F024 /* SamsungDeviceInfoService.swift */,
-				A2000000000000000000F025 /* RememberedTVsStore.swift */,
-				A2000000000000000000F026 /* FileRememberedTVsStore.swift */,
 				A2000000000000000000F059 /* EPGClient.swift */,
 				A2000000000000000000F05E /* MicrophoneCaptureService.swift */,
 				A2000000000000000000F05F /* NetworkMonitor.swift */,
-				A2000000000000000000F064 /* YouTubeLoungeClient.swift */,
-				A2000000000000000000F065 /* SamsungTVService+Voice.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -528,12 +454,10 @@
 		B1000000000000000000F061 /* Intents */ = {
 			isa = PBXGroup;
 			children = (
-				A2000000000000000000F072 /* TVIntentsController.swift */,
 				A2000000000000000000F073 /* TVChannelEntity.swift */,
 				A2000000000000000000F074 /* TVAppEntity.swift */,
 				A2000000000000000000F075 /* TVControlIntents.swift */,
 				A2000000000000000000F076 /* RemoteTVAppShortcuts.swift */,
-				A2000000000000000000F079 /* SharedStorage.swift */,
 			);
 			path = Intents;
 			sourceTree = "<group>";
@@ -558,6 +482,7 @@
 			);
 			name = RemoteTVExtensionExtension;
 			packageProductDependencies = (
+				AB000000000000000000F002 /* RemoteTVCore */,
 			);
 			productName = RemoteTVExtensionExtension;
 			productReference = 36C1F87B2FDDDAE30058B7ED /* RemoteTVExtensionExtension.appex */;
@@ -578,6 +503,9 @@
 				36C1F8902FDDDAE40058B7ED /* PBXTargetDependency */,
 			);
 			name = RemoteTV;
+			packageProductDependencies = (
+				AB000000000000000000F001 /* RemoteTVCore */,
+			);
 			productName = RemoteTV;
 			productReference = C1000000000000000000F001 /* RemoteTV.app */;
 			productType = "com.apple.product-type.application";
@@ -595,6 +523,9 @@
 				D3000000000000000000F002 /* PBXTargetDependency */,
 			);
 			name = RemoteTVTests;
+			packageProductDependencies = (
+				AB000000000000000000F003 /* RemoteTVCore */,
+			);
 			productName = RemoteTVTests;
 			productReference = C1000000000000000000F002 /* RemoteTVTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
@@ -630,6 +561,9 @@
 				Base,
 			);
 			mainGroup = B1000000000000000000F001;
+			packageReferences = (
+				AA000000000000000000F001 /* XCLocalSwiftPackageReference "RemoteTVCore" */,
+			);
 			productRefGroup = B1000000000000000000F002 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
@@ -673,18 +607,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				B2000000000000000000F001 /* RemoteTVApp.swift in Sources */,
-				B2000000000000000000F002 /* TVCommand.swift in Sources */,
-				B2000000000000000000F003 /* TVConnectionMode.swift in Sources */,
-				B2000000000000000000F004 /* TVConnectionState.swift in Sources */,
-				B2000000000000000000F005 /* TVDevice.swift in Sources */,
-				B2000000000000000000F006 /* TVServiceError.swift in Sources */,
-				B2000000000000000000F007 /* TVService.swift in Sources */,
-				B2000000000000000000F008 /* TVTokenStore.swift in Sources */,
-				B2000000000000000000F009 /* TVCommandEncoder.swift in Sources */,
-				B2000000000000000000F00A /* TVURLBuilder.swift in Sources */,
-				B2000000000000000000F00B /* SamsungTrustDelegate.swift in Sources */,
-				B2000000000000000000F00C /* KeychainTVTokenStore.swift in Sources */,
-				B2000000000000000000F00D /* SamsungTVService.swift in Sources */,
 				B2000000000000000000F010 /* RemoteView.swift in Sources */,
 				B2000000000000000000F011 /* RemoteViewModel.swift in Sources */,
 				B2000000000000000000F012 /* RemoteButton.swift in Sources */,
@@ -693,24 +615,13 @@
 				B2000000000000000000F015 /* BottomActionsSection.swift in Sources */,
 				B2000000000000000000F016 /* StatusPill.swift in Sources */,
 				B2000000000000000000F017 /* RemoteToolbarMenu.swift in Sources */,
-				B2000000000000000000F020 /* RememberedTV.swift in Sources */,
-				B2000000000000000000F021 /* MagicPacketBuilder.swift in Sources */,
-				B2000000000000000000F022 /* WakeOnLANService.swift in Sources */,
-				B2000000000000000000F023 /* UDPBroadcastWakeService.swift in Sources */,
-				B2000000000000000000F024 /* SamsungDeviceInfoService.swift in Sources */,
-				B2000000000000000000F025 /* RememberedTVsStore.swift in Sources */,
-				B2000000000000000000F026 /* FileRememberedTVsStore.swift in Sources */,
 				B2000000000000000000F029 /* DiscoveredTV.swift in Sources */,
 				B2000000000000000000F02D /* TVDiscoveryService.swift in Sources */,
 				B2000000000000000000F037 /* BonjourDiscoveryService.swift in Sources */,
 				B2000000000000000000F038 /* ChannelSection.swift in Sources */,
 				B2000000000000000000F039 /* CommercialMuteSection.swift in Sources */,
-				B2000000000000000000F03A /* TVApp.swift in Sources */,
 				B2000000000000000000F03C /* AppsSection.swift in Sources */,
-				B2000000000000000000F03D /* InstalledApp.swift in Sources */,
 				B2000000000000000000F03E /* InstalledAppsSection.swift in Sources */,
-				B2000000000000000000F03F /* KnownTVApps.swift in Sources */,
-				B2000000000000000000F043 /* SniffLogEntry.swift in Sources */,
 				B2000000000000000000F044 /* SniffLogSection.swift in Sources */,
 				1729BA562FA32FBF0032FA73 /* RemoteSamsungStyle.swift in Sources */,
 				B2000000000000000000F045 /* TrackpadGestureMapper.swift in Sources */,
@@ -723,7 +634,6 @@
 				B2000000000000000000F04D /* RemoteSidePanelInstalledApps.swift in Sources */,
 				B2000000000000000000F04E /* RemoteSidePanelSniffLog.swift in Sources */,
 				B2000000000000000000F04F /* RemoteSidePanelShortcuts.swift in Sources */,
-				B2000000000000000000F050 /* TVPowerState.swift in Sources */,
 				B2000000000000000000F052 /* PowerButton.swift in Sources */,
 				B2000000000000000000F053 /* NumberPadView.swift in Sources */,
 				B2000000000000000000F054 /* RootView.swift in Sources */,
@@ -736,8 +646,6 @@
 				B2000000000000000000F05F /* NetworkMonitor.swift in Sources */,
 				B2000000000000000000F060 /* OnboardingViewModel.swift in Sources */,
 				B2000000000000000000F061 /* OnboardingView.swift in Sources */,
-				B2000000000000000000F064 /* YouTubeLoungeClient.swift in Sources */,
-				B2000000000000000000F065 /* SamsungTVService+Voice.swift in Sources */,
 				B2000000000000000000F066 /* OnboardingStepScaffold.swift in Sources */,
 				B2000000000000000000F067 /* OnboardingWelcomeStep.swift in Sources */,
 				B2000000000000000000F068 /* OnboardingNetworkStep.swift in Sources */,
@@ -746,12 +654,10 @@
 				B2000000000000000000F06B /* OnboardingSuccessStep.swift in Sources */,
 				B2000000000000000000F06C /* OnboardingTestStep.swift in Sources */,
 				B2000000000000000000F06D /* OnboardingOptimizeStep.swift in Sources */,
-				B2000000000000000000F072 /* TVIntentsController.swift in Sources */,
 				B2000000000000000000F073 /* TVChannelEntity.swift in Sources */,
 				B2000000000000000000F074 /* TVAppEntity.swift in Sources */,
 				B2000000000000000000F075 /* TVControlIntents.swift in Sources */,
 				B2000000000000000000F076 /* RemoteTVAppShortcuts.swift in Sources */,
-				B2000000000000000000F079 /* SharedStorage.swift in Sources */,
 				B2000000000000000000F062 /* MediaCastView.swift in Sources */,
 				B2000000000000000000F063 /* KeyboardInputView.swift in Sources */,
 				B2000000000000000000F05A /* EPGViewModel.swift in Sources */,
@@ -808,6 +714,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
 				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CODE_SIGN_ENTITLEMENTS = RemoteTVExtensionExtension.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 4GLZUW75SU;
@@ -822,7 +729,7 @@
 					"@executable_path/../../Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.remotetv.RemoteTV.RemoteTVExtension;
+				PRODUCT_BUNDLE_IDENTIFIER = ro.remotetv.RemoteTV.RemoteTVExtension;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -843,6 +750,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
 				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CODE_SIGN_ENTITLEMENTS = RemoteTVExtensionExtension.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 4GLZUW75SU;
@@ -857,7 +765,7 @@
 					"@executable_path/../../Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.remotetv.RemoteTV.RemoteTVExtension;
+				PRODUCT_BUNDLE_IDENTIFIER = ro.remotetv.RemoteTV.RemoteTVExtension;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -1008,7 +916,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.remotetv.RemoteTV;
+				PRODUCT_BUNDLE_IDENTIFIER = ro.remotetv.RemoteTV;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SUPPORTS_MACCATALYST = NO;
@@ -1038,7 +946,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.remotetv.RemoteTV;
+				PRODUCT_BUNDLE_IDENTIFIER = ro.remotetv.RemoteTV;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SUPPORTS_MACCATALYST = NO;
@@ -1056,10 +964,11 @@
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 4GLZUW75SU;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.remotetv.RemoteTVTests;
+				PRODUCT_BUNDLE_IDENTIFIER = ro.remotetv.RemoteTVTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_STRICT_CONCURRENCY = complete;
@@ -1075,10 +984,11 @@
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 4GLZUW75SU;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.remotetv.RemoteTVTests;
+				PRODUCT_BUNDLE_IDENTIFIER = ro.remotetv.RemoteTVTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_STRICT_CONCURRENCY = complete;
@@ -1128,6 +1038,28 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		AA000000000000000000F001 /* XCLocalSwiftPackageReference "RemoteTVCore" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = RemoteTVCore;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		AB000000000000000000F001 /* RemoteTVCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = RemoteTVCore;
+		};
+		AB000000000000000000F002 /* RemoteTVCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = RemoteTVCore;
+		};
+		AB000000000000000000F003 /* RemoteTVCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = RemoteTVCore;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = D1000000000000000000F001 /* Project object */;
 }

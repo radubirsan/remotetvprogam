@@ -1,4 +1,5 @@
 import CoreGraphics
+import RemoteTVCore
 
 /// Logical outcome of a single trackpad gesture: either a stationary tap (mapped to
 /// `KEY_ENTER` by the view) or a swipe in one of the four cardinal directions

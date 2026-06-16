@@ -1,3 +1,4 @@
+import RemoteTVCore
 import SwiftUI
 
 /// Small coloured dot that replaces the design's static "MIC" indicator. Acts as the
