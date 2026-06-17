@@ -53,7 +53,8 @@ struct OnboardingFindTVStep: View {
                     .font(.footnote).foregroundStyle(.white.opacity(0.55))
                     .multilineTextAlignment(.center).fixedSize(horizontal: false, vertical: true)
                 Button("Retry scan") { Task { await vm.retrySearch() } }
-                    .font(.subheadline.weight(.semibold)).padding(.top, 4)
+                    .buttonStyle(OnboardingLinkButtonStyle(prominent: true))
+                    .padding(.top, 4)
             }
             .padding(14)
             .background(Color.white.opacity(0.05), in: RoundedRectangle(cornerRadius: 12))
@@ -75,12 +76,13 @@ struct OnboardingFindTVStep: View {
                     .autocorrectionDisabled()
                 Button("Connect") { Task { await vm.useManualIP() } }
                     .buttonStyle(.borderedProminent)
+                    .tint(OnboardingStyle.accent)
                     .disabled(vm.manualIP.trimmingCharacters(in: .whitespaces).isEmpty)
             }
             .padding(.top, 4)
         } else {
             Button("Enter IP manually") { vm.showManualEntry = true }
-                .font(.footnote).foregroundStyle(.white.opacity(0.6))
+                .buttonStyle(OnboardingLinkButtonStyle())
                 .padding(.top, 4)
         }
     }

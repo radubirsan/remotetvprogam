@@ -1,0 +1,3397 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Another Remote — iPhone App Designs</title>
+<style>
+  html, body { margin: 0; padding: 0; height: 100%; background: #0a0a0b; color: #e8e8ea; font-family: -apple-system, "SF Pro Text", "SF Pro", system-ui, sans-serif; }
+  * { box-sizing: border-box; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script type="text/babel" data-presets="react">
+
+// ===== ios-frame.jsx =====
+
+// iOS.jsx — Simplified iOS 26 (Liquid Glass) device frame
+// Based on the iOS 26 UI Kit + Figma status bar spec. No assets, no deps.
+// Exports: IOSDevice, IOSStatusBar, IOSNavBar, IOSGlassPill, IOSList, IOSListRow, IOSKeyboard
+
+// ─────────────────────────────────────────────────────────────
+// Status bar
+// ─────────────────────────────────────────────────────────────
+function IOSStatusBar({ dark = false, time = '9:41' }) {
+  const c = dark ? '#fff' : '#000';
+  return (
+    <div style={{
+      display: 'flex', gap: 154, alignItems: 'center', justifyContent: 'center',
+      padding: '21px 24px 19px', boxSizing: 'border-box',
+      position: 'relative', zIndex: 20, width: '100%',
+    }}>
+      <div style={{ flex: 1, height: 22, display: 'flex', alignItems: 'center', justifyContent: 'center', paddingTop: 1.5 }}>
+        <span style={{
+          fontFamily: '-apple-system, "SF Pro", system-ui', fontWeight: 590,
+          fontSize: 17, lineHeight: '22px', color: c,
+        }}>{time}</span>
+      </div>
+      <div style={{ flex: 1, height: 22, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, paddingTop: 1, paddingRight: 1 }}>
+        <svg width="19" height="12" viewBox="0 0 19 12">
+          <rect x="0" y="7.5" width="3.2" height="4.5" rx="0.7" fill={c}/>
+          <rect x="4.8" y="5" width="3.2" height="7" rx="0.7" fill={c}/>
+          <rect x="9.6" y="2.5" width="3.2" height="9.5" rx="0.7" fill={c}/>
+          <rect x="14.4" y="0" width="3.2" height="12" rx="0.7" fill={c}/>
+        </svg>
+        <svg width="17" height="12" viewBox="0 0 17 12">
+          <path d="M8.5 3.2C10.8 3.2 12.9 4.1 14.4 5.6L15.5 4.5C13.7 2.7 11.2 1.5 8.5 1.5C5.8 1.5 3.3 2.7 1.5 4.5L2.6 5.6C4.1 4.1 6.2 3.2 8.5 3.2Z" fill={c}/>
+          <path d="M8.5 6.8C9.9 6.8 11.1 7.3 12 8.2L13.1 7.1C11.8 5.9 10.2 5.1 8.5 5.1C6.8 5.1 5.2 5.9 3.9 7.1L5 8.2C5.9 7.3 7.1 6.8 8.5 6.8Z" fill={c}/>
+          <circle cx="8.5" cy="10.5" r="1.5" fill={c}/>
+        </svg>
+        <svg width="27" height="13" viewBox="0 0 27 13">
+          <rect x="0.5" y="0.5" width="23" height="12" rx="3.5" stroke={c} strokeOpacity="0.35" fill="none"/>
+          <rect x="2" y="2" width="20" height="9" rx="2" fill={c}/>
+          <path d="M25 4.5V8.5C25.8 8.2 26.5 7.2 26.5 6.5C26.5 5.8 25.8 4.8 25 4.5Z" fill={c} fillOpacity="0.4"/>
+        </svg>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+// Liquid glass pill — blur + tint + shine
+// ─────────────────────────────────────────────────────────────
+function IOSGlassPill({ children, dark = false, style = {} }) {
+  return (
+    <div style={{
+      height: 44, minWidth: 44, borderRadius: 9999,
+      position: 'relative', overflow: 'hidden',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      boxShadow: dark
+        ? '0 2px 6px rgba(0,0,0,0.35), 0 6px 16px rgba(0,0,0,0.2)'
+        : '0 1px 3px rgba(0,0,0,0.07), 0 3px 10px rgba(0,0,0,0.06)',
+      ...style,
+    }}>
+      {/* blur + tint */}
+      <div style={{
+        position: 'absolute', inset: 0, borderRadius: 9999,
+        backdropFilter: 'blur(12px) saturate(180%)',
+        WebkitBackdropFilter: 'blur(12px) saturate(180%)',
+        background: dark ? 'rgba(120,120,128,0.28)' : 'rgba(255,255,255,0.5)',
+      }} />
+      {/* shine */}
+      <div style={{
+        position: 'absolute', inset: 0, borderRadius: 9999,
+        boxShadow: dark
+          ? 'inset 1.5px 1.5px 1px rgba(255,255,255,0.15), inset -1px -1px 1px rgba(255,255,255,0.08)'
+          : 'inset 1.5px 1.5px 1px rgba(255,255,255,0.7), inset -1px -1px 1px rgba(255,255,255,0.4)',
+        border: dark ? '0.5px solid rgba(255,255,255,0.15)' : '0.5px solid rgba(0,0,0,0.06)',
+      }} />
+      <div style={{ position: 'relative', zIndex: 1, display: 'flex', alignItems: 'center', padding: '0 4px' }}>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+// Navigation bar — glass pills + large title
+// ─────────────────────────────────────────────────────────────
+function IOSNavBar({ title = 'Title', dark = false, trailingIcon = true }) {
+  const muted = dark ? 'rgba(255,255,255,0.6)' : '#404040';
+  const text = dark ? '#fff' : '#000';
+  const pillIcon = (content) => (
+    <IOSGlassPill dark={dark}>
+      <div style={{ width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        {content}
+      </div>
+    </IOSGlassPill>
+  );
+  return (
+    <div style={{
+      display: 'flex', flexDirection: 'column', gap: 10,
+      paddingTop: 62, paddingBottom: 10, position: 'relative', zIndex: 5,
+    }}>
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        padding: '0 16px',
+      }}>
+        {/* back chevron */}
+        {pillIcon(
+          <svg width="12" height="20" viewBox="0 0 12 20" fill="none" style={{ marginLeft: -1 }}>
+            <path d="M10 2L2 10l8 8" stroke={muted} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        )}
+        {/* trailing ellipsis */}
+        {trailingIcon && pillIcon(
+          <svg width="22" height="6" viewBox="0 0 22 6">
+            <circle cx="3" cy="3" r="2.5" fill={muted}/>
+            <circle cx="11" cy="3" r="2.5" fill={muted}/>
+            <circle cx="19" cy="3" r="2.5" fill={muted}/>
+          </svg>
+        )}
+      </div>
+      {/* large title */}
+      <div style={{
+        padding: '0 16px',
+        fontFamily: '-apple-system, system-ui',
+        fontSize: 34, fontWeight: 700, lineHeight: '41px',
+        color: text, letterSpacing: 0.4,
+      }}>{title}</div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+// Grouped list (inset card, r:26) + row (52px)
+// ─────────────────────────────────────────────────────────────
+function IOSListRow({ title, detail, icon, chevron = true, isLast = false, dark = false }) {
+  const text = dark ? '#fff' : '#000';
+  const sec = dark ? 'rgba(235,235,245,0.6)' : 'rgba(60,60,67,0.6)';
+  const ter = dark ? 'rgba(235,235,245,0.3)' : 'rgba(60,60,67,0.3)';
+  const sep = dark ? 'rgba(84,84,88,0.65)' : 'rgba(60,60,67,0.12)';
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'center', minHeight: 52,
+      padding: '0 16px', position: 'relative',
+      fontFamily: '-apple-system, system-ui', fontSize: 17,
+      letterSpacing: -0.43,
+    }}>
+      {icon && (
+        <div style={{
+          width: 30, height: 30, borderRadius: 7, background: icon,
+          marginRight: 12, flexShrink: 0,
+        }} />
+      )}
+      <div style={{ flex: 1, color: text }}>{title}</div>
+      {detail && <span style={{ color: sec, marginRight: 6 }}>{detail}</span>}
+      {chevron && (
+        <svg width="8" height="14" viewBox="0 0 8 14" style={{ flexShrink: 0 }}>
+          <path d="M1 1l6 6-6 6" stroke={ter} strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+      )}
+      {!isLast && (
+        <div style={{
+          position: 'absolute', bottom: 0, right: 0,
+          left: icon ? 58 : 16, height: 0.5, background: sep,
+        }} />
+      )}
+    </div>
+  );
+}
+
+function IOSList({ header, children, dark = false }) {
+  const hc = dark ? 'rgba(235,235,245,0.6)' : 'rgba(60,60,67,0.6)';
+  const bg = dark ? '#1C1C1E' : '#fff';
+  return (
+    <div>
+      {header && (
+        <div style={{
+          fontFamily: '-apple-system, system-ui', fontSize: 13,
+          color: hc, textTransform: 'uppercase',
+          padding: '8px 36px 6px', letterSpacing: -0.08,
+        }}>{header}</div>
+      )}
+      <div style={{
+        background: bg, borderRadius: 26,
+        margin: '0 16px', overflow: 'hidden',
+      }}>{children}</div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+// Device frame
+// ─────────────────────────────────────────────────────────────
+function IOSDevice({
+  children, width = 402, height = 874, dark = false,
+  title, keyboard = false,
+}) {
+  return (
+    <div style={{
+      width, height, borderRadius: 48, overflow: 'hidden',
+      position: 'relative', background: dark ? '#000' : '#F2F2F7',
+      boxShadow: '0 40px 80px rgba(0,0,0,0.18), 0 0 0 1px rgba(0,0,0,0.12)',
+      fontFamily: '-apple-system, system-ui, sans-serif',
+      WebkitFontSmoothing: 'antialiased',
+    }}>
+      {/* dynamic island */}
+      <div style={{
+        position: 'absolute', top: 11, left: '50%', transform: 'translateX(-50%)',
+        width: 126, height: 37, borderRadius: 24, background: '#000', zIndex: 50,
+      }} />
+      {/* status bar (absolute) */}
+      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 10 }}>
+        <IOSStatusBar dark={dark} />
+      </div>
+      {/* nav + content */}
+      <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+        {title !== undefined && <IOSNavBar title={title} dark={dark} />}
+        <div style={{ flex: 1, overflow: 'auto' }}>{children}</div>
+        {keyboard && <IOSKeyboard dark={dark} />}
+      </div>
+      {/* home indicator — always on top */}
+      <div style={{
+        position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 60,
+        height: 34, display: 'flex', justifyContent: 'center', alignItems: 'flex-end',
+        paddingBottom: 8, pointerEvents: 'none',
+      }}>
+        <div style={{
+          width: 139, height: 5, borderRadius: 100,
+          background: dark ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.25)',
+        }} />
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+// Keyboard — iOS 26 liquid glass
+// ─────────────────────────────────────────────────────────────
+function IOSKeyboard({ dark = false }) {
+  const glyph = dark ? 'rgba(255,255,255,0.7)' : '#595959';
+  const sugg = dark ? 'rgba(255,255,255,0.6)' : '#333';
+  const keyBg = dark ? 'rgba(255,255,255,0.22)' : 'rgba(255,255,255,0.85)';
+
+  // special-key icons
+  const icons = {
+    shift: <svg width="19" height="17" viewBox="0 0 19 17"><path d="M9.5 1L1 9.5h4.5V16h8V9.5H18L9.5 1z" fill={glyph}/></svg>,
+    del: <svg width="23" height="17" viewBox="0 0 23 17"><path d="M7 1h13a2 2 0 012 2v11a2 2 0 01-2 2H7l-6-7.5L7 1z" fill="none" stroke={glyph} strokeWidth="1.6" strokeLinejoin="round"/><path d="M10 5l7 7M17 5l-7 7" stroke={glyph} strokeWidth="1.6" strokeLinecap="round"/></svg>,
+    ret: <svg width="20" height="14" viewBox="0 0 20 14"><path d="M18 1v6H4m0 0l4-4M4 7l4 4" fill="none" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>,
+  };
+
+  const key = (content, { w, flex, ret, fs = 25, k } = {}) => (
+    <div key={k} style={{
+      height: 42, borderRadius: 8.5,
+      flex: flex ? 1 : undefined, width: w, minWidth: 0,
+      background: ret ? '#08f' : keyBg,
+      boxShadow: '0 1px 0 rgba(0,0,0,0.075)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      fontFamily: '-apple-system, "SF Compact", system-ui',
+      fontSize: fs, fontWeight: 458, color: ret ? '#fff' : glyph,
+    }}>{content}</div>
+  );
+
+  const row = (keys, pad = 0) => (
+    <div style={{ display: 'flex', gap: 6.5, justifyContent: 'center', padding: `0 ${pad}px` }}>
+      {keys.map(l => key(l, { flex: true, k: l }))}
+    </div>
+  );
+
+  return (
+    <div style={{
+      position: 'relative', zIndex: 15, borderRadius: 27, overflow: 'hidden',
+      padding: '11px 0 2px',
+      display: 'flex', flexDirection: 'column', alignItems: 'center',
+      boxShadow: dark
+        ? '0 -2px 20px rgba(0,0,0,0.09)'
+        : '0 -1px 6px rgba(0,0,0,0.018), 0 -3px 20px rgba(0,0,0,0.012)',
+    }}>
+      {/* liquid glass bg — same recipe as nav pills */}
+      <div style={{
+        position: 'absolute', inset: 0, borderRadius: 27,
+        backdropFilter: 'blur(12px) saturate(180%)',
+        WebkitBackdropFilter: 'blur(12px) saturate(180%)',
+        background: dark ? 'rgba(120,120,128,0.14)' : 'rgba(255,255,255,0.25)',
+      }} />
+      <div style={{
+        position: 'absolute', inset: 0, borderRadius: 27,
+        boxShadow: dark
+          ? 'inset 1.5px 1.5px 1px rgba(255,255,255,0.15)'
+          : 'inset 1.5px 1.5px 1px rgba(255,255,255,0.7), inset -1px -1px 1px rgba(255,255,255,0.4)',
+        border: dark ? '0.5px solid rgba(255,255,255,0.15)' : '0.5px solid rgba(0,0,0,0.06)',
+        pointerEvents: 'none',
+      }} />
+
+      {/* autocorrect bar */}
+      <div style={{
+        display: 'flex', gap: 20, alignItems: 'center',
+        padding: '8px 22px 13px', width: '100%', boxSizing: 'border-box',
+        position: 'relative',
+      }}>
+        {['"The"', 'the', 'to'].map((w, i) => (
+          <React.Fragment key={i}>
+            {i > 0 && <div style={{ width: 1, height: 25, background: '#ccc', opacity: 0.3 }} />}
+            <div style={{
+              flex: 1, textAlign: 'center',
+              fontFamily: '-apple-system, system-ui', fontSize: 17,
+              color: sugg, letterSpacing: -0.43, lineHeight: '22px',
+            }}>{w}</div>
+          </React.Fragment>
+        ))}
+      </div>
+
+      {/* key layout */}
+      <div style={{
+        display: 'flex', flexDirection: 'column', gap: 13,
+        padding: '0 6.5px', width: '100%', boxSizing: 'border-box',
+        position: 'relative',
+      }}>
+        {row(['q','w','e','r','t','y','u','i','o','p'])}
+        {row(['a','s','d','f','g','h','j','k','l'], 20)}
+        <div style={{ display: 'flex', gap: 14.25, alignItems: 'center' }}>
+          {key(icons.shift, { w: 45, k: 'shift' })}
+          <div style={{ display: 'flex', gap: 6.5, flex: 1 }}>
+            {['z','x','c','v','b','n','m'].map(l => key(l, { flex: true, k: l }))}
+          </div>
+          {key(icons.del, { w: 45, k: 'del' })}
+        </div>
+        <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+          {key('ABC', { w: 92.25, fs: 18, k: 'abc' })}
+          {key('', { flex: true, k: 'space' })}
+          {key(icons.ret, { w: 92.25, ret: true, k: 'ret' })}
+        </div>
+      </div>
+
+      {/* bottom spacer (emoji+mic area, icons omitted) */}
+      <div style={{ height: 56, width: '100%', position: 'relative' }} />
+    </div>
+  );
+}
+
+Object.assign(window, {
+  IOSDevice, IOSStatusBar, IOSNavBar, IOSGlassPill, IOSList, IOSListRow, IOSKeyboard,
+});
+
+
+// ===== design-canvas.jsx =====
+
+// DesignCanvas.jsx — Figma-ish design canvas wrapper
+// Warm gray grid bg + Sections + Artboards + PostIt notes.
+// Artboards are reorderable (grip-drag), labels/titles are inline-editable,
+// and any artboard can be opened in a fullscreen focus overlay (←/→/Esc).
+// State persists to a .design-canvas.state.json sidecar via the host
+// bridge. No assets, no deps.
+//
+// Usage:
+//   <DesignCanvas>
+//     <DCSection id="onboarding" title="Onboarding" subtitle="First-run variants">
+//       <DCArtboard id="a" label="A · Dusk" width={260} height={480}>…</DCArtboard>
+//       <DCArtboard id="b" label="B · Minimal" width={260} height={480}>…</DCArtboard>
+//     </DCSection>
+//   </DesignCanvas>
+
+const DC = {
+  bg: '#f0eee9',
+  grid: 'rgba(0,0,0,0.06)',
+  label: 'rgba(60,50,40,0.7)',
+  title: 'rgba(40,30,20,0.85)',
+  subtitle: 'rgba(60,50,40,0.6)',
+  postitBg: '#fef4a8',
+  postitText: '#5a4a2a',
+  font: '-apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif',
+};
+
+// One-time CSS injection (classes are dc-prefixed so they don't collide with
+// the hosted design's own styles).
+if (typeof document !== 'undefined' && !document.getElementById('dc-styles')) {
+  const s = document.createElement('style');
+  s.id = 'dc-styles';
+  s.textContent = [
+    '.dc-editable{cursor:text;outline:none;white-space:nowrap;border-radius:3px;padding:0 2px;margin:0 -2px}',
+    '.dc-editable:focus{background:#fff;box-shadow:0 0 0 1.5px #c96442}',
+    '[data-dc-slot]{transition:transform .18s cubic-bezier(.2,.7,.3,1)}',
+    '[data-dc-slot].dc-dragging{transition:none;z-index:10;pointer-events:none}',
+    '[data-dc-slot].dc-dragging .dc-card{box-shadow:0 12px 40px rgba(0,0,0,.25),0 0 0 2px #c96442;transform:scale(1.02)}',
+    '.dc-card{transition:box-shadow .15s,transform .15s}',
+    '.dc-card *{scrollbar-width:none}',
+    '.dc-card *::-webkit-scrollbar{display:none}',
+    '.dc-labelrow{display:flex;align-items:center;gap:4px;height:24px}',
+    '.dc-grip{cursor:grab;display:flex;align-items:center;padding:5px 4px;border-radius:4px;transition:background .12s}',
+    '.dc-grip:hover{background:rgba(0,0,0,.08)}',
+    '.dc-grip:active{cursor:grabbing}',
+    '.dc-labeltext{cursor:pointer;border-radius:4px;padding:3px 6px;display:flex;align-items:center;transition:background .12s}',
+    '.dc-labeltext:hover{background:rgba(0,0,0,.05)}',
+    '.dc-expand{position:absolute;bottom:100%;right:0;margin-bottom:5px;z-index:2;opacity:0;transition:opacity .12s,background .12s;',
+    '  width:22px;height:22px;border-radius:5px;border:none;cursor:pointer;padding:0;',
+    '  background:transparent;color:rgba(60,50,40,.7);display:flex;align-items:center;justify-content:center}',
+    '.dc-expand:hover{background:rgba(0,0,0,.06);color:#2a251f}',
+    '[data-dc-slot]:hover .dc-expand{opacity:1}',
+  ].join('\n');
+  document.head.appendChild(s);
+}
+
+const DCCtx = React.createContext(null);
+
+// ─────────────────────────────────────────────────────────────
+// DesignCanvas — stateful wrapper around the pan/zoom viewport.
+// Owns runtime state (per-section order, renamed titles/labels, focused
+// artboard). Order/titles/labels persist to a .design-canvas.state.json
+// sidecar next to the HTML. Reads go via plain fetch() so the saved
+// arrangement is visible anywhere the HTML + sidecar are served together
+// (omelette preview, direct link, downloaded zip). Writes go through the
+// host's window.omelette bridge — editing requires the omelette runtime.
+// Focus is ephemeral.
+// ─────────────────────────────────────────────────────────────
+const DC_STATE_FILE = '.design-canvas.state.json';
+
+function DesignCanvas({ children, minScale, maxScale, style }) {
+  const [state, setState] = React.useState({ sections: {}, focus: null });
+  // Hold rendering until the sidecar read settles so the saved order/titles
+  // appear on first paint (no source-order flash). didRead gates writes until
+  // the read settles so the empty initial state can't clobber a slow read;
+  // skipNextWrite suppresses the one echo-write that would otherwise follow
+  // hydration.
+  const [ready, setReady] = React.useState(false);
+  const didRead = React.useRef(false);
+  const skipNextWrite = React.useRef(false);
+
+  React.useEffect(() => {
+    let off = false;
+    fetch('./' + DC_STATE_FILE)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((saved) => {
+        if (off || !saved || !saved.sections) return;
+        skipNextWrite.current = true;
+        setState((s) => ({ ...s, sections: saved.sections }));
+      })
+      .catch(() => {})
+      .finally(() => { didRead.current = true; if (!off) setReady(true); });
+    const t = setTimeout(() => { if (!off) setReady(true); }, 150);
+    return () => { off = true; clearTimeout(t); };
+  }, []);
+
+  React.useEffect(() => {
+    if (!didRead.current) return;
+    if (skipNextWrite.current) { skipNextWrite.current = false; return; }
+    const t = setTimeout(() => {
+      window.omelette?.writeFile(DC_STATE_FILE, JSON.stringify({ sections: state.sections })).catch(() => {});
+    }, 250);
+    return () => clearTimeout(t);
+  }, [state.sections]);
+
+  // Build registries synchronously from children so FocusOverlay can read
+  // them in the same render. Only direct DCSection > DCArtboard children are
+  // walked — wrapping them in other elements opts out of focus/reorder.
+  const registry = {};     // slotId -> { sectionId, artboard }
+  const sectionMeta = {};  // sectionId -> { title, subtitle, slotIds[] }
+  const sectionOrder = [];
+  React.Children.forEach(children, (sec) => {
+    if (!sec || sec.type !== DCSection) return;
+    const sid = sec.props.id ?? sec.props.title;
+    if (!sid) return;
+    sectionOrder.push(sid);
+    const persisted = state.sections[sid] || {};
+    const srcIds = [];
+    React.Children.forEach(sec.props.children, (ab) => {
+      if (!ab || ab.type !== DCArtboard) return;
+      const aid = ab.props.id ?? ab.props.label;
+      if (!aid) return;
+      registry[`${sid}/${aid}`] = { sectionId: sid, artboard: ab };
+      srcIds.push(aid);
+    });
+    const kept = (persisted.order || []).filter((k) => srcIds.includes(k));
+    sectionMeta[sid] = {
+      title: persisted.title ?? sec.props.title,
+      subtitle: sec.props.subtitle,
+      slotIds: [...kept, ...srcIds.filter((k) => !kept.includes(k))],
+    };
+  });
+
+  const api = React.useMemo(() => ({
+    state,
+    section: (id) => state.sections[id] || {},
+    patchSection: (id, p) => setState((s) => ({
+      ...s,
+      sections: { ...s.sections, [id]: { ...s.sections[id], ...(typeof p === 'function' ? p(s.sections[id] || {}) : p) } },
+    })),
+    setFocus: (slotId) => setState((s) => ({ ...s, focus: slotId })),
+  }), [state]);
+
+  // Esc exits focus; any outside pointerdown commits an in-progress rename.
+  React.useEffect(() => {
+    const onKey = (e) => { if (e.key === 'Escape') api.setFocus(null); };
+    const onPd = (e) => {
+      const ae = document.activeElement;
+      if (ae && ae.isContentEditable && !ae.contains(e.target)) ae.blur();
+    };
+    document.addEventListener('keydown', onKey);
+    document.addEventListener('pointerdown', onPd, true);
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      document.removeEventListener('pointerdown', onPd, true);
+    };
+  }, [api]);
+
+  return (
+    <DCCtx.Provider value={api}>
+      <DCViewport minScale={minScale} maxScale={maxScale} style={style}>{ready && children}</DCViewport>
+      {state.focus && registry[state.focus] && (
+        <DCFocusOverlay entry={registry[state.focus]} sectionMeta={sectionMeta} sectionOrder={sectionOrder} />
+      )}
+    </DCCtx.Provider>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+// DCViewport — transform-based pan/zoom (internal)
+//
+// Input mapping (Figma-style):
+//   • trackpad pinch  → zoom   (ctrlKey wheel; Safari gesture* events)
+//   • trackpad scroll → pan    (two-finger)
+//   • mouse wheel     → zoom   (notched; distinguished from trackpad scroll)
+//   • middle-drag / primary-drag-on-bg → pan
+//
+// Transform state lives in a ref and is written straight to the DOM
+// (translate3d + will-change) so wheel ticks don't go through React —
+// keeps pans at 60fps on dense canvases.
+// ─────────────────────────────────────────────────────────────
+function DCViewport({ children, minScale = 0.1, maxScale = 8, style = {} }) {
+  const vpRef = React.useRef(null);
+  const worldRef = React.useRef(null);
+  const tf = React.useRef({ x: 0, y: 0, scale: 1 });
+
+  const apply = React.useCallback(() => {
+    const { x, y, scale } = tf.current;
+    const el = worldRef.current;
+    if (el) el.style.transform = `translate3d(${x}px, ${y}px, 0) scale(${scale})`;
+  }, []);
+
+  React.useEffect(() => {
+    const vp = vpRef.current;
+    if (!vp) return;
+
+    const zoomAt = (cx, cy, factor) => {
+      const r = vp.getBoundingClientRect();
+      const px = cx - r.left, py = cy - r.top;
+      const t = tf.current;
+      const next = Math.min(maxScale, Math.max(minScale, t.scale * factor));
+      const k = next / t.scale;
+      // keep the world point under the cursor fixed
+      t.x = px - (px - t.x) * k;
+      t.y = py - (py - t.y) * k;
+      t.scale = next;
+      apply();
+    };
+
+    // Mouse-wheel vs trackpad-scroll heuristic. A physical wheel sends
+    // line-mode deltas (Firefox) or large integer pixel deltas with no X
+    // component (Chrome/Safari, typically multiples of 100/120). Trackpad
+    // two-finger scroll sends small/fractional pixel deltas, often with
+    // non-zero deltaX. ctrlKey is set by the browser for trackpad pinch.
+    const isMouseWheel = (e) =>
+      e.deltaMode !== 0 ||
+      (e.deltaX === 0 && Number.isInteger(e.deltaY) && Math.abs(e.deltaY) >= 40);
+
+    const onWheel = (e) => {
+      e.preventDefault();
+      if (isGesturing) return; // Safari: gesture* owns the pinch — discard concurrent wheels
+      if (e.ctrlKey) {
+        // trackpad pinch (or explicit ctrl+wheel)
+        zoomAt(e.clientX, e.clientY, Math.exp(-e.deltaY * 0.01));
+      } else if (isMouseWheel(e)) {
+        // notched mouse wheel — fixed-ratio step per click
+        zoomAt(e.clientX, e.clientY, Math.exp(-Math.sign(e.deltaY) * 0.18));
+      } else {
+        // trackpad two-finger scroll — pan
+        tf.current.x -= e.deltaX;
+        tf.current.y -= e.deltaY;
+        apply();
+      }
+    };
+
+    // Safari sends native gesture* events for trackpad pinch with a smooth
+    // e.scale; preferring these over the ctrl+wheel fallback gives a much
+    // better feel there. No-ops on other browsers. Safari also fires
+    // ctrlKey wheel events during the same pinch — isGesturing makes
+    // onWheel drop those entirely so they neither zoom nor pan.
+    let gsBase = 1;
+    let isGesturing = false;
+    const onGestureStart = (e) => { e.preventDefault(); isGesturing = true; gsBase = tf.current.scale; };
+    const onGestureChange = (e) => {
+      e.preventDefault();
+      zoomAt(e.clientX, e.clientY, (gsBase * e.scale) / tf.current.scale);
+    };
+    const onGestureEnd = (e) => { e.preventDefault(); isGesturing = false; };
+
+    // Drag-pan: middle button anywhere, or primary button on canvas
+    // background (anything that isn't an artboard or an inline editor).
+    let drag = null;
+    const onPointerDown = (e) => {
+      const onBg = !e.target.closest('[data-dc-slot], .dc-editable');
+      if (!(e.button === 1 || (e.button === 0 && onBg))) return;
+      e.preventDefault();
+      vp.setPointerCapture(e.pointerId);
+      drag = { id: e.pointerId, lx: e.clientX, ly: e.clientY };
+      vp.style.cursor = 'grabbing';
+    };
+    const onPointerMove = (e) => {
+      if (!drag || e.pointerId !== drag.id) return;
+      tf.current.x += e.clientX - drag.lx;
+      tf.current.y += e.clientY - drag.ly;
+      drag.lx = e.clientX; drag.ly = e.clientY;
+      apply();
+    };
+    const onPointerUp = (e) => {
+      if (!drag || e.pointerId !== drag.id) return;
+      vp.releasePointerCapture(e.pointerId);
+      drag = null;
+      vp.style.cursor = '';
+    };
+
+    vp.addEventListener('wheel', onWheel, { passive: false });
+    vp.addEventListener('gesturestart', onGestureStart, { passive: false });
+    vp.addEventListener('gesturechange', onGestureChange, { passive: false });
+    vp.addEventListener('gestureend', onGestureEnd, { passive: false });
+    vp.addEventListener('pointerdown', onPointerDown);
+    vp.addEventListener('pointermove', onPointerMove);
+    vp.addEventListener('pointerup', onPointerUp);
+    vp.addEventListener('pointercancel', onPointerUp);
+    return () => {
+      vp.removeEventListener('wheel', onWheel);
+      vp.removeEventListener('gesturestart', onGestureStart);
+      vp.removeEventListener('gesturechange', onGestureChange);
+      vp.removeEventListener('gestureend', onGestureEnd);
+      vp.removeEventListener('pointerdown', onPointerDown);
+      vp.removeEventListener('pointermove', onPointerMove);
+      vp.removeEventListener('pointerup', onPointerUp);
+      vp.removeEventListener('pointercancel', onPointerUp);
+    };
+  }, [apply, minScale, maxScale]);
+
+  const gridSvg = `url("data:image/svg+xml,%3Csvg width='120' height='120' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M120 0H0v120' fill='none' stroke='${encodeURIComponent(DC.grid)}' stroke-width='1'/%3E%3C/svg%3E")`;
+  return (
+    <div
+      ref={vpRef}
+      className="design-canvas"
+      style={{
+        height: '100vh', width: '100vw',
+        background: DC.bg,
+        overflow: 'hidden',
+        overscrollBehavior: 'none',
+        touchAction: 'none',
+        position: 'relative',
+        fontFamily: DC.font,
+        boxSizing: 'border-box',
+        ...style,
+      }}
+    >
+      <div
+        ref={worldRef}
+        style={{
+          position: 'absolute', top: 0, left: 0,
+          transformOrigin: '0 0',
+          willChange: 'transform',
+          width: 'max-content', minWidth: '100%',
+          minHeight: '100%',
+          padding: '60px 0 80px',
+        }}
+      >
+        <div style={{ position: 'absolute', inset: -6000, backgroundImage: gridSvg, backgroundSize: '120px 120px', pointerEvents: 'none', zIndex: -1 }} />
+        {children}
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+// DCSection — editable title + h-row of artboards in persisted order
+// ─────────────────────────────────────────────────────────────
+function DCSection({ id, title, subtitle, children, gap = 48 }) {
+  const ctx = React.useContext(DCCtx);
+  const sid = id ?? title;
+  const all = React.Children.toArray(children);
+  const artboards = all.filter((c) => c && c.type === DCArtboard);
+  const rest = all.filter((c) => !(c && c.type === DCArtboard));
+  const srcOrder = artboards.map((a) => a.props.id ?? a.props.label);
+  const sec = (ctx && sid && ctx.section(sid)) || {};
+
+  const order = React.useMemo(() => {
+    const kept = (sec.order || []).filter((k) => srcOrder.includes(k));
+    return [...kept, ...srcOrder.filter((k) => !kept.includes(k))];
+  }, [sec.order, srcOrder.join('|')]);
+
+  const byId = Object.fromEntries(artboards.map((a) => [a.props.id ?? a.props.label, a]));
+
+  return (
+    <div data-dc-section={sid} style={{ marginBottom: 80, position: 'relative' }}>
+      <div style={{ padding: '0 60px 56px' }}>
+        <DCEditable tag="div" value={sec.title ?? title}
+          onChange={(v) => ctx && sid && ctx.patchSection(sid, { title: v })}
+          style={{ fontSize: 28, fontWeight: 600, color: DC.title, letterSpacing: -0.4, marginBottom: 6, display: 'inline-block' }} />
+        {subtitle && <div style={{ fontSize: 16, color: DC.subtitle }}>{subtitle}</div>}
+      </div>
+      <div style={{ display: 'flex', gap, padding: '0 60px', alignItems: 'flex-start', width: 'max-content' }}>
+        {order.map((k) => (
+          <DCArtboardFrame key={k} sectionId={sid} artboard={byId[k]} order={order}
+            label={(sec.labels || {})[k] ?? byId[k].props.label}
+            onRename={(v) => ctx && ctx.patchSection(sid, (x) => ({ labels: { ...x.labels, [k]: v } }))}
+            onReorder={(next) => ctx && ctx.patchSection(sid, { order: next })}
+            onFocus={() => ctx && ctx.setFocus(`${sid}/${k}`)} />
+        ))}
+      </div>
+      {rest}
+    </div>
+  );
+}
+
+// DCArtboard — marker; rendered by DCArtboardFrame via DCSection.
+function DCArtboard() { return null; }
+
+function DCArtboardFrame({ sectionId, artboard, label, order, onRename, onReorder, onFocus }) {
+  const { id: rawId, label: rawLabel, width = 260, height = 480, children, style = {} } = artboard.props;
+  const id = rawId ?? rawLabel;
+  const ref = React.useRef(null);
+
+  // Live drag-reorder: dragged card sticks to cursor; siblings slide into
+  // their would-be slots in real time via transforms. DOM order only
+  // changes on drop.
+  const onGripDown = (e) => {
+    e.preventDefault(); e.stopPropagation();
+    const me = ref.current;
+    // translateX is applied in local (pre-scale) space but pointer deltas and
+    // getBoundingClientRect().left are screen-space — divide by the viewport's
+    // current scale so the dragged card tracks the cursor at any zoom level.
+    const scale = me.getBoundingClientRect().width / me.offsetWidth || 1;
+    const peers = Array.from(document.querySelectorAll(`[data-dc-section="${sectionId}"] [data-dc-slot]`));
+    const homes = peers.map((el) => ({ el, id: el.dataset.dcSlot, x: el.getBoundingClientRect().left }));
+    const slotXs = homes.map((h) => h.x);
+    const startIdx = order.indexOf(id);
+    const startX = e.clientX;
+    let liveOrder = order.slice();
+    me.classList.add('dc-dragging');
+
+    const layout = () => {
+      for (const h of homes) {
+        if (h.id === id) continue;
+        const slot = liveOrder.indexOf(h.id);
+        h.el.style.transform = `translateX(${(slotXs[slot] - h.x) / scale}px)`;
+      }
+    };
+
+    const move = (ev) => {
+      const dx = ev.clientX - startX;
+      me.style.transform = `translateX(${dx / scale}px)`;
+      const cur = homes[startIdx].x + dx;
+      let nearest = 0, best = Infinity;
+      for (let i = 0; i < slotXs.length; i++) {
+        const d = Math.abs(slotXs[i] - cur);
+        if (d < best) { best = d; nearest = i; }
+      }
+      if (liveOrder.indexOf(id) !== nearest) {
+        liveOrder = order.filter((k) => k !== id);
+        liveOrder.splice(nearest, 0, id);
+        layout();
+      }
+    };
+
+    const up = () => {
+      document.removeEventListener('pointermove', move);
+      document.removeEventListener('pointerup', up);
+      const finalSlot = liveOrder.indexOf(id);
+      me.classList.remove('dc-dragging');
+      me.style.transform = `translateX(${(slotXs[finalSlot] - homes[startIdx].x) / scale}px)`;
+      // After the settle transition, kill transitions + clear transforms +
+      // commit the reorder in the same frame so there's no visual snap-back.
+      setTimeout(() => {
+        for (const h of homes) { h.el.style.transition = 'none'; h.el.style.transform = ''; }
+        if (liveOrder.join('|') !== order.join('|')) onReorder(liveOrder);
+        requestAnimationFrame(() => requestAnimationFrame(() => {
+          for (const h of homes) h.el.style.transition = '';
+        }));
+      }, 180);
+    };
+    document.addEventListener('pointermove', move);
+    document.addEventListener('pointerup', up);
+  };
+
+  return (
+    <div ref={ref} data-dc-slot={id} style={{ position: 'relative', flexShrink: 0 }}>
+      <div className="dc-labelrow" style={{ position: 'absolute', bottom: '100%', left: -4, marginBottom: 4, color: DC.label }}>
+        <div className="dc-grip" onPointerDown={onGripDown} title="Drag to reorder">
+          <svg width="9" height="13" viewBox="0 0 9 13" fill="currentColor"><circle cx="2" cy="2" r="1.1"/><circle cx="7" cy="2" r="1.1"/><circle cx="2" cy="6.5" r="1.1"/><circle cx="7" cy="6.5" r="1.1"/><circle cx="2" cy="11" r="1.1"/><circle cx="7" cy="11" r="1.1"/></svg>
+        </div>
+        <div className="dc-labeltext" onClick={onFocus} title="Click to focus">
+          <DCEditable value={label} onChange={onRename} onClick={(e) => e.stopPropagation()}
+            style={{ fontSize: 15, fontWeight: 500, color: DC.label, lineHeight: 1 }} />
+        </div>
+      </div>
+      <button className="dc-expand" onClick={onFocus} onPointerDown={(e) => e.stopPropagation()} title="Focus">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"><path d="M7 1h4v4M5 11H1V7M11 1L7.5 4.5M1 11l3.5-3.5"/></svg>
+      </button>
+      <div className="dc-card"
+        style={{ borderRadius: 2, boxShadow: '0 1px 3px rgba(0,0,0,.08),0 4px 16px rgba(0,0,0,.06)', overflow: 'hidden', width, height, background: '#fff', ...style }}>
+        {children || <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#bbb', fontSize: 13, fontFamily: DC.font }}>{id}</div>}
+      </div>
+    </div>
+  );
+}
+
+// Inline rename — commits on blur or Enter.
+function DCEditable({ value, onChange, style, tag = 'span', onClick }) {
+  const T = tag;
+  return (
+    <T className="dc-editable" contentEditable suppressContentEditableWarning
+      onClick={onClick}
+      onPointerDown={(e) => e.stopPropagation()}
+      onBlur={(e) => onChange && onChange(e.currentTarget.textContent)}
+      onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); e.currentTarget.blur(); } }}
+      style={style}>{value}</T>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+// Focus mode — overlay one artboard; ←/→ within section, ↑/↓ across
+// sections, Esc or backdrop click to exit.
+// ─────────────────────────────────────────────────────────────
+function DCFocusOverlay({ entry, sectionMeta, sectionOrder }) {
+  const ctx = React.useContext(DCCtx);
+  const { sectionId, artboard } = entry;
+  const sec = ctx.section(sectionId);
+  const meta = sectionMeta[sectionId];
+  const peers = meta.slotIds;
+  const aid = artboard.props.id ?? artboard.props.label;
+  const idx = peers.indexOf(aid);
+  const secIdx = sectionOrder.indexOf(sectionId);
+
+  const go = (d) => { const n = peers[(idx + d + peers.length) % peers.length]; if (n) ctx.setFocus(`${sectionId}/${n}`); };
+  const goSection = (d) => {
+    const ns = sectionOrder[(secIdx + d + sectionOrder.length) % sectionOrder.length];
+    const first = sectionMeta[ns] && sectionMeta[ns].slotIds[0];
+    if (first) ctx.setFocus(`${ns}/${first}`);
+  };
+
+  React.useEffect(() => {
+    const k = (e) => {
+      if (e.key === 'ArrowLeft') { e.preventDefault(); go(-1); }
+      if (e.key === 'ArrowRight') { e.preventDefault(); go(1); }
+      if (e.key === 'ArrowUp') { e.preventDefault(); goSection(-1); }
+      if (e.key === 'ArrowDown') { e.preventDefault(); goSection(1); }
+    };
+    document.addEventListener('keydown', k);
+    return () => document.removeEventListener('keydown', k);
+  });
+
+  const { width = 260, height = 480, children } = artboard.props;
+  const [vp, setVp] = React.useState({ w: window.innerWidth, h: window.innerHeight });
+  React.useEffect(() => { const r = () => setVp({ w: window.innerWidth, h: window.innerHeight }); window.addEventListener('resize', r); return () => window.removeEventListener('resize', r); }, []);
+  const scale = Math.max(0.1, Math.min((vp.w - 200) / width, (vp.h - 260) / height, 2));
+
+  const [ddOpen, setDd] = React.useState(false);
+  const Arrow = ({ dir, onClick }) => (
+    <button onClick={(e) => { e.stopPropagation(); onClick(); }}
+      style={{ position: 'absolute', top: '50%', [dir]: 28, transform: 'translateY(-50%)',
+        border: 'none', background: 'rgba(255,255,255,.08)', color: 'rgba(255,255,255,.9)',
+        width: 44, height: 44, borderRadius: 22, fontSize: 18, cursor: 'pointer',
+        display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background .15s' }}
+      onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(255,255,255,.18)')}
+      onMouseLeave={(e) => (e.currentTarget.style.background = 'rgba(255,255,255,.08)')}>
+      <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+        <path d={dir === 'left' ? 'M11 3L5 9l6 6' : 'M7 3l6 6-6 6'} /></svg>
+    </button>
+  );
+
+  // Portal to body so position:fixed is the real viewport regardless of any
+  // transform on DesignCanvas's ancestors (including the canvas zoom itself).
+  return ReactDOM.createPortal(
+    <div onClick={() => ctx.setFocus(null)}
+      onWheel={(e) => e.preventDefault()}
+      style={{ position: 'fixed', inset: 0, zIndex: 100, background: 'rgba(24,20,16,.6)', backdropFilter: 'blur(14px)',
+        fontFamily: DC.font, color: '#fff' }}>
+
+      {/* top bar: section dropdown (left) · close (right) */}
+      <div onClick={(e) => e.stopPropagation()}
+        style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 72, display: 'flex', alignItems: 'flex-start', padding: '16px 20px 0', gap: 16 }}>
+        <div style={{ position: 'relative' }}>
+          <button onClick={() => setDd((o) => !o)}
+            style={{ border: 'none', background: 'transparent', color: '#fff', cursor: 'pointer', padding: '6px 8px',
+              borderRadius: 6, textAlign: 'left', fontFamily: 'inherit' }}>
+            <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ fontSize: 18, fontWeight: 600, letterSpacing: -0.3 }}>{meta.title}</span>
+              <svg width="11" height="11" viewBox="0 0 11 11" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" style={{ opacity: .7 }}><path d="M2 4l3.5 3.5L9 4"/></svg>
+            </span>
+            {meta.subtitle && <span style={{ display: 'block', fontSize: 13, opacity: .6, fontWeight: 400, marginTop: 2 }}>{meta.subtitle}</span>}
+          </button>
+          {ddOpen && (
+            <div style={{ position: 'absolute', top: '100%', left: 0, marginTop: 4, background: '#2a251f', borderRadius: 8,
+              boxShadow: '0 8px 32px rgba(0,0,0,.4)', padding: 4, minWidth: 200, zIndex: 10 }}>
+              {sectionOrder.map((sid) => (
+                <button key={sid} onClick={() => { setDd(false); const f = sectionMeta[sid].slotIds[0]; if (f) ctx.setFocus(`${sid}/${f}`); }}
+                  style={{ display: 'block', width: '100%', textAlign: 'left', border: 'none', cursor: 'pointer',
+                    background: sid === sectionId ? 'rgba(255,255,255,.1)' : 'transparent', color: '#fff',
+                    padding: '8px 12px', borderRadius: 5, fontSize: 14, fontWeight: sid === sectionId ? 600 : 400, fontFamily: 'inherit' }}>
+                  {sectionMeta[sid].title}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+        <div style={{ flex: 1 }} />
+        <button onClick={() => ctx.setFocus(null)}
+          onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(255,255,255,.12)')}
+          onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+          style={{ border: 'none', background: 'transparent', color: 'rgba(255,255,255,.7)', width: 32, height: 32,
+            borderRadius: 16, fontSize: 20, cursor: 'pointer', lineHeight: 1, transition: 'background .12s' }}>×</button>
+      </div>
+
+      {/* card centered, label + index below — only the card itself stops
+          propagation so any backdrop click (including the margins around
+          the card) exits focus */}
+      <div
+        style={{ position: 'absolute', top: 64, bottom: 56, left: 100, right: 100, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16 }}>
+        <div onClick={(e) => e.stopPropagation()} style={{ width: width * scale, height: height * scale, position: 'relative' }}>
+          <div style={{ width, height, transform: `scale(${scale})`, transformOrigin: 'top left', background: '#fff', borderRadius: 2, overflow: 'hidden',
+            boxShadow: '0 20px 80px rgba(0,0,0,.4)' }}>
+            {children || <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#bbb' }}>{aid}</div>}
+          </div>
+        </div>
+        <div onClick={(e) => e.stopPropagation()} style={{ fontSize: 14, fontWeight: 500, opacity: .85, textAlign: 'center' }}>
+          {(sec.labels || {})[aid] ?? artboard.props.label}
+          <span style={{ opacity: .5, marginLeft: 10, fontVariantNumeric: 'tabular-nums' }}>{idx + 1} / {peers.length}</span>
+        </div>
+      </div>
+
+      <Arrow dir="left" onClick={() => go(-1)} />
+      <Arrow dir="right" onClick={() => go(1)} />
+
+      {/* dots */}
+      <div onClick={(e) => e.stopPropagation()}
+        style={{ position: 'absolute', bottom: 20, left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: 8 }}>
+        {peers.map((p, i) => (
+          <button key={p} onClick={() => ctx.setFocus(`${sectionId}/${p}`)}
+            style={{ border: 'none', padding: 0, cursor: 'pointer', width: 6, height: 6, borderRadius: 3,
+              background: i === idx ? '#fff' : 'rgba(255,255,255,.3)' }} />
+        ))}
+      </div>
+    </div>,
+    document.body,
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+// Post-it — absolute-positioned sticky note
+// ─────────────────────────────────────────────────────────────
+function DCPostIt({ children, top, left, right, bottom, rotate = -2, width = 180 }) {
+  return (
+    <div style={{
+      position: 'absolute', top, left, right, bottom, width,
+      background: DC.postitBg, padding: '14px 16px',
+      fontFamily: '"Comic Sans MS", "Marker Felt", "Segoe Print", cursive',
+      fontSize: 14, lineHeight: 1.4, color: DC.postitText,
+      boxShadow: '0 2px 8px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.08)',
+      transform: `rotate(${rotate}deg)`,
+      zIndex: 5,
+    }}>{children}</div>
+  );
+}
+
+Object.assign(window, { DesignCanvas, DCSection, DCArtboard, DCPostIt });
+
+
+
+// ===== tweaks-panel.jsx =====
+
+// tweaks-panel.jsx
+// Reusable Tweaks shell + form-control helpers.
+//
+// Owns the host protocol (listens for __activate_edit_mode / __deactivate_edit_mode,
+// posts __edit_mode_available / __edit_mode_set_keys / __edit_mode_dismissed) so
+// individual prototypes don't re-roll it. Ships a consistent set of controls so you
+// don't hand-draw <input type="range">, segmented radios, steppers, etc.
+//
+// Usage (in an HTML file that loads React + Babel):
+//
+//   const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+//     "primaryColor": "#D97757",
+//     "fontSize": 16,
+//     "density": "regular",
+//     "dark": false
+//   }/*EDITMODE-END*/;
+//
+//   function App() {
+//     const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
+//     return (
+//       <div style={{ fontSize: t.fontSize, color: t.primaryColor }}>
+//         Hello
+//         <TweaksPanel>
+//           <TweakSection label="Typography" />
+//           <TweakSlider label="Font size" value={t.fontSize} min={10} max={32} unit="px"
+//                        onChange={(v) => setTweak('fontSize', v)} />
+//           <TweakRadio  label="Density" value={t.density}
+//                        options={['compact', 'regular', 'comfy']}
+//                        onChange={(v) => setTweak('density', v)} />
+//           <TweakSection label="Theme" />
+//           <TweakColor  label="Primary" value={t.primaryColor}
+//                        onChange={(v) => setTweak('primaryColor', v)} />
+//           <TweakToggle label="Dark mode" value={t.dark}
+//                        onChange={(v) => setTweak('dark', v)} />
+//         </TweaksPanel>
+//       </div>
+//     );
+//   }
+//
+// ─────────────────────────────────────────────────────────────────────────────
+
+const __TWEAKS_STYLE = `
+  .twk-panel{position:fixed;right:16px;bottom:16px;z-index:2147483646;width:280px;
+    max-height:calc(100vh - 32px);display:flex;flex-direction:column;
+    background:rgba(250,249,247,.78);color:#29261b;
+    -webkit-backdrop-filter:blur(24px) saturate(160%);backdrop-filter:blur(24px) saturate(160%);
+    border:.5px solid rgba(255,255,255,.6);border-radius:14px;
+    box-shadow:0 1px 0 rgba(255,255,255,.5) inset,0 12px 40px rgba(0,0,0,.18);
+    font:11.5px/1.4 ui-sans-serif,system-ui,-apple-system,sans-serif;overflow:hidden}
+  .twk-hd{display:flex;align-items:center;justify-content:space-between;
+    padding:10px 8px 10px 14px;cursor:move;user-select:none}
+  .twk-hd b{font-size:12px;font-weight:600;letter-spacing:.01em}
+  .twk-x{appearance:none;border:0;background:transparent;color:rgba(41,38,27,.55);
+    width:22px;height:22px;border-radius:6px;cursor:default;font-size:13px;line-height:1}
+  .twk-x:hover{background:rgba(0,0,0,.06);color:#29261b}
+  .twk-body{padding:2px 14px 14px;display:flex;flex-direction:column;gap:10px;
+    overflow-y:auto;overflow-x:hidden;min-height:0;
+    scrollbar-width:thin;scrollbar-color:rgba(0,0,0,.15) transparent}
+  .twk-body::-webkit-scrollbar{width:8px}
+  .twk-body::-webkit-scrollbar-track{background:transparent;margin:2px}
+  .twk-body::-webkit-scrollbar-thumb{background:rgba(0,0,0,.15);border-radius:4px;
+    border:2px solid transparent;background-clip:content-box}
+  .twk-body::-webkit-scrollbar-thumb:hover{background:rgba(0,0,0,.25);
+    border:2px solid transparent;background-clip:content-box}
+  .twk-row{display:flex;flex-direction:column;gap:5px}
+  .twk-row-h{flex-direction:row;align-items:center;justify-content:space-between;gap:10px}
+  .twk-lbl{display:flex;justify-content:space-between;align-items:baseline;
+    color:rgba(41,38,27,.72)}
+  .twk-lbl>span:first-child{font-weight:500}
+  .twk-val{color:rgba(41,38,27,.5);font-variant-numeric:tabular-nums}
+
+  .twk-sect{font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;
+    color:rgba(41,38,27,.45);padding:10px 0 0}
+  .twk-sect:first-child{padding-top:0}
+
+  .twk-field{appearance:none;width:100%;height:26px;padding:0 8px;
+    border:.5px solid rgba(0,0,0,.1);border-radius:7px;
+    background:rgba(255,255,255,.6);color:inherit;font:inherit;outline:none}
+  .twk-field:focus{border-color:rgba(0,0,0,.25);background:rgba(255,255,255,.85)}
+  select.twk-field{padding-right:22px;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'><path fill='rgba(0,0,0,.5)' d='M0 0h10L5 6z'/></svg>");
+    background-repeat:no-repeat;background-position:right 8px center}
+
+  .twk-slider{appearance:none;-webkit-appearance:none;width:100%;height:4px;margin:6px 0;
+    border-radius:999px;background:rgba(0,0,0,.12);outline:none}
+  .twk-slider::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;
+    width:14px;height:14px;border-radius:50%;background:#fff;
+    border:.5px solid rgba(0,0,0,.12);box-shadow:0 1px 3px rgba(0,0,0,.2);cursor:default}
+  .twk-slider::-moz-range-thumb{width:14px;height:14px;border-radius:50%;
+    background:#fff;border:.5px solid rgba(0,0,0,.12);box-shadow:0 1px 3px rgba(0,0,0,.2);cursor:default}
+
+  .twk-seg{position:relative;display:flex;padding:2px;border-radius:8px;
+    background:rgba(0,0,0,.06);user-select:none}
+  .twk-seg-thumb{position:absolute;top:2px;bottom:2px;border-radius:6px;
+    background:rgba(255,255,255,.9);box-shadow:0 1px 2px rgba(0,0,0,.12);
+    transition:left .15s cubic-bezier(.3,.7,.4,1),width .15s}
+  .twk-seg.dragging .twk-seg-thumb{transition:none}
+  .twk-seg button{appearance:none;position:relative;z-index:1;flex:1;border:0;
+    background:transparent;color:inherit;font:inherit;font-weight:500;min-height:22px;
+    border-radius:6px;cursor:default;padding:4px 6px;line-height:1.2;
+    overflow-wrap:anywhere}
+
+  .twk-toggle{position:relative;width:32px;height:18px;border:0;border-radius:999px;
+    background:rgba(0,0,0,.15);transition:background .15s;cursor:default;padding:0}
+  .twk-toggle[data-on="1"]{background:#34c759}
+  .twk-toggle i{position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;
+    background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.25);transition:transform .15s}
+  .twk-toggle[data-on="1"] i{transform:translateX(14px)}
+
+  .twk-num{display:flex;align-items:center;height:26px;padding:0 0 0 8px;
+    border:.5px solid rgba(0,0,0,.1);border-radius:7px;background:rgba(255,255,255,.6)}
+  .twk-num-lbl{font-weight:500;color:rgba(41,38,27,.6);cursor:ew-resize;
+    user-select:none;padding-right:8px}
+  .twk-num input{flex:1;min-width:0;height:100%;border:0;background:transparent;
+    font:inherit;font-variant-numeric:tabular-nums;text-align:right;padding:0 8px 0 0;
+    outline:none;color:inherit;-moz-appearance:textfield}
+  .twk-num input::-webkit-inner-spin-button,.twk-num input::-webkit-outer-spin-button{
+    -webkit-appearance:none;margin:0}
+  .twk-num-unit{padding-right:8px;color:rgba(41,38,27,.45)}
+
+  .twk-btn{appearance:none;height:26px;padding:0 12px;border:0;border-radius:7px;
+    background:rgba(0,0,0,.78);color:#fff;font:inherit;font-weight:500;cursor:default}
+  .twk-btn:hover{background:rgba(0,0,0,.88)}
+  .twk-btn.secondary{background:rgba(0,0,0,.06);color:inherit}
+  .twk-btn.secondary:hover{background:rgba(0,0,0,.1)}
+
+  .twk-swatch{appearance:none;-webkit-appearance:none;width:56px;height:22px;
+    border:.5px solid rgba(0,0,0,.1);border-radius:6px;padding:0;cursor:default;
+    background:transparent;flex-shrink:0}
+  .twk-swatch::-webkit-color-swatch-wrapper{padding:0}
+  .twk-swatch::-webkit-color-swatch{border:0;border-radius:5.5px}
+  .twk-swatch::-moz-color-swatch{border:0;border-radius:5.5px}
+`;
+
+// ── useTweaks ───────────────────────────────────────────────────────────────
+// Single source of truth for tweak values. setTweak persists via the host
+// (__edit_mode_set_keys → host rewrites the EDITMODE block on disk).
+function useTweaks(defaults) {
+  const [values, setValues] = React.useState(defaults);
+  // Accepts either setTweak('key', value) or setTweak({ key: value, ... }) so a
+  // useState-style call doesn't write a "[object Object]" key into the persisted
+  // JSON block.
+  const setTweak = React.useCallback((keyOrEdits, val) => {
+    const edits = typeof keyOrEdits === 'object' && keyOrEdits !== null
+      ? keyOrEdits : { [keyOrEdits]: val };
+    setValues((prev) => ({ ...prev, ...edits }));
+    window.parent.postMessage({ type: '__edit_mode_set_keys', edits }, '*');
+  }, []);
+  return [values, setTweak];
+}
+
+// ── TweaksPanel ─────────────────────────────────────────────────────────────
+// Floating shell. Registers the protocol listener BEFORE announcing
+// availability — if the announce ran first, the host's activate could land
+// before our handler exists and the toolbar toggle would silently no-op.
+// The close button posts __edit_mode_dismissed so the host's toolbar toggle
+// flips off in lockstep; the host echoes __deactivate_edit_mode back which
+// is what actually hides the panel.
+function TweaksPanel({ title = 'Tweaks', children }) {
+  const [open, setOpen] = React.useState(false);
+  const dragRef = React.useRef(null);
+  const offsetRef = React.useRef({ x: 16, y: 16 });
+  const PAD = 16;
+
+  const clampToViewport = React.useCallback(() => {
+    const panel = dragRef.current;
+    if (!panel) return;
+    const w = panel.offsetWidth, h = panel.offsetHeight;
+    const maxRight = Math.max(PAD, window.innerWidth - w - PAD);
+    const maxBottom = Math.max(PAD, window.innerHeight - h - PAD);
+    offsetRef.current = {
+      x: Math.min(maxRight, Math.max(PAD, offsetRef.current.x)),
+      y: Math.min(maxBottom, Math.max(PAD, offsetRef.current.y)),
+    };
+    panel.style.right = offsetRef.current.x + 'px';
+    panel.style.bottom = offsetRef.current.y + 'px';
+  }, []);
+
+  React.useEffect(() => {
+    if (!open) return;
+    clampToViewport();
+    if (typeof ResizeObserver === 'undefined') {
+      window.addEventListener('resize', clampToViewport);
+      return () => window.removeEventListener('resize', clampToViewport);
+    }
+    const ro = new ResizeObserver(clampToViewport);
+    ro.observe(document.documentElement);
+    return () => ro.disconnect();
+  }, [open, clampToViewport]);
+
+  React.useEffect(() => {
+    const onMsg = (e) => {
+      const t = e?.data?.type;
+      if (t === '__activate_edit_mode') setOpen(true);
+      else if (t === '__deactivate_edit_mode') setOpen(false);
+    };
+    window.addEventListener('message', onMsg);
+    window.parent.postMessage({ type: '__edit_mode_available' }, '*');
+    return () => window.removeEventListener('message', onMsg);
+  }, []);
+
+  const dismiss = () => {
+    setOpen(false);
+    window.parent.postMessage({ type: '__edit_mode_dismissed' }, '*');
+  };
+
+  const onDragStart = (e) => {
+    const panel = dragRef.current;
+    if (!panel) return;
+    const r = panel.getBoundingClientRect();
+    const sx = e.clientX, sy = e.clientY;
+    const startRight = window.innerWidth - r.right;
+    const startBottom = window.innerHeight - r.bottom;
+    const move = (ev) => {
+      offsetRef.current = {
+        x: startRight - (ev.clientX - sx),
+        y: startBottom - (ev.clientY - sy),
+      };
+      clampToViewport();
+    };
+    const up = () => {
+      window.removeEventListener('mousemove', move);
+      window.removeEventListener('mouseup', up);
+    };
+    window.addEventListener('mousemove', move);
+    window.addEventListener('mouseup', up);
+  };
+
+  if (!open) return null;
+  return (
+    <>
+      <style>{__TWEAKS_STYLE}</style>
+      <div ref={dragRef} className="twk-panel" data-noncommentable=""
+           style={{ right: offsetRef.current.x, bottom: offsetRef.current.y }}>
+        <div className="twk-hd" onMouseDown={onDragStart}>
+          <b>{title}</b>
+          <button className="twk-x" aria-label="Close tweaks"
+                  onMouseDown={(e) => e.stopPropagation()}
+                  onClick={dismiss}>✕</button>
+        </div>
+        <div className="twk-body">{children}</div>
+      </div>
+    </>
+  );
+}
+
+// ── Layout helpers ──────────────────────────────────────────────────────────
+
+function TweakSection({ label, children }) {
+  return (
+    <>
+      <div className="twk-sect">{label}</div>
+      {children}
+    </>
+  );
+}
+
+function TweakRow({ label, value, children, inline = false }) {
+  return (
+    <div className={inline ? 'twk-row twk-row-h' : 'twk-row'}>
+      <div className="twk-lbl">
+        <span>{label}</span>
+        {value != null && <span className="twk-val">{value}</span>}
+      </div>
+      {children}
+    </div>
+  );
+}
+
+// ── Controls ────────────────────────────────────────────────────────────────
+
+function TweakSlider({ label, value, min = 0, max = 100, step = 1, unit = '', onChange }) {
+  return (
+    <TweakRow label={label} value={`${value}${unit}`}>
+      <input type="range" className="twk-slider" min={min} max={max} step={step}
+             value={value} onChange={(e) => onChange(Number(e.target.value))} />
+    </TweakRow>
+  );
+}
+
+function TweakToggle({ label, value, onChange }) {
+  return (
+    <div className="twk-row twk-row-h">
+      <div className="twk-lbl"><span>{label}</span></div>
+      <button type="button" className="twk-toggle" data-on={value ? '1' : '0'}
+              role="switch" aria-checked={!!value}
+              onClick={() => onChange(!value)}><i /></button>
+    </div>
+  );
+}
+
+function TweakRadio({ label, value, options, onChange }) {
+  const trackRef = React.useRef(null);
+  const [dragging, setDragging] = React.useState(false);
+  const opts = options.map((o) => (typeof o === 'object' ? o : { value: o, label: o }));
+  const idx = Math.max(0, opts.findIndex((o) => o.value === value));
+  const n = opts.length;
+
+  // The active value is read by pointer-move handlers attached for the lifetime
+  // of a drag — ref it so a stale closure doesn't fire onChange for every move.
+  const valueRef = React.useRef(value);
+  valueRef.current = value;
+
+  const segAt = (clientX) => {
+    const r = trackRef.current.getBoundingClientRect();
+    const inner = r.width - 4;
+    const i = Math.floor(((clientX - r.left - 2) / inner) * n);
+    return opts[Math.max(0, Math.min(n - 1, i))].value;
+  };
+
+  const onPointerDown = (e) => {
+    setDragging(true);
+    const v0 = segAt(e.clientX);
+    if (v0 !== valueRef.current) onChange(v0);
+    const move = (ev) => {
+      if (!trackRef.current) return;
+      const v = segAt(ev.clientX);
+      if (v !== valueRef.current) onChange(v);
+    };
+    const up = () => {
+      setDragging(false);
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+    };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
+  };
+
+  return (
+    <TweakRow label={label}>
+      <div ref={trackRef} role="radiogroup" onPointerDown={onPointerDown}
+           className={dragging ? 'twk-seg dragging' : 'twk-seg'}>
+        <div className="twk-seg-thumb"
+             style={{ left: `calc(2px + ${idx} * (100% - 4px) / ${n})`,
+                      width: `calc((100% - 4px) / ${n})` }} />
+        {opts.map((o) => (
+          <button key={o.value} type="button" role="radio" aria-checked={o.value === value}>
+            {o.label}
+          </button>
+        ))}
+      </div>
+    </TweakRow>
+  );
+}
+
+function TweakSelect({ label, value, options, onChange }) {
+  return (
+    <TweakRow label={label}>
+      <select className="twk-field" value={value} onChange={(e) => onChange(e.target.value)}>
+        {options.map((o) => {
+          const v = typeof o === 'object' ? o.value : o;
+          const l = typeof o === 'object' ? o.label : o;
+          return <option key={v} value={v}>{l}</option>;
+        })}
+      </select>
+    </TweakRow>
+  );
+}
+
+function TweakText({ label, value, placeholder, onChange }) {
+  return (
+    <TweakRow label={label}>
+      <input className="twk-field" type="text" value={value} placeholder={placeholder}
+             onChange={(e) => onChange(e.target.value)} />
+    </TweakRow>
+  );
+}
+
+function TweakNumber({ label, value, min, max, step = 1, unit = '', onChange }) {
+  const clamp = (n) => {
+    if (min != null && n < min) return min;
+    if (max != null && n > max) return max;
+    return n;
+  };
+  const startRef = React.useRef({ x: 0, val: 0 });
+  const onScrubStart = (e) => {
+    e.preventDefault();
+    startRef.current = { x: e.clientX, val: value };
+    const decimals = (String(step).split('.')[1] || '').length;
+    const move = (ev) => {
+      const dx = ev.clientX - startRef.current.x;
+      const raw = startRef.current.val + dx * step;
+      const snapped = Math.round(raw / step) * step;
+      onChange(clamp(Number(snapped.toFixed(decimals))));
+    };
+    const up = () => {
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+    };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
+  };
+  return (
+    <div className="twk-num">
+      <span className="twk-num-lbl" onPointerDown={onScrubStart}>{label}</span>
+      <input type="number" value={value} min={min} max={max} step={step}
+             onChange={(e) => onChange(clamp(Number(e.target.value)))} />
+      {unit && <span className="twk-num-unit">{unit}</span>}
+    </div>
+  );
+}
+
+function TweakColor({ label, value, onChange }) {
+  return (
+    <div className="twk-row twk-row-h">
+      <div className="twk-lbl"><span>{label}</span></div>
+      <input type="color" className="twk-swatch" value={value}
+             onChange={(e) => onChange(e.target.value)} />
+    </div>
+  );
+}
+
+function TweakButton({ label, onClick, secondary = false }) {
+  return (
+    <button type="button" className={secondary ? 'twk-btn secondary' : 'twk-btn'}
+            onClick={onClick}>{label}</button>
+  );
+}
+
+Object.assign(window, {
+  useTweaks, TweaksPanel, TweakSection, TweakRow,
+  TweakSlider, TweakToggle, TweakRadio, TweakSelect,
+  TweakText, TweakNumber, TweakColor, TweakButton,
+});
+
+
+// ===== icons.jsx =====
+// Original icon set drawn as inline SVG paths.
+// All icons are 24×24 by default and inherit currentColor.
+
+const Icon = ({ d, size = 24, stroke = 2, fill = "none", children, style }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill={fill} stroke="currentColor"
+       strokeWidth={stroke} strokeLinecap="round" strokeLinejoin="round" style={style}>
+    {d ? <path d={d} /> : children}
+  </svg>
+);
+
+const IconPower = (p) => (
+  <Icon {...p}><path d="M12 3v9" /><path d="M5.5 7.5a8 8 0 1 0 13 0" /></Icon>
+);
+const IconMic = (p) => (
+  <Icon {...p}>
+    <rect x="9" y="3" width="6" height="12" rx="3" />
+    <path d="M5.5 12a6.5 6.5 0 0 0 13 0" />
+    <path d="M12 18.5V22" />
+  </Icon>
+);
+const IconKeypad = (p) => (
+  <Icon {...p}>
+    {[0,1,2].map(r => [0,1,2].map(c => (
+      <circle key={`${r}${c}`} cx={6 + c*6} cy={6 + r*6} r="0.9" fill="currentColor" stroke="none" />
+    )))}
+  </Icon>
+);
+const IconBack = (p) => (
+  <Icon {...p}><path d="M9 14L4 9l5-5" /><path d="M4 9h10a6 6 0 0 1 0 12h-3" /></Icon>
+);
+const IconHome = (p) => (
+  <Icon {...p}><path d="M3 11.5L12 4l9 7.5" /><path d="M5 10.5V20h14V10.5" /></Icon>
+);
+const IconPlayPause = (p) => (
+  <Icon {...p}>
+    <path d="M7 5l6 4.2v5.6L7 19V5z" fill="currentColor" stroke="none" />
+    <rect x="15" y="5" width="2.4" height="14" rx="0.6" fill="currentColor" stroke="none" />
+    <rect x="18.6" y="5" width="2.4" height="14" rx="0.6" fill="currentColor" stroke="none" />
+  </Icon>
+);
+const IconPlus = (p) => (
+  <Icon {...p}><path d="M12 6v12" /><path d="M6 12h12" /></Icon>
+);
+const IconMinus = (p) => (
+  <Icon {...p}><path d="M6 12h12" /></Icon>
+);
+const IconChevronUp = (p) => (
+  <Icon {...p}><path d="M5 14l7-6 7 6" /></Icon>
+);
+const IconChevronDown = (p) => (
+  <Icon {...p}><path d="M5 10l7 6 7-6" /></Icon>
+);
+const IconMute = (p) => (
+  <Icon {...p}>
+    <path d="M4 9h3l5-4v14l-5-4H4z" />
+    <path d="M16 9l5 6" />
+    <path d="M21 9l-5 6" />
+  </Icon>
+);
+const IconCC = ({ size = 24, style }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" style={style}>
+    <rect x="2" y="5" width="20" height="14" rx="3" fill="none" stroke="currentColor" strokeWidth="1.6" />
+    <path d="M9.5 10.5a2 2 0 0 0-3.5 1.5 2 2 0 0 0 3.5 1.5" stroke="currentColor" strokeWidth="1.6" fill="none" strokeLinecap="round" />
+    <path d="M17.5 10.5a2 2 0 0 0-3.5 1.5 2 2 0 0 0 3.5 1.5" stroke="currentColor" strokeWidth="1.6" fill="none" strokeLinecap="round" />
+  </svg>
+);
+const IconSettings = (p) => (
+  <Icon {...p}>
+    <circle cx="12" cy="12" r="3" />
+    <path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1" />
+  </Icon>
+);
+const IconBrightness = (p) => (
+  <Icon {...p}>
+    <circle cx="12" cy="12" r="4" />
+    <path d="M12 2v2M12 20v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M2 12h2M20 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4" />
+  </Icon>
+);
+const IconClose = (p) => (
+  <Icon {...p}><path d="M6 6l12 12" /><path d="M18 6L6 18" /></Icon>
+);
+const IconChevronRight = (p) => (
+  <Icon {...p}><path d="M9 5l7 7-7 7" /></Icon>
+);
+const IconRewind = (p) => (
+  <Icon {...p}>
+    <path d="M11 6L4 12l7 6V6z" fill="currentColor" stroke="none" />
+    <path d="M20 6l-7 6 7 6V6z" fill="currentColor" stroke="none" />
+  </Icon>
+);
+const IconForward = (p) => (
+  <Icon {...p}>
+    <path d="M13 6l7 6-7 6V6z" fill="currentColor" stroke="none" />
+    <path d="M4 6l7 6-7 6V6z" fill="currentColor" stroke="none" />
+  </Icon>
+);
+const IconTV = (p) => (
+  <Icon {...p}>
+    <rect x="2.5" y="5" width="19" height="12" rx="2" />
+    <path d="M8 21h8M12 17v4" />
+  </Icon>
+);
+
+Object.assign(window, {
+  IconPower, IconMic, IconKeypad, IconBack, IconHome, IconPlayPause,
+  IconPlus, IconMinus, IconChevronUp, IconChevronDown, IconMute, IconCC,
+  IconSettings, IconBrightness, IconClose, IconChevronRight,
+  IconRewind, IconForward, IconTV,
+});
+
+
+// ===== remote-classic.jsx =====
+// Variation A: Classic Skeuomorphic
+// Matte charcoal body, recessed wells, soft shadows. Original button layout.
+
+const classicStyles = {
+  body: {
+    width: 393, height: 852, position: 'relative',
+    background: 'radial-gradient(ellipse at 50% 0%, #1a1a1d 0%, #0c0c0e 60%, #050506 100%)',
+    overflow: 'hidden',
+    fontFamily: '-apple-system, "SF Pro Text", system-ui',
+    color: '#e8e8ea',
+  },
+};
+
+// Reusable circular tactile button
+const TactileButton = ({ size = 64, children, accent, label, sublabel, recessed, style }) => (
+  <div style={{
+    width: size, height: size, position: 'relative',
+    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+    ...style,
+  }}>
+    {/* recessed well */}
+    <div style={{
+      position: 'absolute', inset: 0, borderRadius: '50%',
+      background: 'radial-gradient(circle at 50% 30%, #0a0a0c 0%, #161618 70%, #1c1c1f 100%)',
+      boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.7), inset 0 -1px 1px rgba(255,255,255,0.04), 0 1px 0 rgba(255,255,255,0.03)',
+    }} />
+    {/* button cap */}
+    <div style={{
+      position: 'absolute', inset: 4, borderRadius: '50%',
+      background: accent
+        ? `radial-gradient(circle at 35% 30%, ${accent.hi}, ${accent.lo})`
+        : 'radial-gradient(circle at 35% 30%, #2a2a2e 0%, #1d1d20 55%, #131315 100%)',
+      boxShadow: accent
+        ? `inset 0 1px 1px rgba(255,255,255,0.25), inset 0 -2px 3px rgba(0,0,0,0.4), 0 2px 4px rgba(0,0,0,0.5), 0 0 14px ${accent.glow}`
+        : 'inset 0 1px 1px rgba(255,255,255,0.06), inset 0 -2px 3px rgba(0,0,0,0.5), 0 2px 4px rgba(0,0,0,0.6)',
+      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+      color: accent ? '#fff' : '#dcdcde',
+      gap: 1,
+    }}>
+      {children}
+      {label && <div style={{ fontSize: 9, fontWeight: 600, letterSpacing: 0.4, opacity: 0.85 }}>{label}</div>}
+      {sublabel && <div style={{ fontSize: 7.5, fontWeight: 500, opacity: 0.55, marginTop: -1 }}>{sublabel}</div>}
+    </div>
+  </div>
+);
+
+// D-pad
+const DPad = ({ size = 240 }) => {
+  const ring = size;
+  const center = size * 0.36;
+  return (
+    <div style={{
+      width: ring, height: ring, position: 'relative',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+    }}>
+      {/* outer recessed well */}
+      <div style={{
+        position: 'absolute', inset: 0, borderRadius: '50%',
+        background: 'radial-gradient(circle at 50% 30%, #060608 0%, #131315 70%, #1a1a1d 100%)',
+        boxShadow: 'inset 0 3px 6px rgba(0,0,0,0.8), inset 0 -2px 2px rgba(255,255,255,0.04), 0 1px 0 rgba(255,255,255,0.04)',
+      }} />
+      {/* outer ring (the rotational pad) */}
+      <div style={{
+        position: 'absolute', inset: 12, borderRadius: '50%',
+        background: 'conic-gradient(from 220deg, #242428, #1a1a1d, #2a2a2e, #1a1a1d, #242428)',
+        boxShadow: 'inset 0 1px 1px rgba(255,255,255,0.08), inset 0 -2px 3px rgba(0,0,0,0.6), 0 4px 12px rgba(0,0,0,0.6)',
+      }} />
+      {/* directional tick marks */}
+      {['top', 'right', 'bottom', 'left'].map((dir, i) => {
+        const tx = { top: '50%,16px', right: 'calc(100% - 28px),50%', bottom: '50%,calc(100% - 28px)', left: '16px,50%' }[dir].split(',');
+        return (
+          <div key={dir} style={{
+            position: 'absolute', left: tx[0], top: tx[1], transform: 'translate(-50%,-50%)',
+            width: 4, height: 4, borderRadius: '50%', background: '#3a3a3e',
+            boxShadow: 'inset 0 1px 1px rgba(0,0,0,0.6)',
+          }} />
+        );
+      })}
+      {/* inner OK button well */}
+      <div style={{
+        width: center, height: center, borderRadius: '50%',
+        position: 'relative',
+        background: 'radial-gradient(circle at 35% 30%, #2c2c30 0%, #1c1c1f 55%, #101012 100%)',
+        boxShadow: 'inset 0 1px 1px rgba(255,255,255,0.08), inset 0 -2px 3px rgba(0,0,0,0.5), 0 2px 6px rgba(0,0,0,0.7)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        zIndex: 2,
+      }}>
+        <div style={{
+          fontSize: 11, fontWeight: 600, letterSpacing: 1.2, color: '#88888c',
+        }}>OK</div>
+      </div>
+    </div>
+  );
+};
+
+// Volume / channel rocker
+const Rocker = ({ height = 130, top, bottom, label, vertical = true }) => (
+  <div style={{
+    width: 64, height: height, position: 'relative',
+    display: 'flex', flexDirection: 'column',
+  }}>
+    {/* well */}
+    <div style={{
+      position: 'absolute', inset: 0, borderRadius: 36,
+      background: 'radial-gradient(ellipse at 50% 20%, #0a0a0c, #15151820)',
+      boxShadow: 'inset 0 2px 5px rgba(0,0,0,0.7), inset 0 -1px 1px rgba(255,255,255,0.03)',
+    }} />
+    {/* upper cap */}
+    <div style={{
+      position: 'absolute', top: 4, left: 4, right: 4, height: 'calc(50% - 5px)',
+      borderRadius: '32px 32px 8px 8px',
+      background: 'linear-gradient(180deg, #2a2a2e 0%, #1d1d20 60%, #161618 100%)',
+      boxShadow: 'inset 0 1px 1px rgba(255,255,255,0.07), inset 0 -1px 1px rgba(0,0,0,0.5), 0 2px 4px rgba(0,0,0,0.5)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      color: '#dcdcde',
+    }}>{top}</div>
+    {/* divider hint */}
+    <div style={{
+      position: 'absolute', top: '50%', left: 14, right: 14, height: 1,
+      background: 'linear-gradient(90deg, transparent, rgba(0,0,0,0.7), transparent)',
+      transform: 'translateY(-0.5px)',
+    }} />
+    {/* lower cap */}
+    <div style={{
+      position: 'absolute', bottom: 4, left: 4, right: 4, height: 'calc(50% - 5px)',
+      borderRadius: '8px 8px 32px 32px',
+      background: 'linear-gradient(180deg, #161618 0%, #1d1d20 40%, #2a2a2e 100%)',
+      boxShadow: 'inset 0 1px 1px rgba(255,255,255,0.04), inset 0 -1px 1px rgba(0,0,0,0.5), 0 2px 4px rgba(0,0,0,0.5)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      color: '#dcdcde',
+    }}>{bottom}</div>
+    {/* label badge */}
+    {label && (
+      <div style={{
+        position: 'absolute', left: '50%', top: '50%',
+        transform: 'translate(-50%, -50%)',
+        fontSize: 9, fontWeight: 600, letterSpacing: 1.5,
+        color: '#5a5a5e',
+      }}>{label}</div>
+    )}
+  </div>
+);
+
+function RemoteClassic({ accent = 'red', onSettings }) {
+  const accentMap = {
+    red:    { hi: '#ff6b5a', lo: '#c8281a', glow: 'rgba(255,80,60,0.35)' },
+    amber:  { hi: '#ffb86b', lo: '#c8821a', glow: 'rgba(255,160,60,0.35)' },
+    cyan:   { hi: '#6bd4ff', lo: '#1a8ec8', glow: 'rgba(60,180,255,0.35)' },
+    violet: { hi: '#b86bff', lo: '#7028c8', glow: 'rgba(160,80,255,0.35)' },
+    green:  { hi: '#6bffaa', lo: '#1ac876', glow: 'rgba(60,255,160,0.30)' },
+  };
+  const a = accentMap[accent] || accentMap.red;
+
+  return (
+    <div style={classicStyles.body}>
+      {/* Status bar safe area */}
+      <div style={{
+        position: 'absolute', top: 0, left: 0, right: 0, height: 59,
+        display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between',
+        padding: '0 28px 8px', fontSize: 16, fontWeight: 600,
+        color: '#fff',
+      }}>
+        <span>9:41</span>
+        <span style={{ display: 'flex', gap: 6, alignItems: 'center', fontSize: 11 }}>
+          <svg width="17" height="11" viewBox="0 0 17 11" fill="#fff"><rect x="0" y="7" width="3" height="4" rx="0.6"/><rect x="4.5" y="5" width="3" height="6" rx="0.6"/><rect x="9" y="3" width="3" height="8" rx="0.6"/><rect x="13.5" y="0" width="3" height="11" rx="0.6"/></svg>
+          <svg width="22" height="11" viewBox="0 0 22 11" fill="none" stroke="#fff" strokeWidth="1"><rect x="1" y="2" width="17" height="7" rx="2"/><rect x="3" y="4" width="13" height="3" rx="0.8" fill="#fff"/><path d="M19.5 4.5v2" strokeWidth="1.5" strokeLinecap="round"/></svg>
+        </span>
+      </div>
+
+      {/* App header */}
+      <div style={{
+        position: 'absolute', top: 64, left: 24, right: 24,
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+      }}>
+        <div>
+          <div style={{ fontSize: 11, letterSpacing: 2, color: '#5a5a5e', fontWeight: 600 }}>CONNECTED</div>
+          <div style={{ fontSize: 17, fontWeight: 600, color: '#e8e8ea', marginTop: 2, display: 'flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap' }}>
+            <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#34d160', boxShadow: '0 0 8px #34d16080', flexShrink: 0 }} />
+            Living Room TV
+          </div>
+        </div>
+        <button onClick={onSettings} style={{
+          width: 40, height: 40, borderRadius: '50%', border: 'none', cursor: 'pointer',
+          background: 'rgba(255,255,255,0.04)',
+          color: '#9a9a9e',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>
+          <IconSettings size={18} stroke={1.6} />
+        </button>
+      </div>
+
+      {/* Top row: power / keypad / mic */}
+      <div style={{
+        position: 'absolute', top: 138, left: 32, right: 32,
+        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+      }}>
+        <TactileButton size={62} accent={a}>
+          <IconPower size={22} stroke={2.4} />
+        </TactileButton>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+          <div style={{ fontSize: 9, fontWeight: 600, letterSpacing: 1.4, color: '#5a5a5e' }}>MIC</div>
+          <div style={{ width: 4, height: 4, borderRadius: '50%', background: '#2a2a2e' }} />
+        </div>
+        <TactileButton size={62}>
+          <IconKeypad size={22} stroke={1.8} />
+        </TactileButton>
+      </div>
+
+      {/* D-pad */}
+      <div style={{
+        position: 'absolute', top: 224, left: '50%', transform: 'translateX(-50%)',
+      }}>
+        <DPad size={240} />
+      </div>
+
+      {/* Transport row: back / home / play */}
+      <div style={{
+        position: 'absolute', top: 484, left: 56, right: 56,
+        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+      }}>
+        <TactileButton size={56}>
+          <IconBack size={20} stroke={2} />
+        </TactileButton>
+        <TactileButton size={56}>
+          <IconHome size={20} stroke={2} />
+        </TactileButton>
+        <TactileButton size={56}>
+          <IconPlayPause size={20} />
+        </TactileButton>
+      </div>
+
+      {/* Rockers row: volume / channel */}
+      <div style={{
+        position: 'absolute', top: 568, left: 56, right: 56,
+        display: 'flex', justifyContent: 'space-between',
+      }}>
+        <Rocker
+          top={<IconPlus size={18} stroke={2.2} />}
+          bottom={<IconMinus size={18} stroke={2.2} />}
+          label="VOL"
+        />
+        <Rocker
+          top={<IconChevronUp size={18} stroke={2.2} />}
+          bottom={<IconChevronDown size={18} stroke={2.2} />}
+          label="CH"
+        />
+      </div>
+
+      {/* Mute + CC + Mic */}
+      <div style={{
+        position: 'absolute', top: 720, left: 32, right: 32,
+        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+      }}>
+        <TactileButton size={56}>
+          <IconMute size={20} stroke={1.8} />
+        </TactileButton>
+        <TactileButton size={68} accent={{ hi: '#3a3a3e', lo: '#1c1c1f', glow: 'rgba(0,0,0,0)' }}>
+          <IconMic size={24} stroke={1.8} />
+        </TactileButton>
+        <TactileButton size={56}>
+          <IconCC size={22} />
+        </TactileButton>
+      </div>
+
+      {/* Home indicator */}
+      <div style={{
+        position: 'absolute', bottom: 8, left: '50%', transform: 'translateX(-50%)',
+        width: 134, height: 5, borderRadius: 100, background: 'rgba(255,255,255,0.5)',
+      }} />
+    </div>
+  );
+}
+
+window.RemoteClassic = RemoteClassic;
+
+
+// ===== remote-glass.jsx =====
+// Variation B: Floating glass over textured dark background.
+// Translucent frosted buttons, subtle inner glow, more "iOS Liquid Glass" character.
+
+const glassStyles = {
+  body: {
+    width: 393, height: 852, position: 'relative', overflow: 'hidden',
+    background: '#08080a',
+    fontFamily: '-apple-system, "SF Pro Text", system-ui',
+    color: '#e8e8ea',
+  },
+};
+
+// Background: ambient blobs
+const GlassBackground = ({ accent }) => (
+  <>
+    <div style={{
+      position: 'absolute', inset: 0,
+      background: `
+        radial-gradient(circle at 20% 10%, ${accent.glow1}, transparent 50%),
+        radial-gradient(circle at 80% 30%, ${accent.glow2}, transparent 50%),
+        radial-gradient(circle at 50% 90%, ${accent.glow3}, transparent 60%),
+        #08080a
+      `,
+    }} />
+    {/* Noise / grain via repeating gradient */}
+    <div style={{
+      position: 'absolute', inset: 0, opacity: 0.5,
+      backgroundImage: `radial-gradient(circle at 1px 1px, rgba(255,255,255,0.018) 1px, transparent 0)`,
+      backgroundSize: '3px 3px',
+      mixBlendMode: 'overlay',
+    }} />
+  </>
+);
+
+const GlassButton = ({ size = 64, children, primary, label, style }) => (
+  <div style={{
+    width: size, height: size, borderRadius: '50%',
+    position: 'relative',
+    background: primary
+      ? 'linear-gradient(145deg, rgba(255,255,255,0.18), rgba(255,255,255,0.04))'
+      : 'linear-gradient(145deg, rgba(255,255,255,0.10), rgba(255,255,255,0.02))',
+    backdropFilter: 'blur(20px)',
+    WebkitBackdropFilter: 'blur(20px)',
+    boxShadow: primary
+      ? 'inset 0 1px 1px rgba(255,255,255,0.35), inset 0 -1px 2px rgba(0,0,0,0.3), 0 6px 18px rgba(0,0,0,0.5)'
+      : 'inset 0 1px 1px rgba(255,255,255,0.18), inset 0 -1px 2px rgba(0,0,0,0.3), 0 4px 12px rgba(0,0,0,0.45)',
+    border: '1px solid rgba(255,255,255,0.06)',
+    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+    color: '#fff',
+    ...style,
+  }}>
+    {children}
+    {label && <div style={{ fontSize: 9, fontWeight: 600, letterSpacing: 0.6, opacity: 0.75, marginTop: 2 }}>{label}</div>}
+  </div>
+);
+
+// D-pad: outer ring with arrows + center OK
+const GlassDPad = ({ size = 240 }) => (
+  <div style={{
+    width: size, height: size, position: 'relative',
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+  }}>
+    {/* Outer glass ring */}
+    <div style={{
+      position: 'absolute', inset: 0, borderRadius: '50%',
+      background: 'conic-gradient(from 0deg, rgba(255,255,255,0.03), rgba(255,255,255,0.12), rgba(255,255,255,0.03), rgba(255,255,255,0.10), rgba(255,255,255,0.03))',
+      backdropFilter: 'blur(24px)',
+      WebkitBackdropFilter: 'blur(24px)',
+      border: '1px solid rgba(255,255,255,0.08)',
+      boxShadow: 'inset 0 1px 2px rgba(255,255,255,0.15), inset 0 -2px 4px rgba(0,0,0,0.3), 0 8px 32px rgba(0,0,0,0.5)',
+    }} />
+    {/* Inner cutout / well */}
+    <div style={{
+      position: 'absolute', width: size * 0.55, height: size * 0.55, borderRadius: '50%',
+      background: 'radial-gradient(circle at 50% 30%, rgba(0,0,0,0.55), rgba(0,0,0,0.25))',
+      boxShadow: 'inset 0 2px 6px rgba(0,0,0,0.6), inset 0 -1px 1px rgba(255,255,255,0.06)',
+    }} />
+    {/* Direction arrows on ring */}
+    {[
+      { rot: 0,  icon: <IconChevronUp size={20} stroke={2} /> },
+      { rot: 90, icon: <IconChevronUp size={20} stroke={2} /> },
+      { rot: 180, icon: <IconChevronUp size={20} stroke={2} /> },
+      { rot: 270, icon: <IconChevronUp size={20} stroke={2} /> },
+    ].map((d, i) => (
+      <div key={i} style={{
+        position: 'absolute', inset: 0,
+        transform: `rotate(${d.rot}deg)`,
+        display: 'flex', justifyContent: 'center', paddingTop: 14,
+        color: 'rgba(255,255,255,0.55)',
+      }}>
+        {d.icon}
+      </div>
+    ))}
+    {/* Center OK */}
+    <div style={{
+      width: size * 0.36, height: size * 0.36, borderRadius: '50%',
+      position: 'relative', zIndex: 2,
+      background: 'linear-gradient(145deg, rgba(255,255,255,0.18), rgba(255,255,255,0.04))',
+      backdropFilter: 'blur(20px)',
+      WebkitBackdropFilter: 'blur(20px)',
+      boxShadow: 'inset 0 1px 1px rgba(255,255,255,0.3), inset 0 -1px 2px rgba(0,0,0,0.3), 0 4px 14px rgba(0,0,0,0.5)',
+      border: '1px solid rgba(255,255,255,0.1)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      fontSize: 13, fontWeight: 600, letterSpacing: 1.5,
+      color: 'rgba(255,255,255,0.92)',
+    }}>OK</div>
+  </div>
+);
+
+// Pill-shaped rocker
+const GlassPill = ({ height = 130, top, bottom, label }) => (
+  <div style={{
+    width: 64, height,
+    borderRadius: 36,
+    background: 'linear-gradient(145deg, rgba(255,255,255,0.10), rgba(255,255,255,0.02))',
+    backdropFilter: 'blur(20px)',
+    WebkitBackdropFilter: 'blur(20px)',
+    border: '1px solid rgba(255,255,255,0.07)',
+    boxShadow: 'inset 0 1px 1px rgba(255,255,255,0.18), inset 0 -1px 2px rgba(0,0,0,0.3), 0 4px 12px rgba(0,0,0,0.45)',
+    display: 'flex', flexDirection: 'column',
+    position: 'relative',
+    color: '#fff',
+  }}>
+    <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{top}</div>
+    <div style={{ height: 1, margin: '0 14px', background: 'rgba(255,255,255,0.08)' }} />
+    <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{bottom}</div>
+    {label && (
+      <div style={{
+        position: 'absolute', left: '50%', top: '50%',
+        transform: 'translate(-50%, -50%)',
+        fontSize: 8.5, fontWeight: 700, letterSpacing: 1.6,
+        color: 'rgba(255,255,255,0.35)',
+        background: 'rgba(0,0,0,0.4)', padding: '2px 6px', borderRadius: 4,
+      }}>{label}</div>
+    )}
+  </div>
+);
+
+function RemoteGlass({ accent = 'red', onSettings }) {
+  const accentMap = {
+    red:    { fg: '#ff7a6c', glow1: 'rgba(255,80,60,0.15)', glow2: 'rgba(255,140,60,0.10)', glow3: 'rgba(180,40,40,0.18)' },
+    amber:  { fg: '#ffb86b', glow1: 'rgba(255,170,60,0.14)', glow2: 'rgba(255,140,60,0.10)', glow3: 'rgba(200,120,40,0.18)' },
+    cyan:   { fg: '#6bd4ff', glow1: 'rgba(60,180,255,0.18)', glow2: 'rgba(60,140,255,0.10)', glow3: 'rgba(40,80,200,0.18)' },
+    violet: { fg: '#b86bff', glow1: 'rgba(160,80,255,0.18)', glow2: 'rgba(200,80,255,0.10)', glow3: 'rgba(80,40,200,0.20)' },
+    green:  { fg: '#6bffaa', glow1: 'rgba(60,255,160,0.14)', glow2: 'rgba(60,200,180,0.10)', glow3: 'rgba(40,180,100,0.16)' },
+  };
+  const a = accentMap[accent] || accentMap.red;
+
+  return (
+    <div style={glassStyles.body}>
+      <GlassBackground accent={a} />
+
+      {/* Status bar */}
+      <div style={{
+        position: 'absolute', top: 0, left: 0, right: 0, height: 59,
+        display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between',
+        padding: '0 28px 8px', fontSize: 16, fontWeight: 600, color: '#fff', zIndex: 5,
+      }}>
+        <span>9:41</span>
+        <span style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+          <svg width="17" height="11" viewBox="0 0 17 11" fill="#fff"><rect x="0" y="7" width="3" height="4" rx="0.6"/><rect x="4.5" y="5" width="3" height="6" rx="0.6"/><rect x="9" y="3" width="3" height="8" rx="0.6"/><rect x="13.5" y="0" width="3" height="11" rx="0.6"/></svg>
+          <svg width="22" height="11" viewBox="0 0 22 11" fill="none" stroke="#fff" strokeWidth="1"><rect x="1" y="2" width="17" height="7" rx="2"/><rect x="3" y="4" width="13" height="3" rx="0.8" fill="#fff"/><path d="M19.5 4.5v2" strokeWidth="1.5" strokeLinecap="round"/></svg>
+        </span>
+      </div>
+
+      {/* Header */}
+      <div style={{
+        position: 'absolute', top: 64, left: 24, right: 24, zIndex: 5,
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+      }}>
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 10,
+          padding: '7px 14px 7px 8px', borderRadius: 999,
+          background: 'rgba(255,255,255,0.06)', backdropFilter: 'blur(20px)',
+          border: '1px solid rgba(255,255,255,0.08)',
+        }}>
+          <div style={{
+            width: 26, height: 26, borderRadius: '50%',
+            background: `radial-gradient(circle at 35% 30%, ${a.fg}, rgba(255,255,255,0.05))`,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>
+            <IconTV size={14} stroke={1.8} style={{ color: '#fff' }} />
+          </div>
+          <div style={{ minWidth: 0 }}>
+            <div style={{ fontSize: 13, fontWeight: 600, color: '#fff', whiteSpace: 'nowrap' }}>Living Room</div>
+            <div style={{ fontSize: 9, letterSpacing: 1, color: '#7a7a7e', marginTop: 1, whiteSpace: 'nowrap' }}>CONNECTED</div>
+          </div>
+        </div>
+        <button onClick={onSettings} style={{
+          width: 40, height: 40, borderRadius: '50%', border: '1px solid rgba(255,255,255,0.07)',
+          background: 'rgba(255,255,255,0.05)', cursor: 'pointer', color: '#cfcfd2',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          backdropFilter: 'blur(20px)',
+        }}>
+          <IconSettings size={18} stroke={1.6} />
+        </button>
+      </div>
+
+      {/* Top: power, keypad, mic */}
+      <div style={{
+        position: 'absolute', top: 138, left: 32, right: 32, zIndex: 5,
+        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+      }}>
+        <GlassButton size={62} primary style={{
+          background: `linear-gradient(145deg, ${a.fg}cc, ${a.fg}55)`,
+          boxShadow: `inset 0 1px 1px rgba(255,255,255,0.4), 0 0 24px ${a.fg}50, 0 6px 18px rgba(0,0,0,0.5)`,
+        }}>
+          <IconPower size={22} stroke={2.4} />
+        </GlassButton>
+        <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: 2, color: '#5a5a5e' }}>● MIC</div>
+        <GlassButton size={62}>
+          <IconKeypad size={22} stroke={1.8} />
+        </GlassButton>
+      </div>
+
+      {/* D-pad */}
+      <div style={{
+        position: 'absolute', top: 222, left: '50%', transform: 'translateX(-50%)', zIndex: 5,
+      }}>
+        <GlassDPad size={244} />
+      </div>
+
+      {/* Transport */}
+      <div style={{
+        position: 'absolute', top: 488, left: 48, right: 48, zIndex: 5,
+        display: 'flex', justifyContent: 'space-between',
+      }}>
+        <GlassButton size={56}><IconBack size={20} stroke={2} /></GlassButton>
+        <GlassButton size={56}><IconHome size={20} stroke={2} /></GlassButton>
+        <GlassButton size={56}><IconPlayPause size={20} /></GlassButton>
+      </div>
+
+      {/* Rockers */}
+      <div style={{
+        position: 'absolute', top: 572, left: 56, right: 56, zIndex: 5,
+        display: 'flex', justifyContent: 'space-between',
+      }}>
+        <GlassPill
+          top={<IconPlus size={18} stroke={2.2} />}
+          bottom={<IconMinus size={18} stroke={2.2} />}
+          label="VOL"
+        />
+        <GlassPill
+          top={<IconChevronUp size={18} stroke={2.2} />}
+          bottom={<IconChevronDown size={18} stroke={2.2} />}
+          label="CH"
+        />
+      </div>
+
+      {/* Mute / Big mic / CC */}
+      <div style={{
+        position: 'absolute', top: 720, left: 32, right: 32, zIndex: 5,
+        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+      }}>
+        <GlassButton size={56}><IconMute size={20} stroke={1.8} /></GlassButton>
+        <GlassButton size={70} primary style={{
+          background: 'linear-gradient(145deg, rgba(255,255,255,0.22), rgba(255,255,255,0.06))',
+        }}>
+          <IconMic size={26} stroke={1.8} />
+        </GlassButton>
+        <GlassButton size={56}><IconCC size={22} /></GlassButton>
+      </div>
+
+      {/* Home indicator */}
+      <div style={{
+        position: 'absolute', bottom: 8, left: '50%', transform: 'translateX(-50%)',
+        width: 134, height: 5, borderRadius: 100, background: 'rgba(255,255,255,0.5)', zIndex: 10,
+      }} />
+    </div>
+  );
+}
+
+window.RemoteGlass = RemoteGlass;
+
+
+// ===== remote-compact.jsx =====
+// Variation C: Compact, modern, two-column with prominent D-pad above shortcut grid.
+// More information-dense; accent stripes and labels.
+
+const compactStyles = {
+  body: {
+    width: 393, height: 852, position: 'relative', overflow: 'hidden',
+    background: 'linear-gradient(180deg, #121214 0%, #08080a 100%)',
+    fontFamily: '-apple-system, "SF Pro Text", system-ui',
+    color: '#e8e8ea',
+  },
+};
+
+// Squircle button (rounded square) — flatter, more iOS-like
+const Squircle = ({ size = 64, children, label, accent, primary, style, onClick }) => (
+  <button onClick={onClick} style={{
+    width: size, height: size, borderRadius: size * 0.32,
+    border: 'none', cursor: 'pointer', padding: 0,
+    background: primary
+      ? `linear-gradient(145deg, ${accent.hi}, ${accent.lo})`
+      : 'linear-gradient(145deg, #232327 0%, #18181b 100%)',
+    boxShadow: primary
+      ? `inset 0 1px 1px rgba(255,255,255,0.25), inset 0 -2px 3px rgba(0,0,0,0.3), 0 0 18px ${accent.glow}, 0 4px 10px rgba(0,0,0,0.5)`
+      : 'inset 0 1px 1px rgba(255,255,255,0.05), inset 0 -1px 2px rgba(0,0,0,0.5), 0 4px 10px rgba(0,0,0,0.5)',
+    color: primary ? '#fff' : '#dcdcde',
+    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+    gap: 3,
+    fontFamily: 'inherit',
+    ...style,
+  }}>
+    {children}
+    {label && <div style={{ fontSize: 9, fontWeight: 600, letterSpacing: 0.6, opacity: 0.78 }}>{label}</div>}
+  </button>
+);
+
+const CompactDPad = ({ size = 230, accent }) => (
+  <div style={{
+    width: size, height: size, position: 'relative',
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    borderRadius: '50%',
+    background: 'radial-gradient(circle at 50% 30%, #1a1a1d 0%, #0c0c0f 80%)',
+    boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.7), 0 8px 24px rgba(0,0,0,0.6)',
+  }}>
+    {/* Quadrant arrows */}
+    {[
+      { rot: 0,   pos: { top: 18 } },
+      { rot: 180, pos: { bottom: 18 } },
+      { rot: -90, pos: { left: 18 } },
+      { rot: 90,  pos: { right: 18 } },
+    ].map((d, i) => (
+      <div key={i} style={{
+        position: 'absolute', ...d.pos,
+        width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center',
+        color: 'rgba(255,255,255,0.65)',
+        transform: `rotate(${d.rot}deg)`,
+      }}>
+        <IconChevronUp size={22} stroke={2.2} />
+      </div>
+    ))}
+    {/* Center OK */}
+    <div style={{
+      width: size * 0.42, height: size * 0.42, borderRadius: '50%',
+      background: `radial-gradient(circle at 35% 30%, ${accent.hi}, ${accent.lo})`,
+      boxShadow: `inset 0 1px 1px rgba(255,255,255,0.3), 0 0 22px ${accent.glow}, 0 4px 12px rgba(0,0,0,0.6)`,
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      fontSize: 14, fontWeight: 700, letterSpacing: 1.6, color: '#fff',
+    }}>OK</div>
+  </div>
+);
+
+function RemoteCompact({ accent = 'red', onSettings }) {
+  const accentMap = {
+    red:    { hi: '#ff6b5a', lo: '#c8281a', glow: 'rgba(255,80,60,0.45)' },
+    amber:  { hi: '#ffb86b', lo: '#c8821a', glow: 'rgba(255,160,60,0.45)' },
+    cyan:   { hi: '#6bd4ff', lo: '#1a8ec8', glow: 'rgba(60,180,255,0.45)' },
+    violet: { hi: '#b86bff', lo: '#7028c8', glow: 'rgba(160,80,255,0.45)' },
+    green:  { hi: '#6bffaa', lo: '#1ac876', glow: 'rgba(60,255,160,0.40)' },
+  };
+  const a = accentMap[accent] || accentMap.red;
+
+  return (
+    <div style={compactStyles.body}>
+      {/* Status bar */}
+      <div style={{
+        position: 'absolute', top: 0, left: 0, right: 0, height: 59,
+        display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between',
+        padding: '0 28px 8px', fontSize: 16, fontWeight: 600, color: '#fff',
+      }}>
+        <span>9:41</span>
+        <span style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+          <svg width="17" height="11" viewBox="0 0 17 11" fill="#fff"><rect x="0" y="7" width="3" height="4" rx="0.6"/><rect x="4.5" y="5" width="3" height="6" rx="0.6"/><rect x="9" y="3" width="3" height="8" rx="0.6"/><rect x="13.5" y="0" width="3" height="11" rx="0.6"/></svg>
+          <svg width="22" height="11" viewBox="0 0 22 11" fill="none" stroke="#fff" strokeWidth="1"><rect x="1" y="2" width="17" height="7" rx="2"/><rect x="3" y="4" width="13" height="3" rx="0.8" fill="#fff"/><path d="M19.5 4.5v2" strokeWidth="1.5" strokeLinecap="round"/></svg>
+        </span>
+      </div>
+
+      {/* Header card */}
+      <div style={{
+        position: 'absolute', top: 64, left: 20, right: 20,
+        padding: '12px 14px', borderRadius: 18,
+        background: 'linear-gradient(145deg, #1a1a1d 0%, #131316 100%)',
+        border: '1px solid rgba(255,255,255,0.04)',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={{
+            width: 38, height: 38, borderRadius: 12,
+            background: `linear-gradient(145deg, ${a.hi}, ${a.lo})`,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            boxShadow: `0 0 14px ${a.glow}`,
+          }}>
+            <IconTV size={18} stroke={2} style={{ color: '#fff' }} />
+          </div>
+          <div>
+            <div style={{ fontSize: 15, fontWeight: 600, color: '#e8e8ea' }}>Living Room TV</div>
+            <div style={{ fontSize: 11, color: '#7a7a7e', marginTop: 1, display: 'flex', alignItems: 'center', gap: 5 }}>
+              <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#34d160' }} />
+              Connected · 67% volume
+            </div>
+          </div>
+        </div>
+        <button onClick={onSettings} style={{
+          width: 34, height: 34, borderRadius: 10, border: 'none',
+          background: 'rgba(255,255,255,0.05)', cursor: 'pointer', color: '#9a9a9e',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>
+          <IconChevronRight size={16} stroke={2} />
+        </button>
+      </div>
+
+      {/* Top action bar: power left, mic right */}
+      <div style={{
+        position: 'absolute', top: 156, left: 20, right: 20,
+        display: 'flex', gap: 12,
+      }}>
+        <Squircle size={64} primary accent={a}>
+          <IconPower size={22} stroke={2.4} />
+        </Squircle>
+        <div style={{
+          flex: 1, height: 64, borderRadius: 20,
+          background: 'linear-gradient(145deg, #1a1a1d, #131316)',
+          border: '1px solid rgba(255,255,255,0.04)',
+          display: 'flex', alignItems: 'center', padding: '0 16px', gap: 12,
+        }}>
+          <IconMic size={20} stroke={1.8} style={{ color: a.hi }} />
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 13, fontWeight: 600, color: '#e8e8ea' }}>Hold to speak</div>
+            <div style={{ fontSize: 10.5, color: '#5a5a5e' }}>Voice search & commands</div>
+          </div>
+          {/* Waveform hint */}
+          <div style={{ display: 'flex', gap: 2.5, alignItems: 'center' }}>
+            {[8, 14, 22, 14, 8].map((h, i) => (
+              <div key={i} style={{ width: 2.5, height: h, borderRadius: 2, background: '#3a3a3e' }} />
+            ))}
+          </div>
+        </div>
+        <Squircle size={64}>
+          <IconKeypad size={22} stroke={1.8} />
+        </Squircle>
+      </div>
+
+      {/* D-pad block: large with rockers flanking */}
+      <div style={{
+        position: 'absolute', top: 248, left: 20, right: 20,
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        gap: 8,
+      }}>
+        {/* Volume rocker */}
+        <div style={{
+          width: 56, height: 230, borderRadius: 28,
+          background: 'linear-gradient(180deg, #1a1a1d, #131316)',
+          border: '1px solid rgba(255,255,255,0.04)',
+          display: 'flex', flexDirection: 'column', alignItems: 'center',
+          padding: '14px 0', position: 'relative',
+        }}>
+          <div style={{
+            width: 40, height: 40, borderRadius: '50%',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            color: '#dcdcde',
+          }}>
+            <IconPlus size={20} stroke={2.2} />
+          </div>
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
+            {/* Volume level dots */}
+            {[1,1,1,1,0,0,0].map((on, i) => (
+              <div key={i} style={{
+                width: 6, height: 6, borderRadius: '50%',
+                background: on ? a.hi : 'rgba(255,255,255,0.08)',
+                boxShadow: on ? `0 0 6px ${a.glow}` : 'none',
+              }} />
+            ))}
+          </div>
+          <div style={{
+            width: 40, height: 40, borderRadius: '50%',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            color: '#dcdcde',
+          }}>
+            <IconMinus size={20} stroke={2.2} />
+          </div>
+          <div style={{
+            position: 'absolute', left: -3, top: 14, bottom: 14, width: 2,
+            background: 'rgba(255,255,255,0.04)', borderRadius: 2,
+          }} />
+        </div>
+
+        <CompactDPad size={222} accent={a} />
+
+        {/* Channel rocker */}
+        <div style={{
+          width: 56, height: 230, borderRadius: 28,
+          background: 'linear-gradient(180deg, #1a1a1d, #131316)',
+          border: '1px solid rgba(255,255,255,0.04)',
+          display: 'flex', flexDirection: 'column', alignItems: 'center',
+          padding: '14px 0', position: 'relative',
+        }}>
+          <div style={{
+            width: 40, height: 40, borderRadius: '50%',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            color: '#dcdcde',
+          }}>
+            <IconChevronUp size={20} stroke={2.2} />
+          </div>
+          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{
+              fontSize: 10, fontWeight: 700, letterSpacing: 1.5, color: '#5a5a5e',
+              writingMode: 'vertical-rl', transform: 'rotate(180deg)',
+            }}>CHANNEL</div>
+          </div>
+          <div style={{
+            width: 40, height: 40, borderRadius: '50%',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            color: '#dcdcde',
+          }}>
+            <IconChevronDown size={20} stroke={2.2} />
+          </div>
+        </div>
+      </div>
+
+      {/* Transport row (4 squircles, evenly spaced) */}
+      <div style={{
+        position: 'absolute', top: 506, left: 20, right: 20,
+        display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10,
+      }}>
+        <Squircle size={68}><IconBack size={20} stroke={2} /></Squircle>
+        <Squircle size={68}><IconHome size={20} stroke={2} /></Squircle>
+        <Squircle size={68}><IconRewind size={18} /></Squircle>
+        <Squircle size={68}><IconForward size={18} /></Squircle>
+      </div>
+
+      {/* Big play/pause + mute + cc */}
+      <div style={{
+        position: 'absolute', top: 596, left: 20, right: 20,
+        display: 'flex', gap: 10,
+      }}>
+        <Squircle size={68}><IconMute size={22} stroke={1.8} /></Squircle>
+        <Squircle size={68} style={{ flex: 1, width: 'auto' }}><IconPlayPause size={22} /></Squircle>
+        <Squircle size={68}><IconCC size={24} /></Squircle>
+      </div>
+
+      {/* Bottom: shortcut slots row (placeholders) */}
+      <div style={{
+        position: 'absolute', bottom: 56, left: 20, right: 20,
+      }}>
+        <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1.6, color: '#5a5a5e', marginBottom: 8, paddingLeft: 4 }}>QUICK INPUT</div>
+        <div style={{ display: 'flex', gap: 8 }}>
+          {['HDMI 1', 'HDMI 2', 'AV', 'TV'].map((s, i) => (
+            <div key={i} style={{
+              flex: 1, height: 44, borderRadius: 14,
+              background: 'linear-gradient(145deg, #1a1a1d, #131316)',
+              border: '1px solid rgba(255,255,255,0.04)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: 12, fontWeight: 600, color: '#9a9a9e', letterSpacing: 0.4,
+            }}>{s}</div>
+          ))}
+        </div>
+      </div>
+
+      {/* Home indicator */}
+      <div style={{
+        position: 'absolute', bottom: 8, left: '50%', transform: 'translateX(-50%)',
+        width: 134, height: 5, borderRadius: 100, background: 'rgba(255,255,255,0.5)',
+      }} />
+    </div>
+  );
+}
+
+window.RemoteCompact = RemoteCompact;
+
+
+// ===== remote-samsung.jsx =====
+// Variation D: Direct Samsung-style layout match
+// Same button positions, sizes, and proportions as the reference photo.
+// Original streaming-app slots (no branded logos).
+// Built as ATOMIC components for easy SwiftUI translation.
+
+// ─────────────────────────────────────────────────────────────
+// ATOMS — each maps directly to a SwiftUI view
+// ─────────────────────────────────────────────────────────────
+
+// SwiftUI: Circle().fill(...).shadow(...) inside a ZStack
+const SamsungCircleButton = ({ size, children, accent, style, color = '#dcdcde' }) => (
+  <div style={{
+    width: size, height: size, borderRadius: '50%',
+    position: 'relative',
+    background: accent
+      ? 'radial-gradient(circle at 35% 30%, #2a2a2e 0%, #1a1a1d 60%, #0e0e10 100%)'
+      : 'radial-gradient(circle at 35% 30%, #232327 0%, #161618 60%, #0c0c0e 100%)',
+    boxShadow: 'inset 0 1px 1px rgba(255,255,255,0.05), inset 0 -1px 2px rgba(0,0,0,0.6), 0 2px 4px rgba(0,0,0,0.5)',
+    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+    color: color,
+    ...style,
+  }}>
+    {children}
+  </div>
+);
+
+// SwiftUI: ZStack { Capsule().fill(...); HStack/VStack{...} }
+const SamsungRocker = ({ width, height, top, bottom, label }) => (
+  <div style={{
+    width, height, position: 'relative',
+    borderRadius: height / 2,
+    background: 'radial-gradient(ellipse at 50% 30%, #232327 0%, #161618 60%, #0c0c0e 100%)',
+    boxShadow: 'inset 0 1px 1px rgba(255,255,255,0.05), inset 0 -1px 2px rgba(0,0,0,0.6), 0 2px 4px rgba(0,0,0,0.5)',
+    display: 'flex', alignItems: 'center', justifyContent: 'space-around',
+    color: '#dcdcde',
+  }}>
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 1 }}>{top}</div>
+    {label && (
+      <div style={{
+        position: 'absolute', left: '50%', top: '50%',
+        transform: 'translate(-50%, -50%)',
+        fontSize: 8, fontWeight: 700, letterSpacing: 1.2,
+        color: '#3a3a3e',
+      }}>{label}</div>
+    )}
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 1 }}>{bottom}</div>
+  </div>
+);
+
+// SwiftUI: ZStack with concentric Circles
+const SamsungDPad = ({ outerSize, innerSize }) => (
+  <div style={{
+    width: outerSize, height: outerSize, position: 'relative',
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+  }}>
+    {/* Outer ring */}
+    <div style={{
+      position: 'absolute', inset: 0, borderRadius: '50%',
+      background: 'radial-gradient(circle at 50% 25%, #1f1f22 0%, #131316 70%, #0a0a0c 100%)',
+      boxShadow: 'inset 0 2px 3px rgba(255,255,255,0.04), inset 0 -2px 4px rgba(0,0,0,0.6), 0 3px 8px rgba(0,0,0,0.6)',
+    }} />
+    {/* Inner button */}
+    <div style={{
+      width: innerSize, height: innerSize, borderRadius: '50%',
+      background: 'radial-gradient(circle at 35% 30%, #2c2c30 0%, #1a1a1d 55%, #0c0c0e 100%)',
+      boxShadow: 'inset 0 1px 1px rgba(255,255,255,0.08), inset 0 -2px 3px rgba(0,0,0,0.6), 0 2px 6px rgba(0,0,0,0.7)',
+      position: 'relative', zIndex: 2,
+    }} />
+  </div>
+);
+
+// SwiftUI: Capsule with subtle border (used for streaming slots)
+const SamsungSlot = ({ size, label, sublabel, accent }) => (
+  <div style={{
+    width: size, height: size, borderRadius: '50%',
+    background: 'radial-gradient(circle at 35% 30%, #232327 0%, #161618 60%, #0c0c0e 100%)',
+    boxShadow: 'inset 0 1px 1px rgba(255,255,255,0.05), inset 0 -1px 2px rgba(0,0,0,0.6), 0 2px 4px rgba(0,0,0,0.5)',
+    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+    fontSize: 9.5, fontWeight: 700, letterSpacing: 0.3,
+    color: '#cfcfd2',
+    textAlign: 'center',
+    lineHeight: 1.05,
+    padding: '0 4px',
+  }}>
+    {label}
+    {sublabel && <div style={{ fontSize: 8, fontWeight: 600, opacity: 0.7, marginTop: 1 }}>{sublabel}</div>}
+  </div>
+);
+
+// ─────────────────────────────────────────────────────────────
+// LAYOUT
+// Reference dimensions match the Samsung remote photo proportions:
+//   Body: 144 wide × 540 tall (remote)
+//   Scaled to fit iPhone 16 Pro 393×852 viewport.
+//   We center the remote vertically and use generous side padding.
+// ─────────────────────────────────────────────────────────────
+
+function RemoteSamsungStyle({ accent = 'red', onSettings }) {
+  // Layout constants — these mirror the Samsung remote photo's proportions
+  // and translate cleanly to SwiftUI offsets.
+  const W = 393;   // iPhone width
+  const H = 852;   // iPhone height
+  const RW = 220;  // remote body width
+  const RH = 720;  // remote body height
+  const RX = (W - RW) / 2; // 86.5
+  const RY = 80;
+
+  const accentRed = '#e63946';
+
+  return (
+    <div style={{
+      width: W, height: H, position: 'relative', overflow: 'hidden',
+      background: 'radial-gradient(ellipse at 50% 0%, #1a1a1d 0%, #0a0a0b 70%)',
+      fontFamily: '-apple-system, "SF Pro Text", system-ui',
+      color: '#e8e8ea',
+    }}>
+      {/* Status bar */}
+      <div style={{
+        position: 'absolute', top: 0, left: 0, right: 0, height: 59,
+        display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between',
+        padding: '0 28px 8px', fontSize: 16, fontWeight: 600, color: '#fff', zIndex: 30,
+      }}>
+        <span>9:41</span>
+        <span style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+          <svg width="17" height="11" viewBox="0 0 17 11" fill="#fff"><rect x="0" y="7" width="3" height="4" rx="0.6"/><rect x="4.5" y="5" width="3" height="6" rx="0.6"/><rect x="9" y="3" width="3" height="8" rx="0.6"/><rect x="13.5" y="0" width="3" height="11" rx="0.6"/></svg>
+          <svg width="22" height="11" viewBox="0 0 22 11" fill="none" stroke="#fff" strokeWidth="1"><rect x="1" y="2" width="17" height="7" rx="2"/><rect x="3" y="4" width="13" height="3" rx="0.8" fill="#fff"/><path d="M19.5 4.5v2" strokeWidth="1.5" strokeLinecap="round"/></svg>
+        </span>
+      </div>
+
+      {/* Settings gear in corner */}
+      <button onClick={onSettings} style={{
+        position: 'absolute', top: 64, right: 18, zIndex: 30,
+        width: 36, height: 36, borderRadius: '50%', border: 'none',
+        background: 'rgba(255,255,255,0.04)', color: '#9a9a9e', cursor: 'pointer',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+      }}>
+        <IconSettings size={16} stroke={1.6} />
+      </button>
+
+      {/* REMOTE BODY */}
+      <div style={{
+        position: 'absolute', left: RX, top: RY, width: RW, height: RH,
+        borderRadius: 38,
+        background: 'linear-gradient(180deg, #1f1f22 0%, #15151820 50%, #0e0e10 100%)',
+        boxShadow: 'inset 0 1px 1px rgba(255,255,255,0.08), inset 0 -1px 2px rgba(0,0,0,0.6), 0 12px 32px rgba(0,0,0,0.6), 0 0 0 1px rgba(0,0,0,0.4)',
+      }}>
+
+        {/* Row 1: Power (top-left), MIC label center, Mic button (top-right) */}
+        {/* Power */}
+        <div style={{ position: 'absolute', left: 22, top: 26 }}>
+          <SamsungCircleButton size={36} color={accentRed}>
+            <IconPower size={16} stroke={2.4} />
+          </SamsungCircleButton>
+        </div>
+        {/* MIC indicator label between */}
+        <div style={{
+          position: 'absolute', top: 24, left: '50%', transform: 'translateX(-50%)',
+          display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
+        }}>
+          <div style={{ width: 3, height: 3, borderRadius: '50%', background: '#2a2a2e' }} />
+          <div style={{ fontSize: 8, fontWeight: 700, letterSpacing: 1, color: '#5a5a5e' }}>MIC</div>
+        </div>
+        {/* Mic */}
+        <div style={{ position: 'absolute', right: 22, top: 26 }}>
+          <SamsungCircleButton size={36}>
+            <IconMic size={16} stroke={1.8} />
+          </SamsungCircleButton>
+        </div>
+
+        {/* Row 2: Settings/Keypad (123) — directly under power */}
+        <div style={{ position: 'absolute', left: 22, top: 70 }}>
+          <SamsungCircleButton size={36}>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0, lineHeight: 1 }}>
+              <IconSettings size={11} stroke={1.8} />
+              <div style={{ fontSize: 7, fontWeight: 700, letterSpacing: 0.4, marginTop: 1 }}>123</div>
+            </div>
+          </SamsungCircleButton>
+        </div>
+
+        {/* D-PAD — large circular nav (centered) */}
+        <div style={{ position: 'absolute', top: 130, left: '50%', transform: 'translateX(-50%)' }}>
+          <SamsungDPad outerSize={150} innerSize={62} />
+        </div>
+
+        {/* Row 4: Back / Home / Play-Pause */}
+        {/* Back */}
+        <div style={{ position: 'absolute', left: 28, top: 312 }}>
+          <SamsungCircleButton size={34}>
+            <IconBack size={15} stroke={2} />
+          </SamsungCircleButton>
+        </div>
+        {/* Home (center) */}
+        <div style={{ position: 'absolute', top: 308, left: '50%', transform: 'translateX(-50%)' }}>
+          <SamsungCircleButton size={42}>
+            <IconHome size={17} stroke={2} />
+          </SamsungCircleButton>
+        </div>
+        {/* Play/Pause */}
+        <div style={{ position: 'absolute', right: 28, top: 312 }}>
+          <SamsungCircleButton size={34}>
+            <IconPlayPause size={15} />
+          </SamsungCircleButton>
+        </div>
+
+        {/* Row 5: Vol rocker (left) + Channel rocker (right) */}
+        <div style={{ position: 'absolute', left: 22, top: 372 }}>
+          <SamsungRocker
+            width={72} height={32}
+            top={<IconMinus size={13} stroke={2.2} />}
+            bottom={<IconPlus size={13} stroke={2.2} />}
+          />
+        </div>
+        <div style={{ position: 'absolute', right: 22, top: 372 }}>
+          <SamsungRocker
+            width={72} height={32}
+            top={<IconChevronUp size={13} stroke={2.2} />}
+            bottom={<IconChevronDown size={13} stroke={2.2} />}
+          />
+        </div>
+
+        {/* CC/Mute label under volume rocker */}
+        <div style={{
+          position: 'absolute', left: 22, top: 410, width: 72,
+          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+          fontSize: 8, fontWeight: 700, letterSpacing: 0.6, color: '#7a7a7e',
+        }}>
+          <span>CC/AD</span>
+          <IconMute size={11} stroke={1.6} />
+        </div>
+
+        {/* Row 6: Streaming app slots — placeholders (no branding) */}
+        {/* Top-left slot */}
+        <div style={{ position: 'absolute', left: 22, top: 450 }}>
+          <SamsungSlot size={42} label="APP" sublabel="1" />
+        </div>
+        {/* Top-right slot */}
+        <div style={{ position: 'absolute', right: 22, top: 450 }}>
+          <SamsungSlot size={42} label="APP" sublabel="2" />
+        </div>
+        {/* Center top slot */}
+        <div style={{ position: 'absolute', top: 446, left: '50%', transform: 'translateX(-50%)' }}>
+          <SamsungSlot size={50} label="LIVE" sublabel="TV" accent={accentRed} />
+        </div>
+        {/* Bottom-center slot */}
+        <div style={{ position: 'absolute', top: 510, left: '50%', transform: 'translateX(-50%)' }}>
+          <SamsungSlot size={50} label="APP" sublabel="3" />
+        </div>
+        {/* Bottom-right slot (paired) */}
+        <div style={{ position: 'absolute', top: 514, right: 22 }}>
+          <SamsungSlot size={42} label="APP" sublabel="4" />
+        </div>
+
+        {/* Brand label at bottom */}
+        <div style={{
+          position: 'absolute', bottom: 28, left: 0, right: 0,
+          textAlign: 'center', fontSize: 11, fontWeight: 700, letterSpacing: 2,
+          color: '#5a5a5e',
+        }}>ANOTHER REMOTE</div>
+      </div>
+
+      {/* Home indicator */}
+      <div style={{
+        position: 'absolute', bottom: 8, left: '50%', transform: 'translateX(-50%)',
+        width: 134, height: 5, borderRadius: 100, background: 'rgba(255,255,255,0.5)', zIndex: 30,
+      }} />
+    </div>
+  );
+}
+
+window.RemoteSamsungStyle = RemoteSamsungStyle;
+
+
+// ===== remote-tvguide.jsx =====
+// TV Guide screen — channel list with "now / next" programming.
+// Matches the dark skeuomorphic palette of the remote screens.
+
+const guideStyles = {
+  body: {
+    width: 393, height: 852, position: 'relative', overflow: 'hidden',
+    background: 'linear-gradient(180deg, #121214 0%, #08080a 100%)',
+    fontFamily: '-apple-system, "SF Pro Text", system-ui',
+    color: '#e8e8ea',
+    display: 'flex', flexDirection: 'column',
+  },
+};
+
+// Channel data — generic, no real broadcaster branding.
+const GUIDE_CHANNELS = [
+  { num: 2,  name: 'Skyline News',   tint: '#e63946',
+    now: { title: 'Morning Briefing', start: '9:00', end: '10:00', prog: 0.68, cat: 'News' },
+    next: { title: 'Markets Today', start: '10:00' } },
+  { num: 4,  name: 'Apex Sports',    tint: '#2a9d8f',
+    now: { title: 'Premier Match: Lions vs Hawks', start: '8:30', end: '10:30', prog: 0.34, cat: 'Live' },
+    next: { title: 'Post-Game Analysis', start: '10:30' } },
+  { num: 7,  name: 'Cinema One',     tint: '#e9c46a',
+    now: { title: 'The Long Horizon', start: '8:15', end: '10:20', prog: 0.41, cat: 'Movie' },
+    next: { title: 'Director\u2019s Cut', start: '10:20' } },
+  { num: 9,  name: 'Discovery Lab',  tint: '#457b9d',
+    now: { title: 'Deep Ocean: Episode 3', start: '9:30', end: '10:15', prog: 0.55, cat: 'Doc' },
+    next: { title: 'Wild Frontiers', start: '10:15' } },
+  { num: 11, name: 'Comedy Vault',   tint: '#f4a261',
+    now: { title: 'Late Night Laughs', start: '9:00', end: '9:45', prog: 0.88, cat: 'Comedy' },
+    next: { title: 'Stand-Up Special', start: '9:45' } },
+  { num: 14, name: 'Kids Planet',    tint: '#8367c7',
+    now: { title: 'Robo Rangers', start: '9:20', end: '9:50', prog: 0.62, cat: 'Kids' },
+    next: { title: 'Story Time', start: '9:50' } },
+  { num: 18, name: 'Pulse Music',    tint: '#ef476f',
+    now: { title: 'Top 40 Countdown', start: '8:00', end: '10:00', prog: 0.78, cat: 'Music' },
+    next: { title: 'Acoustic Sessions', start: '10:00' } },
+  { num: 22, name: 'Globe Travel',   tint: '#06a77d',
+    now: { title: 'Hidden Cities: Lisbon', start: '9:10', end: '10:00', prog: 0.50, cat: 'Travel' },
+    next: { title: 'Island Escapes', start: '10:00' } },
+];
+
+function ChannelRow({ ch, accent }) {
+  const n = ch.now;
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'stretch', gap: 12,
+      padding: '12px 0',
+      borderBottom: '1px solid rgba(255,255,255,0.05)',
+    }}>
+      {/* Channel badge */}
+      <div style={{
+        width: 52, flexShrink: 0,
+        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3,
+      }}>
+        <div style={{
+          width: 44, height: 44, borderRadius: 12,
+          background: `linear-gradient(145deg, ${ch.tint}, ${ch.tint}99)`,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: 16, fontWeight: 800, color: '#fff',
+          boxShadow: `0 3px 8px ${ch.tint}40`,
+        }}>{ch.num}</div>
+        <div style={{ fontSize: 8.5, fontWeight: 600, color: '#6a6a6e', letterSpacing: 0.2, textAlign: 'center', lineHeight: 1.1, maxWidth: 52 }}>
+          {ch.name}
+        </div>
+      </div>
+
+      {/* Program info */}
+      <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 3 }}>
+          <span style={{
+            fontSize: 9, fontWeight: 700, letterSpacing: 0.5,
+            padding: '2px 6px', borderRadius: 5,
+            background: n.cat === 'Live' ? 'rgba(230,57,70,0.18)' : 'rgba(255,255,255,0.06)',
+            color: n.cat === 'Live' ? '#ff6b6b' : '#9a9a9e',
+            textTransform: 'uppercase',
+          }}>{n.cat}</span>
+          <span style={{ fontSize: 11, color: '#6a6a6e', fontVariantNumeric: 'tabular-nums' }}>{n.start} – {n.end}</span>
+        </div>
+        <div style={{
+          fontSize: 14.5, fontWeight: 600, color: '#e8e8ea',
+          whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+        }}>{n.title}</div>
+        {/* Progress bar */}
+        <div style={{ marginTop: 7, height: 3, borderRadius: 2, background: 'rgba(255,255,255,0.08)', overflow: 'hidden' }}>
+          <div style={{ width: `${n.prog * 100}%`, height: '100%', borderRadius: 2, background: accent }} />
+        </div>
+        {/* Next up */}
+        <div style={{ fontSize: 11, color: '#5a5a5e', marginTop: 6, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+          <span style={{ color: '#7a7a7e', fontWeight: 600 }}>{ch.next.start}</span>&nbsp; Next: {ch.next.title}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function TVGuideScreen({ accent = 'red', onSettings }) {
+  const accentMap = {
+    red: '#ff6b5a', amber: '#ffb86b', cyan: '#6bd4ff', violet: '#b86bff', green: '#6bffaa',
+  };
+  const a = accentMap[accent] || accentMap.red;
+
+  // Featured "on now" — pulls the live sports match
+  const featured = GUIDE_CHANNELS[1];
+
+  return (
+    <div style={guideStyles.body}>
+      {/* Status bar */}
+      <div style={{
+        height: 59, flexShrink: 0,
+        display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between',
+        padding: '0 28px 8px', fontSize: 16, fontWeight: 600, color: '#fff',
+      }}>
+        <span>9:41</span>
+        <span style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+          <svg width="17" height="11" viewBox="0 0 17 11" fill="#fff"><rect x="0" y="7" width="3" height="4" rx="0.6"/><rect x="4.5" y="5" width="3" height="6" rx="0.6"/><rect x="9" y="3" width="3" height="8" rx="0.6"/><rect x="13.5" y="0" width="3" height="11" rx="0.6"/></svg>
+          <svg width="22" height="11" viewBox="0 0 22 11" fill="none" stroke="#fff" strokeWidth="1"><rect x="1" y="2" width="17" height="7" rx="2"/><rect x="3" y="4" width="13" height="3" rx="0.8" fill="#fff"/><path d="M19.5 4.5v2" strokeWidth="1.5" strokeLinecap="round"/></svg>
+        </span>
+      </div>
+
+      {/* Header */}
+      <div style={{ flexShrink: 0, padding: '4px 20px 12px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div>
+            <div style={{ fontSize: 28, fontWeight: 700, letterSpacing: -0.5, color: '#fff' }}>TV Guide</div>
+            <div style={{ fontSize: 12.5, color: '#7a7a7e', marginTop: 2 }}>Tuesday, June 17 · 9:41 AM</div>
+          </div>
+          <button onClick={onSettings} style={{
+            width: 40, height: 40, borderRadius: '50%', border: 'none',
+            background: 'rgba(255,255,255,0.05)', color: '#9a9a9e', cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>
+            <IconSettings size={18} stroke={1.6} />
+          </button>
+        </div>
+
+        {/* Search bar */}
+        <div style={{
+          marginTop: 14, height: 40, borderRadius: 12,
+          background: 'rgba(255,255,255,0.05)',
+          display: 'flex', alignItems: 'center', padding: '0 14px', gap: 8,
+        }}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6a6a6e" strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg>
+          <span style={{ fontSize: 14, color: '#6a6a6e' }}>Search channels & shows</span>
+        </div>
+
+        {/* Category filter chips */}
+        <div style={{ display: 'flex', gap: 8, marginTop: 12, overflowX: 'hidden' }}>
+          {['All', 'Live', 'Movies', 'Sports', 'News', 'Kids'].map((c, i) => (
+            <div key={c} style={{
+              flexShrink: 0,
+              padding: '6px 14px', borderRadius: 999, fontSize: 12.5, fontWeight: 600,
+              background: i === 0 ? a : 'rgba(255,255,255,0.06)',
+              color: i === 0 ? '#1a1a1d' : '#b0b0b4',
+            }}>{c}</div>
+          ))}
+        </div>
+      </div>
+
+      {/* Featured "On Now" card */}
+      <div style={{ flexShrink: 0, padding: '0 20px 8px' }}>
+        <div style={{
+          borderRadius: 18, overflow: 'hidden', position: 'relative',
+          height: 120,
+          background: `linear-gradient(135deg, ${featured.tint}cc 0%, #1a1a1d 75%)`,
+          padding: 16,
+          display: 'flex', flexDirection: 'column', justifyContent: 'flex-end',
+        }}>
+          <div style={{
+            position: 'absolute', top: 14, left: 16,
+            display: 'flex', alignItems: 'center', gap: 6,
+            fontSize: 10, fontWeight: 700, letterSpacing: 0.8, color: '#fff',
+            padding: '4px 9px', borderRadius: 6, background: 'rgba(0,0,0,0.3)',
+          }}>
+            <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#ff4444', boxShadow: '0 0 6px #ff4444' }} />
+            LIVE NOW
+          </div>
+          <div style={{ position: 'absolute', top: 14, right: 16, fontSize: 11, color: 'rgba(255,255,255,0.85)', fontWeight: 600 }}>
+            CH {featured.num} · {featured.name}
+          </div>
+          <div style={{ fontSize: 18, fontWeight: 700, color: '#fff', textShadow: '0 1px 4px rgba(0,0,0,0.4)' }}>
+            {featured.now.title}
+          </div>
+          <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.85)', marginTop: 2 }}>
+            {featured.now.start} – {featured.now.end} · Ends in 79 min
+          </div>
+        </div>
+      </div>
+
+      {/* Channel list header */}
+      <div style={{
+        flexShrink: 0, padding: '8px 20px 4px',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+      }}>
+        <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1.4, color: '#5a5a5e' }}>ALL CHANNELS</div>
+        <div style={{ fontSize: 11, fontWeight: 600, color: a }}>On Now ▾</div>
+      </div>
+
+      {/* Scrollable channel list */}
+      <div style={{ flex: 1, overflow: 'hidden', padding: '0 20px' }}>
+        {GUIDE_CHANNELS.map(ch => <ChannelRow key={ch.num} ch={ch} accent={a} />)}
+      </div>
+
+      {/* Bottom tab bar */}
+      <div style={{
+        flexShrink: 0, height: 80,
+        borderTop: '1px solid rgba(255,255,255,0.06)',
+        background: 'rgba(12,12,14,0.9)',
+        backdropFilter: 'blur(20px)',
+        display: 'flex', alignItems: 'flex-start', justifyContent: 'space-around',
+        padding: '10px 12px 0',
+      }}>
+        {[
+          { icon: <IconTV size={22} stroke={1.8} />, label: 'Remote' },
+          { icon: (<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M7 20h10M8 8h5M8 12h8"/></svg>), label: 'Guide', active: true },
+          { icon: (<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M4 6h16M4 12h16M4 18h10"/></svg>), label: 'Apps' },
+          { icon: <IconSettings size={22} stroke={1.6} />, label: 'Settings' },
+        ].map((t, i) => (
+          <div key={i} style={{
+            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
+            color: t.active ? a : '#6a6a6e',
+          }}>
+            {t.icon}
+            <span style={{ fontSize: 10, fontWeight: 600 }}>{t.label}</span>
+          </div>
+        ))}
+      </div>
+
+      {/* Home indicator */}
+      <div style={{
+        position: 'absolute', bottom: 8, left: '50%', transform: 'translateX(-50%)',
+        width: 134, height: 5, borderRadius: 100, background: 'rgba(255,255,255,0.5)', zIndex: 30,
+      }} />
+    </div>
+  );
+}
+
+window.TVGuideScreen = TVGuideScreen;
+
+
+// ===== remote-onboarding.jsx =====
+// Onboarding — first screen.
+// Fixed headline + auto-looping showcase of three features:
+// Remote, TV Guide, Mute Timer. Crossfades every ~2.6s.
+
+const { useState: useStateOB, useEffect: useEffectOB } = React;
+
+const onbStyles = {
+  body: {
+    width: 393, height: 852, position: 'relative', overflow: 'hidden',
+    background: 'radial-gradient(ellipse at 50% 12%, #1c1c20 0%, #0b0b0d 55%, #060607 100%)',
+    fontFamily: '-apple-system, "SF Pro Text", system-ui',
+    color: '#e8e8ea',
+    display: 'flex', flexDirection: 'column',
+  },
+};
+
+// ── Feature preview illustrations ──────────────────────────────
+
+function PreviewRemote({ a }) {
+  const btn = (extra = {}) => ({
+    borderRadius: '50%',
+    background: 'radial-gradient(circle at 35% 30%, #2a2a2e, #161618 60%, #0c0c0e)',
+    boxShadow: 'inset 0 1px 1px rgba(255,255,255,0.06), inset 0 -1px 2px rgba(0,0,0,0.6), 0 2px 4px rgba(0,0,0,0.5)',
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    color: '#cfcfd2',
+    ...extra,
+  });
+  return (
+    <div style={{
+      width: 150, height: 250, borderRadius: 34, padding: 18,
+      background: 'linear-gradient(180deg, #1f1f22, #0e0e10)',
+      boxShadow: 'inset 0 1px 1px rgba(255,255,255,0.07), 0 12px 30px rgba(0,0,0,0.5)',
+      display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14,
+    }}>
+      {/* top row */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
+        <div style={btn({ width: 30, height: 30, color: a })}><IconPower size={14} stroke={2.4} /></div>
+        <div style={btn({ width: 30, height: 30 })}><IconMic size={13} stroke={1.8} /></div>
+      </div>
+      {/* dpad */}
+      <div style={{
+        width: 96, height: 96, borderRadius: '50%', position: 'relative',
+        background: 'radial-gradient(circle at 50% 25%, #1f1f22, #111114 70%, #0a0a0c)',
+        boxShadow: 'inset 0 2px 3px rgba(255,255,255,0.04), inset 0 -2px 4px rgba(0,0,0,0.6)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+      }}>
+        <div style={{
+          width: 42, height: 42, borderRadius: '50%',
+          background: 'radial-gradient(circle at 35% 30%, #2c2c30, #18181b 60%, #0c0c0e)',
+          boxShadow: 'inset 0 1px 1px rgba(255,255,255,0.08), 0 2px 5px rgba(0,0,0,0.6)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: 9, fontWeight: 700, letterSpacing: 1, color: '#7a7a7e',
+        }}>OK</div>
+      </div>
+      {/* rockers */}
+      <div style={{ display: 'flex', gap: 12 }}>
+        <div style={btn({ width: 34, height: 56, borderRadius: 18, flexDirection: 'column', gap: 8 })}>
+          <IconPlus size={12} stroke={2.2} /><IconMinus size={12} stroke={2.2} />
+        </div>
+        <div style={btn({ width: 34, height: 56, borderRadius: 18, flexDirection: 'column', gap: 8 })}>
+          <IconChevronUp size={12} stroke={2.2} /><IconChevronDown size={12} stroke={2.2} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function PreviewGuide({ a }) {
+  const rows = [
+    { n: 2, t: '#e63946', title: 'Morning Briefing', cat: 'NEWS', prog: 0.68 },
+    { n: 4, t: '#2a9d8f', title: 'Lions vs Hawks', cat: 'LIVE', prog: 0.34 },
+    { n: 7, t: '#e9c46a', title: 'The Long Horizon', cat: 'MOVIE', prog: 0.41 },
+    { n: 9, t: '#457b9d', title: 'Deep Ocean', cat: 'DOC', prog: 0.55 },
+  ];
+  return (
+    <div style={{
+      width: 230, height: 250, borderRadius: 26, padding: 16,
+      background: 'linear-gradient(180deg, #16161a, #0c0c0e)',
+      boxShadow: 'inset 0 1px 1px rgba(255,255,255,0.05), 0 12px 30px rgba(0,0,0,0.5)',
+      display: 'flex', flexDirection: 'column', gap: 10,
+    }}>
+      <div style={{ fontSize: 14, fontWeight: 700, color: '#fff', letterSpacing: -0.3 }}>TV Guide</div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
+        {rows.map(r => (
+          <div key={r.n} style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+            <div style={{
+              width: 28, height: 28, borderRadius: 8, flexShrink: 0,
+              background: `linear-gradient(145deg, ${r.t}, ${r.t}99)`,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: 11, fontWeight: 800, color: '#fff',
+            }}>{r.n}</div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                <span style={{
+                  fontSize: 7, fontWeight: 700, padding: '1.5px 4px', borderRadius: 3,
+                  background: r.cat === 'LIVE' ? 'rgba(230,57,70,0.2)' : 'rgba(255,255,255,0.07)',
+                  color: r.cat === 'LIVE' ? '#ff6b6b' : '#9a9a9e',
+                }}>{r.cat}</span>
+              </div>
+              <div style={{ fontSize: 11, fontWeight: 600, color: '#e8e8ea', marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.title}</div>
+              <div style={{ height: 2.5, borderRadius: 2, background: 'rgba(255,255,255,0.08)', marginTop: 4, overflow: 'hidden' }}>
+                <div style={{ width: `${r.prog * 100}%`, height: '100%', background: a }} />
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function PreviewMuteTimer({ a }) {
+  const R = 54, C = 2 * Math.PI * R, prog = 0.62;
+  return (
+    <div style={{
+      width: 210, height: 250, borderRadius: 26, padding: 20,
+      background: 'linear-gradient(180deg, #16161a, #0c0c0e)',
+      boxShadow: 'inset 0 1px 1px rgba(255,255,255,0.05), 0 12px 30px rgba(0,0,0,0.5)',
+      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 18,
+    }}>
+      <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1.4, color: '#6a6a6e' }}>MUTE TIMER</div>
+      <div style={{ position: 'relative', width: 140, height: 140 }}>
+        <svg width="140" height="140" viewBox="0 0 140 140" style={{ transform: 'rotate(-90deg)' }}>
+          <circle cx="70" cy="70" r={R} fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="8" />
+          <circle cx="70" cy="70" r={R} fill="none" stroke={a} strokeWidth="8" strokeLinecap="round"
+                  strokeDasharray={C} strokeDashoffset={C * (1 - prog)} />
+        </svg>
+        <div style={{
+          position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column',
+          alignItems: 'center', justifyContent: 'center', gap: 2,
+        }}>
+          <IconMute size={26} stroke={1.8} style={{ color: a }} />
+          <div style={{ fontSize: 22, fontWeight: 700, color: '#fff', fontVariantNumeric: 'tabular-nums' }}>2:48</div>
+          <div style={{ fontSize: 9.5, color: '#6a6a6e', fontWeight: 600 }}>until unmute</div>
+        </div>
+      </div>
+      <div style={{ display: 'flex', gap: 8 }}>
+        {['5m', '10m', '30m'].map((t, i) => (
+          <div key={t} style={{
+            padding: '5px 11px', borderRadius: 999, fontSize: 11, fontWeight: 600,
+            background: i === 1 ? a : 'rgba(255,255,255,0.06)',
+            color: i === 1 ? '#1a1a1d' : '#b0b0b4',
+          }}>{t}</div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── Onboarding screen ──────────────────────────────────────────
+
+function OnboardingScreen({ accent = 'red', onSettings }) {
+  const accentMap = {
+    red: '#ff6b5a', amber: '#ffb86b', cyan: '#6bd4ff', violet: '#b86bff', green: '#6bffaa',
+  };
+  const a = accentMap[accent] || accentMap.red;
+
+  const features = [
+    { key: 'remote', label: 'Full Remote', desc: 'Every button from your physical remote — power, D-pad, volume, and voice.', render: PreviewRemote },
+    { key: 'guide',  label: 'TV Guide',    desc: 'See what\u2019s on now and next across all your channels at a glance.', render: PreviewGuide },
+    { key: 'timer',  label: 'Mute Timer',  desc: 'Silence the ad break and auto-unmute right when your show returns.', render: PreviewMuteTimer },
+  ];
+
+  const [idx, setIdx] = useStateOB(0);
+  useEffectOB(() => {
+    const id = setInterval(() => setIdx(i => (i + 1) % features.length), 2600);
+    return () => clearInterval(id);
+  }, []);
+  const f = features[idx];
+  const Preview = f.render;
+
+  return (
+    <div style={onbStyles.body}>
+      {/* Status bar */}
+      <div style={{
+        height: 59, flexShrink: 0,
+        display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between',
+        padding: '0 28px 8px', fontSize: 16, fontWeight: 600, color: '#fff',
+      }}>
+        <span>9:41</span>
+        <span style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+          <svg width="17" height="11" viewBox="0 0 17 11" fill="#fff"><rect x="0" y="7" width="3" height="4" rx="0.6"/><rect x="4.5" y="5" width="3" height="6" rx="0.6"/><rect x="9" y="3" width="3" height="8" rx="0.6"/><rect x="13.5" y="0" width="3" height="11" rx="0.6"/></svg>
+          <svg width="22" height="11" viewBox="0 0 22 11" fill="none" stroke="#fff" strokeWidth="1"><rect x="1" y="2" width="17" height="7" rx="2"/><rect x="3" y="4" width="13" height="3" rx="0.8" fill="#fff"/><path d="M19.5 4.5v2" strokeWidth="1.5" strokeLinecap="round"/></svg>
+        </span>
+      </div>
+
+      {/* Brand mark */}
+      <div style={{
+        flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+        paddingTop: 8,
+      }}>
+        <div style={{
+          width: 26, height: 26, borderRadius: 8,
+          background: `linear-gradient(145deg, ${a}, ${a}88)`,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          boxShadow: `0 0 14px ${a}55`,
+        }}>
+          <IconTV size={14} stroke={2} style={{ color: '#fff' }} />
+        </div>
+        <span style={{ fontSize: 13, fontWeight: 700, letterSpacing: 1, color: '#9a9a9e' }}>ANOTHER REMOTE</span>
+      </div>
+
+      {/* Looping feature stage */}
+      <div style={{
+        flex: 1, position: 'relative',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        minHeight: 0,
+      }}>
+        {/* Ambient glow that tints to feature */}
+        <div style={{
+          position: 'absolute', width: 280, height: 280, borderRadius: '50%',
+          background: `radial-gradient(circle, ${a}22, transparent 65%)`,
+          filter: 'blur(8px)',
+        }} />
+        {features.map((feat, i) => {
+          const FP = feat.render;
+          return (
+            <div key={feat.key} style={{
+              position: 'absolute',
+              transition: 'opacity 0.6s ease, transform 0.6s ease',
+              opacity: i === idx ? 1 : 0,
+              transform: i === idx ? 'scale(1)' : 'scale(0.94)',
+              pointerEvents: 'none',
+            }}>
+              <FP a={a} />
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Rotating feature caption */}
+      <div style={{ flexShrink: 0, padding: '0 36px', textAlign: 'center', minHeight: 64 }}>
+        <div key={f.key} style={{ animation: 'obFade 0.6s ease' }}>
+          <div style={{
+            display: 'inline-flex', alignItems: 'center', gap: 6,
+            fontSize: 12, fontWeight: 700, letterSpacing: 0.5,
+            color: a, marginBottom: 6,
+          }}>
+            <span style={{ width: 5, height: 5, borderRadius: '50%', background: a }} />
+            {f.label.toUpperCase()}
+          </div>
+          <div style={{ fontSize: 14.5, color: '#9a9a9e', lineHeight: 1.45, textWrap: 'pretty' }}>{f.desc}</div>
+        </div>
+      </div>
+
+      {/* Page dots */}
+      <div style={{ flexShrink: 0, display: 'flex', justifyContent: 'center', gap: 7, padding: '18px 0 14px' }}>
+        {features.map((_, i) => (
+          <div key={i} style={{
+            height: 6, borderRadius: 3,
+            width: i === idx ? 20 : 6,
+            background: i === idx ? a : 'rgba(255,255,255,0.18)',
+            transition: 'all 0.4s ease',
+          }} />
+        ))}
+      </div>
+
+      {/* Headline + CTA */}
+      <div style={{ flexShrink: 0, padding: '0 28px 8px' }}>
+        <h1 style={{
+          margin: 0, fontSize: 28, fontWeight: 700, lineHeight: 1.15,
+          letterSpacing: -0.6, color: '#fff', textAlign: 'center', textWrap: 'balance',
+        }}>
+          Turn your iPhone into a remote for your Samsung TV
+        </h1>
+
+        <button style={{
+          marginTop: 22, width: '100%', height: 54, borderRadius: 16, border: 'none',
+          background: `linear-gradient(180deg, ${a}, ${a}cc)`,
+          color: '#1a1a1d', fontSize: 17, fontWeight: 700, cursor: 'pointer',
+          boxShadow: `0 6px 18px ${a}40`,
+          fontFamily: 'inherit',
+        }}>
+          Get Started
+        </button>
+
+        <div style={{ textAlign: 'center', marginTop: 14, fontSize: 13.5, color: '#7a7a7e' }}>
+          Already set up?{' '}
+          <span style={{ color: '#cfcfd2', fontWeight: 600 }}>Connect your TV</span>
+        </div>
+      </div>
+
+      {/* Home indicator */}
+      <div style={{
+        flexShrink: 0, alignSelf: 'center', marginTop: 6, marginBottom: 8,
+        width: 134, height: 5, borderRadius: 100, background: 'rgba(255,255,255,0.5)',
+      }} />
+
+      <style>{`@keyframes obFade { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }`}</style>
+    </div>
+  );
+}
+
+window.OnboardingScreen = OnboardingScreen;
+
+
+// ===== app.jsx =====
+// Main app: design canvas with three remote variations + settings sheet + tweaks panel.
+
+const { useState } = React;
+
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "accent": "red",
+  "showFrames": true,
+  "background": "studio"
+}/*EDITMODE-END*/;
+
+const ACCENTS = [
+  { value: 'red',    label: 'Ember',  hex: '#ff6b5a' },
+  { value: 'amber',  label: 'Amber',  hex: '#ffb86b' },
+  { value: 'cyan',   label: 'Cyan',   hex: '#6bd4ff' },
+  { value: 'violet', label: 'Violet', hex: '#b86bff' },
+  { value: 'green',  label: 'Mint',   hex: '#6bffaa' },
+];
+
+// Settings sheet — shared by all three variants
+function SettingsSheet({ open, onClose, accent }) {
+  if (!open) return null;
+  return (
+    <div style={{
+      position: 'absolute', inset: 0, zIndex: 100,
+      pointerEvents: 'auto',
+    }}>
+      {/* Scrim */}
+      <div onClick={onClose} style={{
+        position: 'absolute', inset: 0,
+        background: 'rgba(0,0,0,0.55)',
+        backdropFilter: 'blur(4px)',
+      }} />
+      {/* Sheet */}
+      <div style={{
+        position: 'absolute', bottom: 0, left: 0, right: 0,
+        background: 'linear-gradient(180deg, #18181b 0%, #0e0e10 100%)',
+        borderRadius: '24px 24px 0 0',
+        padding: '12px 18px 28px',
+        border: '1px solid rgba(255,255,255,0.06)',
+        borderBottom: 'none',
+        animation: 'sheetUp 0.3s cubic-bezier(0.32, 0.72, 0, 1)',
+      }}>
+        {/* Grabber */}
+        <div style={{
+          width: 36, height: 5, borderRadius: 100,
+          background: 'rgba(255,255,255,0.18)', margin: '0 auto 14px',
+        }} />
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+          <div style={{ fontSize: 22, fontWeight: 700, color: '#fff', letterSpacing: -0.4 }}>Settings</div>
+          <button onClick={onClose} style={{
+            width: 32, height: 32, borderRadius: '50%', border: 'none',
+            background: 'rgba(255,255,255,0.08)', color: '#cfcfd2', cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>
+            <IconClose size={16} stroke={2} />
+          </button>
+        </div>
+
+        {/* Device */}
+        <div style={{
+          padding: '14px 14px', borderRadius: 14,
+          background: 'rgba(255,255,255,0.04)',
+          border: '1px solid rgba(255,255,255,0.04)',
+          display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14,
+        }}>
+          <div style={{
+            width: 38, height: 38, borderRadius: 11,
+            background: `linear-gradient(145deg, ${accent}, ${accent}80)`,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>
+            <IconTV size={18} stroke={2} style={{ color: '#fff' }} />
+          </div>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 14, fontWeight: 600, color: '#fff' }}>Living Room TV</div>
+            <div style={{ fontSize: 11.5, color: '#7a7a7e' }}>Connected · 2.4 GHz · IR + Wi-Fi</div>
+          </div>
+          <button style={{
+            fontSize: 12, fontWeight: 600, color: accent,
+            background: 'transparent', border: 'none', cursor: 'pointer',
+          }}>Change</button>
+        </div>
+
+        {/* List rows */}
+        <div style={{
+          borderRadius: 14, overflow: 'hidden',
+          background: 'rgba(255,255,255,0.04)',
+          border: '1px solid rgba(255,255,255,0.04)',
+        }}>
+          {[
+            { label: 'Haptic feedback', value: 'On' },
+            { label: 'Sound on press', value: 'Off' },
+            { label: 'Brightness control', value: 'Auto' },
+            { label: 'Voice assistant', value: 'Built-in' },
+          ].map((r, i, arr) => (
+            <div key={r.label} style={{
+              padding: '14px 14px',
+              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+              borderBottom: i < arr.length - 1 ? '1px solid rgba(255,255,255,0.04)' : 'none',
+            }}>
+              <div style={{ fontSize: 14, color: '#e8e8ea' }}>{r.label}</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: '#9a9a9e' }}>
+                {r.value}
+                <IconChevronRight size={14} stroke={2} style={{ color: '#5a5a5e' }} />
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div style={{ marginTop: 14, fontSize: 11, color: '#5a5a5e', textAlign: 'center', letterSpacing: 0.3 }}>
+          Another Remote · v1.0
+        </div>
+      </div>
+      <style>{`@keyframes sheetUp { from { transform: translateY(100%); } to { transform: translateY(0); } }`}</style>
+    </div>
+  );
+}
+
+// Wrapper: phone bezel around a remote variant
+function PhoneFrame({ children }) {
+  return (
+    <div style={{
+      width: 421, height: 880, padding: 14,
+      borderRadius: 60,
+      background: 'linear-gradient(145deg, #1d1d20 0%, #0a0a0c 100%)',
+      boxShadow: 'inset 0 1px 1px rgba(255,255,255,0.08), 0 30px 60px rgba(0,0,0,0.6), 0 0 0 1px rgba(0,0,0,0.5)',
+    }}>
+      <div style={{
+        width: 393, height: 852, borderRadius: 47, overflow: 'hidden',
+        position: 'relative',
+        boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.04)',
+      }}>
+        {/* Dynamic Island */}
+        <div style={{
+          position: 'absolute', top: 11, left: '50%', transform: 'translateX(-50%)',
+          width: 126, height: 37, borderRadius: 24, background: '#000', zIndex: 50,
+        }} />
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function App() {
+  const [tweaks, setTweak] = useTweaks(TWEAK_DEFAULTS);
+  const [settingsOpen, setSettingsOpen] = useState(null); // which artboard's sheet is open
+  const accentMap = {
+    red: '#ff6b5a', amber: '#ffb86b', cyan: '#6bd4ff', violet: '#b86bff', green: '#6bffaa',
+  };
+
+  const renderArtboard = (id, label, Component) => (
+    <DCArtboard id={id} label={label} width={tweaks.showFrames ? 421 : 393} height={tweaks.showFrames ? 880 : 852}>
+      {tweaks.showFrames ? (
+        <PhoneFrame>
+          <Component accent={tweaks.accent} onSettings={() => setSettingsOpen(id)} />
+          <SettingsSheet open={settingsOpen === id} onClose={() => setSettingsOpen(null)} accent={accentMap[tweaks.accent]} />
+        </PhoneFrame>
+      ) : (
+        <div style={{ position: 'relative', width: 393, height: 852, borderRadius: 47, overflow: 'hidden' }}>
+          <Component accent={tweaks.accent} onSettings={() => setSettingsOpen(id)} />
+          <SettingsSheet open={settingsOpen === id} onClose={() => setSettingsOpen(null)} accent={accentMap[tweaks.accent]} />
+        </div>
+      )}
+    </DCArtboard>
+  );
+
+  return (
+    <>
+      <DesignCanvas title="Another Remote — iPhone App" subtitle="Three skeuomorphic dark variations · iPhone 16 Pro · 393×852">
+        <DCSection id="variations" title="Design Variations">
+          {renderArtboard('samsung', 'D · Samsung-style match', RemoteSamsungStyle)}
+          {renderArtboard('classic', 'A · Classic skeuomorphic', RemoteClassic)}
+          {renderArtboard('glass', 'B · Liquid glass', RemoteGlass)}
+          {renderArtboard('compact', 'C · Compact info-rich', RemoteCompact)}
+        </DCSection>
+        <DCSection id="screens" title="App Screens">
+          {renderArtboard('onboarding', 'Onboarding — Welcome', OnboardingScreen)}
+          {renderArtboard('tvguide', 'TV Guide', TVGuideScreen)}
+        </DCSection>
+      </DesignCanvas>
+
+      <TweaksPanel title="Tweaks">
+        <TweakSection title="Theme">
+          <TweakSelect
+            label="Accent color"
+            value={tweaks.accent}
+            options={ACCENTS.map(a => ({ value: a.value, label: a.label }))}
+            onChange={v => setTweak('accent', v)}
+          />
+          <TweakRadio
+            label="Background"
+            value={tweaks.background}
+            options={[
+              { value: 'studio', label: 'Studio' },
+              { value: 'plain', label: 'Plain' },
+            ]}
+            onChange={v => setTweak('background', v)}
+          />
+        </TweakSection>
+        <TweakSection title="Display">
+          <TweakToggle
+            label="Show phone bezels"
+            value={tweaks.showFrames}
+            onChange={v => setTweak('showFrames', v)}
+          />
+        </TweakSection>
+        <TweakSection title="Try it">
+          <div style={{ fontSize: 12, color: '#888', lineHeight: 1.5, padding: '4px 2px' }}>
+            Tap the gear icon on any variant to preview the settings sheet.
+          </div>
+        </TweakSection>
+      </TweaksPanel>
+    </>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+
+
+</script>
+</body>
+</html>

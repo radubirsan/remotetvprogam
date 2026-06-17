@@ -18,7 +18,7 @@ struct OnboardingNetworkStep: View {
                     Button("Open Settings") {
                         if let url = URL(string: UIApplication.openSettingsURLString) { openURL(url) }
                     }
-                    .font(.subheadline.weight(.semibold))
+                    .buttonStyle(OnboardingLinkButtonStyle(prominent: true))
                 }
                 Text("On first launch iOS will also ask for **Local Network** access — please allow it, or the remote can't find your TV.")
                     .font(.footnote)

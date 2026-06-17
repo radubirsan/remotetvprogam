@@ -39,30 +39,37 @@ struct OnboardingView: View {
 
     var body: some View {
         ZStack {
-            RemoteTheme.bg.ignoresSafeArea()
+            OnboardingStyle.background.ignoresSafeArea()
 
-            VStack(spacing: 0) {
-                header
+            if vm.step == .welcome {
+                // Full-bleed welcome screen — it brings its own brand mark, feature
+                // showcase, and "Connect your TV" exit, so it skips the wizard header.
+                OnboardingWelcomeStep(vm: vm, onConnect: { onFinished(nil) })
+                    .transition(.opacity)
+            } else {
+                VStack(spacing: 0) {
+                    header
 
-                Group {
-                    switch vm.step {
-                    case .welcome:  OnboardingWelcomeStep(vm: vm)
-                    case .network:  OnboardingNetworkStep(vm: vm)
-                    case .findTV:   OnboardingFindTVStep(vm: vm)
-                    case .pair:     OnboardingPairStep(vm: vm)
-                    case .success:  OnboardingSuccessStep(vm: vm)
-                    case .test:     OnboardingTestStep(vm: vm)
-                    case .optimize: OnboardingOptimizeStep(vm: vm, onDone: { onFinished(vm.selectedDevice) })
+                    Group {
+                        switch vm.step {
+                        case .welcome:  EmptyView()
+                        case .network:  OnboardingNetworkStep(vm: vm)
+                        case .findTV:   OnboardingFindTVStep(vm: vm)
+                        case .pair:     OnboardingPairStep(vm: vm)
+                        case .success:  OnboardingSuccessStep(vm: vm)
+                        case .test:     OnboardingTestStep(vm: vm)
+                        case .optimize: OnboardingOptimizeStep(vm: vm, onDone: { onFinished(vm.selectedDevice) })
+                        }
                     }
+                    .frame(maxWidth: 460)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .transition(.asymmetric(
+                        insertion: .move(edge: .trailing).combined(with: .opacity),
+                        removal: .move(edge: .leading).combined(with: .opacity)
+                    ))
                 }
-                .frame(maxWidth: 460)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .transition(.asymmetric(
-                    insertion: .move(edge: .trailing).combined(with: .opacity),
-                    removal: .move(edge: .leading).combined(with: .opacity)
-                ))
+                .padding(.horizontal, 24)
             }
-            .padding(.horizontal, 24)
         }
         .preferredColorScheme(.dark)
         .animation(.snappy, value: vm.step)
@@ -92,7 +99,7 @@ private struct ProgressDots: View {
         HStack(spacing: 7) {
             ForEach(OnboardingViewModel.Step.milestones, id: \.self) { milestone in
                 Capsule()
-                    .fill(isActive(milestone) ? Color.accentColor : Color.white.opacity(0.18))
+                    .fill(isActive(milestone) ? OnboardingStyle.accent : Color.white.opacity(0.18))
                     .frame(width: isActive(milestone) ? 22 : 7, height: 7)
             }
         }

@@ -64,6 +64,7 @@
 		B2000000000000000000F062 /* MediaCastView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F062 /* MediaCastView.swift */; };
 		B2000000000000000000F063 /* KeyboardInputView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F063 /* KeyboardInputView.swift */; };
 		B2000000000000000000F066 /* OnboardingStepScaffold.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F066 /* OnboardingStepScaffold.swift */; };
+		B2000000000000000000F07B /* OnboardingStyle.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F07B /* OnboardingStyle.swift */; };
 		B2000000000000000000F067 /* OnboardingWelcomeStep.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F067 /* OnboardingWelcomeStep.swift */; };
 		B2000000000000000000F068 /* OnboardingNetworkStep.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F068 /* OnboardingNetworkStep.swift */; };
 		B2000000000000000000F069 /* OnboardingFindTVStep.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F069 /* OnboardingFindTVStep.swift */; };
@@ -194,6 +195,7 @@
 		A2000000000000000000F062 /* MediaCastView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaCastView.swift; sourceTree = "<group>"; };
 		A2000000000000000000F063 /* KeyboardInputView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyboardInputView.swift; sourceTree = "<group>"; };
 		A2000000000000000000F066 /* OnboardingStepScaffold.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingStepScaffold.swift; sourceTree = "<group>"; };
+		A2000000000000000000F07B /* OnboardingStyle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingStyle.swift; sourceTree = "<group>"; };
 		A2000000000000000000F067 /* OnboardingWelcomeStep.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingWelcomeStep.swift; sourceTree = "<group>"; };
 		A2000000000000000000F068 /* OnboardingNetworkStep.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingNetworkStep.swift; sourceTree = "<group>"; };
 		A2000000000000000000F069 /* OnboardingFindTVStep.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingFindTVStep.swift; sourceTree = "<group>"; };
@@ -443,6 +445,7 @@
 				A2000000000000000000F060 /* OnboardingViewModel.swift */,
 				A2000000000000000000F061 /* OnboardingView.swift */,
 				A2000000000000000000F066 /* OnboardingStepScaffold.swift */,
+				A2000000000000000000F07B /* OnboardingStyle.swift */,
 				A2000000000000000000F067 /* OnboardingWelcomeStep.swift */,
 				A2000000000000000000F068 /* OnboardingNetworkStep.swift */,
 				A2000000000000000000F069 /* OnboardingFindTVStep.swift */,
@@ -652,6 +655,7 @@
 				B2000000000000000000F060 /* OnboardingViewModel.swift in Sources */,
 				B2000000000000000000F061 /* OnboardingView.swift in Sources */,
 				B2000000000000000000F066 /* OnboardingStepScaffold.swift in Sources */,
+				B2000000000000000000F07B /* OnboardingStyle.swift in Sources */,
 				B2000000000000000000F067 /* OnboardingWelcomeStep.swift in Sources */,
 				B2000000000000000000F068 /* OnboardingNetworkStep.swift in Sources */,
 				B2000000000000000000F069 /* OnboardingFindTVStep.swift in Sources */,

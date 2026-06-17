@@ -19,8 +19,7 @@ struct OnboardingPairStep: View {
                     OnboardingPrimaryButton(title: "Try again") { Task { await vm.retryPairing() } }
                 }
                 Button("Pick a different TV") { Task { await vm.backToFind() } }
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.white.opacity(0.7))
+                    .buttonStyle(OnboardingLinkButtonStyle())
             }
         }
     }

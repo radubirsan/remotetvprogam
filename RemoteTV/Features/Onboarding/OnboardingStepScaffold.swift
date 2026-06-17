@@ -37,16 +37,17 @@ struct OnboardingStepScaffold<Content: View, Actions: View>: View {
     }
 }
 
-/// Full-width prominent action button used at the bottom of onboarding steps.
+/// Full-width primary CTA at the bottom of onboarding steps — the handoff's Ember
+/// accent-gradient button (see ``OnboardingPrimaryButtonStyle``).
 struct OnboardingPrimaryButton: View {
     let title: String
     var enabled = true
     let action: () -> Void
     var body: some View {
         Button(action: action) {
-            Text(title).bold().frame(maxWidth: .infinity, minHeight: 52)
+            Text(title)
         }
-        .buttonStyle(.borderedProminent)
+        .buttonStyle(OnboardingPrimaryButtonStyle())
         .disabled(!enabled)
     }
 }
