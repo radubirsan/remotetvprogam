@@ -23,12 +23,11 @@ struct OnboardingWelcomeStep: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            brandMark
-                .padding(.top, 8)
+          //  brandMark
+          //      .padding(.top, 8)
 
-            featureStage
-                .frame(maxHeight: .infinity)
-
+            Spacer().frame(height: 26)
+          //  Spacer().padding(.top, 10)
             caption
                 .padding(.horizontal, 36)
                 .frame(minHeight: 64)
@@ -36,7 +35,10 @@ struct OnboardingWelcomeStep: View {
             pageDots
                 .padding(.top, 18)
                 .padding(.bottom, 14)
-
+             
+            featureStage
+                .frame(maxHeight: .infinity)
+            Spacer()
             headlineAndCTA
         }
         .onReceive(advance) { _ in
