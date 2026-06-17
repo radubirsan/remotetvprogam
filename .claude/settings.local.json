@@ -42,7 +42,10 @@
       "Bash(xcodebuild clean *)",
       "Bash(git worktree *)",
       "WebFetch(domain:onmyway133.com)",
-      "WebFetch(domain:zachwaugh.com)"
+      "WebFetch(domain:zachwaugh.com)",
+      "Bash(git merge-base *)",
+      "Bash(git merge --no-ff parallel-work -m 'Merge parallel-work \\(TV Guide redesign\\) into main *)",
+      "Bash(git checkout *)"
     ]
   }
 }
