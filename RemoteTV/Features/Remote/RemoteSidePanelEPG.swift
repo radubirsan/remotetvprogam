@@ -4,16 +4,13 @@ import SwiftUI
 
 /// TV Guide screen — a dark, skeuomorphic channel guide redesigned to match the
 /// `design_handoff_another_remote` "TV Guide" mock. Shows what's on Romanian TV right
-/// now (featured "Live Now" card + per-channel now/next rows) with drill-in for a full
+/// now (featured "Live Now" card + per-channel now/next rows) and drills into a full
 /// per-channel daily schedule.
 ///
-/// Pushed as its own screen from ``RemoteView``'s TV Guide toolbar button — the
-/// navigation (push/pop, the "TV Guide" nav title, the back button) is unchanged; only
-/// the content is restyled. The two internal states are still driven by
-/// `vm.selectedChannelID`:
-///   * `nil` → search + filter + the channel list.
-///   * non-nil → today's schedule for that channel, with an in-content Back button that
-///     clears the selection.
+/// Pushed from ``RemoteView``'s TV Guide toolbar button. Tapping a channel (or the
+/// featured card) sets `vm.selectedChannelID`, which pushes ``ChannelScheduleScreen`` via
+/// `navigationDestination(item:)` — so each level gets a real navigation entry with its
+/// own native back button and left-edge swipe-to-go-back.
 @MainActor
 struct RemoteSidePanelEPG: View {
     @Bindable var vm: EPGViewModel
@@ -38,8 +35,6 @@ struct RemoteSidePanelEPG: View {
                     ProgressView()
                         .tint(GuidePalette.accent)
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
-                } else if vm.selectedChannel != nil {
-                    scheduleDetail
                 } else {
                     channelListScreen
                 }
@@ -48,6 +43,9 @@ struct RemoteSidePanelEPG: View {
         .colorScheme(.dark)
         .task { await vm.loadIfNeeded() }
         .onReceive(Timer.publish(every: 30, on: .main, in: .common).autoconnect()) { now = $0 }
+        .navigationDestination(item: $vm.selectedChannelID) { channelID in
+            ChannelScheduleScreen(vm: vm, channelID: channelID, onDispatchMacro: onDispatchMacro)
+        }
     }
 
     // MARK: - List screen
@@ -55,16 +53,17 @@ struct RemoteSidePanelEPG: View {
     @ViewBuilder
     private var channelListScreen: some View {
         VStack(alignment: .leading, spacing: 14) {
-            headerRow
-            searchBar
-            categoryChips
-
             if let featuredID = vm.featuredChannelID(at: now),
                let featured = vm.channel(withID: featuredID) {
                 featuredCard(featured)
             }
+           // headerRow
+            searchBar
+            categoryChips
 
-            listHeader
+            
+
+           // listHeader
             channelScroll
         }
         .padding(.horizontal, 20)
@@ -413,7 +412,7 @@ struct RemoteSidePanelEPG: View {
     private func rowMenu(for channel: EPGChannel) -> some View {
         if let number = vm.tvChannelNumber(for: channel.id) {
             Button("Tune to channel \(number)", systemImage: "tv.badge.wifi") {
-                tune(channel)
+                tune(channel.id)
             }
         }
         Button(
@@ -424,93 +423,167 @@ struct RemoteSidePanelEPG: View {
         }
     }
 
-    private func tune(_ channel: EPGChannel) {
+    private func tune(_ channelID: String) {
         Task {
-            if let commands = vm.tuneCommands(for: channel.id) {
+            if let commands = vm.tuneCommands(for: channelID) {
                 await onDispatchMacro(commands)
             }
-            vm.pinnedChannelID = channel.id
+            vm.pinnedChannelID = channelID
         }
     }
 
-    // MARK: - Detail mode
+    // MARK: - Formatting helpers
+
+    private func timeRange(_ programme: EPGProgramme) -> String {
+        let start = programme.start.formatted(.dateTime.hour().minute())
+        let stop = programme.stop.formatted(.dateTime.hour().minute())
+        return "\(start) – \(stop)"
+    }
+
+    private func endsInSuffix(_ programme: EPGProgramme) -> String {
+        let remaining = programme.stop.timeIntervalSince(now)
+        guard remaining > 0 else { return "" }
+        let minutes = Int((remaining / 60).rounded())
+        return minutes > 0 ? " · Ends in \(minutes) min" : ""
+    }
+
+    // MARK: - Accessibility
+
+    private func accessibilityLabel(for channel: EPGChannel) -> String {
+        if let now = vm.nowPlaying(for: channel.id, at: now) {
+            "\(channel.primaryName), now playing \(now.title)"
+        } else {
+            "\(channel.primaryName), no current programme"
+        }
+    }
+
+    // MARK: - Error
 
     @ViewBuilder
-    private var scheduleDetail: some View {
-        if let channel = vm.selectedChannel {
-            VStack(alignment: .leading, spacing: 12) {
-                detailHeader(channel)
+    private func errorView(_ error: String) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Label("Couldn't load TV guide", systemImage: "exclamationmark.triangle")
+                .font(.footnote.bold())
+                .foregroundStyle(.orange)
+            Text(error)
+                .font(.caption2)
+                .foregroundStyle(GuidePalette.secondary)
+                .lineLimit(3)
+            Button("Retry") {
+                Task { await vm.reload() }
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(GuidePalette.accent)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+}
 
-                Text(now, format: .dateTime.weekday(.wide).day().month())
-                    .font(.system(size: 12))
-                    .foregroundStyle(GuidePalette.tertiary)
+// MARK: - Channel schedule (pushed)
 
-                let programmes = vm.programmesForSelected
-                if programmes.isEmpty {
-                    Text("No programmes in the feed for today.")
-                        .font(.footnote)
-                        .foregroundStyle(GuidePalette.secondary)
-                    Spacer(minLength: 0)
-                } else {
+/// A single channel's full schedule for today — pushed onto the navigation stack from the
+/// guide list. Lives behind a real navigation entry so it gets the native back button and
+/// left-edge swipe-to-go-back for free; Tune / Pin ride in the nav-bar toolbar.
+@MainActor
+private struct ChannelScheduleScreen: View {
+    @Bindable var vm: EPGViewModel
+    let channelID: String
+    let onDispatchMacro: ([TVCommand]) async -> Void
+
+    @State private var now: Date = .now
+
+    private var channel: EPGChannel? { vm.channel(withID: channelID) }
+
+    var body: some View {
+        ZStack {
+            GuidePalette.screenBackground.ignoresSafeArea()
+            content
+        }
+        .colorScheme(.dark)
+        .navigationTitle(channel?.primaryName ?? "Channel")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbarColorScheme(.dark, for: .navigationBar)
+        .onReceive(Timer.publish(every: 30, on: .main, in: .common).autoconnect()) { now = $0 }
+        .toolbar {
+            if let number = vm.tvChannelNumber(for: channelID) {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button { tune() } label: {
+                        Label("Tune \(number)", systemImage: "tv.badge.wifi")
+                    }
+                    .tint(GuidePalette.accent)
+                    .accessibilityLabel("Tune the TV to channel \(number)")
+                }
+            }
+            ToolbarItem(placement: .topBarTrailing) {
+                Button { vm.togglePin(channelID) } label: {
+                    Image(systemName: vm.isPinned(channelID) ? "pin.fill" : "pin")
+                }
+                .tint(vm.isPinned(channelID) ? GuidePalette.accent : GuidePalette.secondary)
+                .accessibilityLabel(vm.isPinned(channelID) ? "Unpin from remote" : "Pin as TV's current channel")
+            }
+        }
+    }
+
+    private var content: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            headerStrip
+
+            let programmes = vm.programmes(forChannel: channelID, on: now)
+            if programmes.isEmpty {
+                Text("No programmes in the feed for today.")
+                    .font(.footnote)
+                    .foregroundStyle(GuidePalette.secondary)
+                Spacer(minLength: 0)
+            } else {
+                ScrollViewReader { proxy in
                     ScrollView {
                         LazyVStack(spacing: 6) {
                             ForEach(programmes) { programmeRow($0) }
                         }
                     }
                     .scrollIndicators(.hidden)
+                    // Land on what's on now (or the next show) instead of the top of the
+                    // day. `onAppear` fires after the first layout pass, so the lazy rows
+                    // exist to scroll to.
+                    .onAppear {
+                        guard let target = scrollTarget(in: programmes) else { return }
+                        proxy.scrollTo(target, anchor: .center)
+                    }
                 }
             }
-            .padding(.horizontal, 20)
-            .padding(.top, 8)
         }
+        .padding(.horizontal, 20)
+        .padding(.top, 8)
     }
 
-    private func detailHeader(_ channel: EPGChannel) -> some View {
-        let tint = GuidePalette.tint(for: vm.tvChannelNumber(for: channel.id))
+    /// The programme to reveal when the schedule opens: whatever's live now, else the
+    /// next show to start. Nil when the day's already over (leaves the list at the top).
+    private func scrollTarget(in programmes: [EPGProgramme]) -> EPGProgramme.ID? {
+        if let live = programmes.first(where: { $0.isLive(at: now) }) { return live.id }
+        return programmes.first(where: { $0.start > now })?.id
+    }
+
+    private var headerStrip: some View {
+        let tint = GuidePalette.tint(for: vm.tvChannelNumber(for: channelID))
         return HStack(spacing: 12) {
-            // No in-panel back button — RemoteView's nav-bar context-aware back handles
-            // "schedule → channel list → leave guide" (kept from the control-panel work).
             RoundedRectangle(cornerRadius: 10, style: .continuous)
                 .fill(LinearGradient(colors: [tint, tint.opacity(0.6)],
                                      startPoint: .topLeading, endPoint: .bottomTrailing))
                 .frame(width: 38, height: 38)
                 .overlay {
-                    Text(vm.tvChannelNumber(for: channel.id).map(String.init) ?? "–")
+                    Text(vm.tvChannelNumber(for: channelID).map(String.init) ?? "–")
                         .font(.system(size: 14, weight: .heavy).monospacedDigit())
                         .foregroundStyle(.white)
                 }
-
-            Text(channel.primaryName)
-                .font(.system(size: 18, weight: .bold))
-                .foregroundStyle(.white)
-                .lineLimit(1)
-
-            Spacer(minLength: 4)
-
-            if let number = vm.tvChannelNumber(for: channel.id) {
-                Button {
-                    tune(channel)
-                } label: {
-                    Label("Tune", systemImage: "tv.badge.wifi")
-                        .font(.system(size: 13, weight: .bold))
-                        .foregroundStyle(GuidePalette.chipSelectedText)
-                        .padding(.horizontal, 12)
-                        .frame(height: 36)
-                        .background(Capsule().fill(GuidePalette.accent))
-                }
-                .accessibilityLabel("Tune the TV to channel \(number), \(channel.primaryName)")
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Today's schedule")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(.white)
+                Text(now, format: .dateTime.weekday(.wide).day().month())
+                    .font(.system(size: 12))
+                    .foregroundStyle(GuidePalette.tertiary)
             }
-
-            Button {
-                vm.togglePin(channel.id)
-            } label: {
-                Image(systemName: vm.isPinned(channel.id) ? "pin.fill" : "pin")
-                    .font(.system(size: 15))
-                    .foregroundStyle(vm.isPinned(channel.id) ? GuidePalette.accent : GuidePalette.secondary)
-                    .frame(width: 36, height: 36)
-                    .background(Circle().fill(.white.opacity(0.06)))
-            }
-            .accessibilityLabel(vm.isPinned(channel.id) ? "Unpin from remote" : "Pin as TV's current channel")
+            Spacer()
         }
     }
 
@@ -563,28 +636,12 @@ struct RemoteSidePanelEPG: View {
         .accessibilityLabel(accessibilityLabel(for: programme, isLive: isLive))
     }
 
-    // MARK: - Formatting helpers
-
-    private func timeRange(_ programme: EPGProgramme) -> String {
-        let start = programme.start.formatted(.dateTime.hour().minute())
-        let stop = programme.stop.formatted(.dateTime.hour().minute())
-        return "\(start) – \(stop)"
-    }
-
-    private func endsInSuffix(_ programme: EPGProgramme) -> String {
-        let remaining = programme.stop.timeIntervalSince(now)
-        guard remaining > 0 else { return "" }
-        let minutes = Int((remaining / 60).rounded())
-        return minutes > 0 ? " · Ends in \(minutes) min" : ""
-    }
-
-    // MARK: - Accessibility
-
-    private func accessibilityLabel(for channel: EPGChannel) -> String {
-        if let now = vm.nowPlaying(for: channel.id, at: now) {
-            "\(channel.primaryName), now playing \(now.title)"
-        } else {
-            "\(channel.primaryName), no current programme"
+    private func tune() {
+        Task {
+            if let commands = vm.tuneCommands(for: channelID) {
+                await onDispatchMacro(commands)
+            }
+            vm.pinnedChannelID = channelID
         }
     }
 
@@ -592,27 +649,6 @@ struct RemoteSidePanelEPG: View {
         let prefix = isLive ? "Now playing: " : ""
         let times = "\(programme.start.formatted(date: .omitted, time: .shortened)) to \(programme.stop.formatted(date: .omitted, time: .shortened))"
         return "\(prefix)\(programme.title), \(times)"
-    }
-
-    // MARK: - Error
-
-    @ViewBuilder
-    private func errorView(_ error: String) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Label("Couldn't load TV guide", systemImage: "exclamationmark.triangle")
-                .font(.footnote.bold())
-                .foregroundStyle(.orange)
-            Text(error)
-                .font(.caption2)
-                .foregroundStyle(GuidePalette.secondary)
-                .lineLimit(3)
-            Button("Retry") {
-                Task { await vm.reload() }
-            }
-            .buttonStyle(.borderedProminent)
-            .tint(GuidePalette.accent)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }
 

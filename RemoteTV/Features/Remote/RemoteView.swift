@@ -281,30 +281,14 @@ struct RemoteView: View {
             )
         }
         .navigationDestination(isPresented: $showTVGuide) {
+            // The guide's channel list and a channel's schedule are each real navigation
+            // entries (the schedule is pushed via `navigationDestination(item:)` inside
+            // `RemoteSidePanelEPG`), so both levels keep the native back button and
+            // left-edge swipe-to-go-back.
             RemoteSidePanelEPG(vm: epgViewModel, onDispatchMacro: dispatchTuneMacro)
                 .navigationTitle("TV Guide")
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbarBackground(.visible, for: .navigationBar)
-                // Replace the system back chevron with one context-aware back button so the
-                // guide doesn't show two stacked backs (the EPG view used to render its own
-                // "back to channel list" button under the nav bar).
-                .navigationBarBackButtonHidden(true)
-                .toolbar {
-                    ToolbarItem(placement: .topBarLeading) {
-                        Button {
-                            if epgViewModel.selectedChannelID != nil {
-                                // In a channel's schedule → step back to the channel list.
-                                epgViewModel.selectedChannelID = nil
-                            } else {
-                                // On the channel list → leave the guide.
-                                showTVGuide = false
-                            }
-                        } label: {
-                            Image(systemName: "chevron.left")
-                        }
-                        .accessibilityLabel("Back")
-                    }
-                }
         }
         }
     }

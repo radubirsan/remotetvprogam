@@ -31,8 +31,9 @@ final class EPGViewModel {
     /// equivalent to the old search-only behaviour the unit tests assert).
     var selectedCategory: GuideCategory = .all
 
-    /// `nil` → panel shows the channel list. Non-nil → panel shows today's schedule
-    /// for the selected channel id with a Back button to clear the selection.
+    /// Drives the channel-schedule navigation push: setting it (tapping a row or the
+    /// featured card) pushes ``ChannelScheduleScreen`` for that id; the native back button
+    /// / edge-swipe clears it back to `nil`. Bound via `navigationDestination(item:)`.
     var selectedChannelID: String?
 
     /// The EPG channel id the user has pinned as "what's currently on the TV". Persisted
@@ -165,17 +166,11 @@ final class EPGViewModel {
         return filteredChannels.first { nowPlaying(for: $0.id, at: date) != nil }?.id
     }
 
-    /// Today's schedule for the currently selected channel, sorted by start time.
-    var programmesForSelected: [EPGProgramme] {
-        guard let id = selectedChannelID else { return [] }
-        return guide?.programmes(for: id, on: .now) ?? []
-    }
-
-    /// The selected channel object (display name, etc.) for the detail header.
-    /// Resolves synthesized channels too, so drilling into a channel that's in the
-    /// mapping but absent from today's feed still opens its (empty) schedule.
-    var selectedChannel: EPGChannel? {
-        selectedChannelID.flatMap(channel(for:))
+    /// Today's schedule for `channelID`, sorted by start time. Drives the pushed
+    /// ``ChannelScheduleScreen`` — decoupled from `selectedChannelID` so the screen reads
+    /// straight from the id the navigation push handed it.
+    func programmes(forChannel channelID: String, on day: Date = .now) -> [EPGProgramme] {
+        guide?.programmes(for: channelID, on: day) ?? []
     }
 
     /// The pinned channel object, if any.
