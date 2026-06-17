@@ -39,7 +39,10 @@
       "Bash(awk 'NR>=1 && /Begin PBXFrameworksBuildPhase/,/End PBXFrameworksBuildPhase/' RemoteTV.xcodeproj/project.pbxproj)",
       "Bash(xcodebuild -project RemoteTV.xcodeproj -list)",
       "Bash(xcodebuild build-for-testing *)",
-      "Bash(xcodebuild clean *)"
+      "Bash(xcodebuild clean *)",
+      "Bash(git worktree *)",
+      "WebFetch(domain:onmyway133.com)",
+      "WebFetch(domain:zachwaugh.com)"
     ]
   }
 }

@@ -75,6 +75,8 @@
 		B2000000000000000000F074 /* TVAppEntity.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F074 /* TVAppEntity.swift */; };
 		B2000000000000000000F075 /* TVControlIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F075 /* TVControlIntents.swift */; };
 		B2000000000000000000F076 /* RemoteTVAppShortcuts.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F076 /* RemoteTVAppShortcuts.swift */; };
+		B2000000000000000000F07A /* OpenRemoteTVAppIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F07A /* OpenRemoteTVAppIntent.swift */; };
+		B3000000000000000000F07A /* OpenRemoteTVAppIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F07A /* OpenRemoteTVAppIntent.swift */; };
 		C2000000000000000000F018 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F018 /* Assets.xcassets */; };
 		C2000000000000000000F019 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F019 /* Localizable.xcstrings */; };
 		D2000000000000000000F01B /* TVCommandEncoderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F01B /* TVCommandEncoderTests.swift */; };
@@ -207,6 +209,7 @@
 		A2000000000000000000F074 /* TVAppEntity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TVAppEntity.swift; sourceTree = "<group>"; };
 		A2000000000000000000F075 /* TVControlIntents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TVControlIntents.swift; sourceTree = "<group>"; };
 		A2000000000000000000F076 /* RemoteTVAppShortcuts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteTVAppShortcuts.swift; sourceTree = "<group>"; };
+		A2000000000000000000F07A /* OpenRemoteTVAppIntent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenRemoteTVAppIntent.swift; sourceTree = "<group>"; };
 		A2000000000000000000F077 /* TVIntentsControllerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TVIntentsControllerTests.swift; sourceTree = "<group>"; };
 		A2000000000000000000F078 /* TVIntentEntitiesTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TVIntentEntitiesTests.swift; sourceTree = "<group>"; };
 		C1000000000000000000F001 /* RemoteTV.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = RemoteTV.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -458,6 +461,7 @@
 				A2000000000000000000F074 /* TVAppEntity.swift */,
 				A2000000000000000000F075 /* TVControlIntents.swift */,
 				A2000000000000000000F076 /* RemoteTVAppShortcuts.swift */,
+				A2000000000000000000F07A /* OpenRemoteTVAppIntent.swift */,
 			);
 			path = Intents;
 			sourceTree = "<group>";
@@ -599,6 +603,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				B3000000000000000000F07A /* OpenRemoteTVAppIntent.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -658,6 +663,7 @@
 				B2000000000000000000F074 /* TVAppEntity.swift in Sources */,
 				B2000000000000000000F075 /* TVControlIntents.swift in Sources */,
 				B2000000000000000000F076 /* RemoteTVAppShortcuts.swift in Sources */,
+				B2000000000000000000F07A /* OpenRemoteTVAppIntent.swift in Sources */,
 				B2000000000000000000F062 /* MediaCastView.swift in Sources */,
 				B2000000000000000000F063 /* KeyboardInputView.swift in Sources */,
 				B2000000000000000000F05A /* EPGViewModel.swift in Sources */,

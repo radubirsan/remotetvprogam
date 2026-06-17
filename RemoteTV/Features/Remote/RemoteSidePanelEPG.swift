@@ -53,16 +53,8 @@ struct RemoteSidePanelEPG: View {
     private var header: some View {
         HStack(spacing: 8) {
             if let selected = vm.selectedChannel {
-                Button {
-                    vm.selectedChannelID = nil
-                } label: {
-                    Label("Back", systemImage: "chevron.left")
-                        .labelStyle(.iconOnly)
-                        .frame(width: 32, height: 32)
-                }
-                .buttonStyle(.bordered)
-                .accessibilityLabel("Back to channel list")
-
+                // No in-panel back button here — the nav bar's single context-aware back
+                // (in `RemoteView`) handles "schedule → channel list → leave guide".
                 Text(selected.primaryName)
                     .font(.title3.bold())
                     .lineLimit(1)

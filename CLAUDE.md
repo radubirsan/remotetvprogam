@@ -243,8 +243,15 @@ target; it's an Xcode file-system synchronized folder). It links `RemoteTVCore` 
 `ControlWidget`s — **TV Power**, **Mute**, **Volume Up/Down**, **Channel Up/Down**, and
 **Open RemoteTV** — whose intents call `TVIntentsController.resolve()` on the real engine.
 Channel taps send a single key; Volume Up sends **2** `.volumeUp` and Volume Down sends **3**
-`.volumeDown` per press (via the paced `send(macro:)`). **Open RemoteTV** is an
-`openAppWhenRun = true` intent (no engine call) that just foregrounds the app. In the extension process `shared` is nil, so `resolve()` returns
+`.volumeDown` per press (via the paced `send(macro:)`). **Open RemoteTV** foregrounds the app
+via `OpenRemoteTVAppIntent` (`openAppWhenRun = true`, returns `.result()`). That intent lives in
+`RemoteTV/Intents/OpenRemoteTVAppIntent.swift` with **dual target membership (app + extension)**
+— load-bearing: the control references it (extension), and the system runs it in the APP
+process to open the app. An extension-only intent does NOT open the app, and `OpenURLIntent`
+to a custom scheme is unreliable on iOS 18. It can't go in `RemoteTVCore` either — SwiftPM
+skips AppIntents metadata extraction, so package-defined intents never register. The dual
+membership is the only working option; in the pbxproj it's two PBXBuildFiles (`B2…F07A` app,
+`B3…F07A` ext) pointing at one fileRef (`A2…F07A`), one in each target's Sources phase. In the extension process `shared` is nil, so `resolve()` returns
 `makeStandalone()`, which builds a fresh `SamsungTVService` from shared storage. Power toggles
 `KEY_POWER` when reachable and falls back to Wake-on-LAN when the TV is off; Mute opens a fresh
 socket and sends `KEY_MUTE`.
@@ -388,7 +395,10 @@ refs, `B2…F0XX` for Sources build files). Insert four entries:
 
 Grep for an existing sibling file (e.g. `VolumeSection`) to copy the pattern. Test files
 use `D2…F0XX` build-file UUIDs and go in the test target's group + Sources phase instead.
-Currently the highest used suffix is `F078`. Suffixes `F040`–`F042` (removed DIAL feature)
+Currently the highest used suffix is `F07A` (`OpenRemoteTVAppIntent.swift`, which is a member
+of BOTH the app and extension targets — app build file `B2…F07A`, extension build file
+`B3…F07A`, both referencing fileRef `A2…F07A`; the `B3…` prefix is the convention for an
+app-source file also compiled into the extension). Suffixes `F040`–`F042` (removed DIAL feature)
 and `F072`/`F079` (`TVIntentsController`/`SharedStorage`, which moved to `RemoteTVCore`) are
 retired; don't reuse them. (`RemoteSamsungStyle.swift` is the one exception to the
 deterministic-UUID scheme — it kept its Xcode-generated UUID when moved into
