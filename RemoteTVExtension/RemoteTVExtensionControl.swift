@@ -188,13 +188,5 @@ struct OpenRemoteTVAppControl: ControlWidget {
     }
 }
 
-/// Just foregrounds the app. `openAppWhenRun` does the launching; `perform` has nothing to do.
-struct OpenRemoteTVAppIntent: AppIntent {
-    static let title: LocalizedStringResource = "Open RemoteTV"
-    static let openAppWhenRun = true
-
-    @MainActor
-    func perform() async throws -> some IntentResult {
-        .result()
-    }
-}
+// `OpenRemoteTVAppIntent` lives in its own file (RemoteTV/Intents/OpenRemoteTVAppIntent.swift)
+// with membership in BOTH this extension and the app target — required for the app-open to work.

@@ -285,6 +285,26 @@ struct RemoteView: View {
                 .navigationTitle("TV Guide")
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbarBackground(.visible, for: .navigationBar)
+                // Replace the system back chevron with one context-aware back button so the
+                // guide doesn't show two stacked backs (the EPG view used to render its own
+                // "back to channel list" button under the nav bar).
+                .navigationBarBackButtonHidden(true)
+                .toolbar {
+                    ToolbarItem(placement: .topBarLeading) {
+                        Button {
+                            if epgViewModel.selectedChannelID != nil {
+                                // In a channel's schedule → step back to the channel list.
+                                epgViewModel.selectedChannelID = nil
+                            } else {
+                                // On the channel list → leave the guide.
+                                showTVGuide = false
+                            }
+                        } label: {
+                            Image(systemName: "chevron.left")
+                        }
+                        .accessibilityLabel("Back")
+                    }
+                }
         }
         }
     }

@@ -26,11 +26,6 @@ final class EPGViewModel {
     /// Two-way binding for the panel's `.searchable` field.
     var searchText: String = ""
 
-    /// The category chip the user has selected in the redesigned guide. Default `.all`
-    /// keeps the full lineup visible (and keeps `filteredChannels` byte-for-byte
-    /// equivalent to the old search-only behaviour the unit tests assert).
-    var selectedCategory: GuideCategory = .all
-
     /// `nil` → panel shows the channel list. Non-nil → panel shows today's schedule
     /// for the selected channel id with a Back button to clear the selection.
     var selectedChannelID: String?
@@ -97,18 +92,12 @@ final class EPGViewModel {
     /// filters within that set (case- and diacritic-insensitive) without reordering.
     var filteredChannels: [EPGChannel] {
         let trimmed = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
-        let bySearch: [EPGChannel]
-        if trimmed.isEmpty {
-            bySearch = allKnownChannels
-        } else {
-            bySearch = allKnownChannels.filter { channel in
-                channel.primaryName.localizedStandardContains(trimmed) ||
-                channel.id.localizedStandardContains(trimmed) ||
-                channel.displayNames.contains { $0.localizedStandardContains(trimmed) }
-            }
+        guard !trimmed.isEmpty else { return allKnownChannels }
+        return allKnownChannels.filter { channel in
+            channel.primaryName.localizedStandardContains(trimmed) ||
+            channel.id.localizedStandardContains(trimmed) ||
+            channel.displayNames.contains { $0.localizedStandardContains(trimmed) }
         }
-        guard selectedCategory != .all else { return bySearch }
-        return bySearch.filter { selectedCategory.matches(nowPlaying(for: $0.id)) }
     }
 
     /// The user's full known lineup as ``EPGChannel`` values, ordered by channel
@@ -121,10 +110,6 @@ final class EPGViewModel {
     /// Resolves an id to an ``EPGChannel``: the feed's entry if present (real
     /// display name + icon), otherwise a placeholder synthesized from the id for any
     /// id in ``KnownChannelNumbers/mapping``. Nil for ids we know nothing about.
-    /// Public resolver for a single channel id (feed entry or synthesized placeholder).
-    /// Used by the redesigned guide to render the featured card from a channel id.
-    func channel(withID id: String) -> EPGChannel? { channel(for: id) }
-
     private func channel(for id: String) -> EPGChannel? {
         if let inFeed = guide?.channels.first(where: { $0.id == id }) { return inFeed }
         guard KnownChannelNumbers.number(for: id) != nil else { return nil }
@@ -135,34 +120,6 @@ final class EPGViewModel {
     /// Inline in the channel-list rows so the user sees the current show without drilling in.
     func nowPlaying(for channelID: String, at date: Date = .now) -> EPGProgramme? {
         guide?.nowPlaying(on: channelID, at: date)
-    }
-
-    /// The next programme to air on `channelID` after `date` — first entry in today's
-    /// schedule whose start is in the future. Drives the redesigned row's "Next:" line.
-    func nextProgramme(for channelID: String, after date: Date = .now) -> EPGProgramme? {
-        guide?.programmes(for: channelID)
-            .first { $0.start > date }
-    }
-
-    /// Fraction (0...1) of the way through `programme` at `date`. Drives the row and
-    /// featured-card progress bars; clamped so a just-started or already-finished show
-    /// never overflows the track.
-    func progress(of programme: EPGProgramme, at date: Date = .now) -> Double {
-        let total = programme.duration
-        guard total > 0 else { return 0 }
-        let elapsed = date.timeIntervalSince(programme.start)
-        return min(max(elapsed / total, 0), 1)
-    }
-
-    /// The channel to surface in the featured "Live Now" card: the pinned channel when
-    /// it's actually airing something, otherwise the first channel in the visible list
-    /// with a current programme. Returns `nil` when nothing is airing (feed not loaded
-    /// or no overlap), and the view hides the card.
-    func featuredChannelID(at date: Date = .now) -> String? {
-        if let pinned = pinnedChannelID, nowPlaying(for: pinned, at: date) != nil {
-            return pinned
-        }
-        return filteredChannels.first { nowPlaying(for: $0.id, at: date) != nil }?.id
     }
 
     /// Today's schedule for the currently selected channel, sorted by start time.
@@ -232,58 +189,5 @@ final class EPGViewModel {
     static func tuneCommands(for channelNumber: Int) -> [TVCommand] {
         let digits = String(channelNumber).compactMap { $0.wholeNumberValue }
         return digits.compactMap { TVCommand.digit($0) } + [.enter]
-    }
-}
-
-/// The category-filter chips shown above the guide's channel list (mirrors the design
-/// handoff: All · Live · Movies · Sports · News · Kids).
-///
-/// Matching is best-effort against the XMLTV `categories` of whatever's airing now —
-/// the upstream Romanian feed tags shows in Romanian, so each case carries both English
-/// and Romanian keywords and folds away case/diacritics before comparing. `.all` short-
-/// circuits to "everything" and `.live` means "currently airing anything".
-enum GuideCategory: String, CaseIterable, Identifiable {
-    case all, live, movies, sports, news, kids
-
-    var id: String { rawValue }
-
-    /// Chip label.
-    var title: String {
-        switch self {
-        case .all: "All"
-        case .live: "Live"
-        case .movies: "Movies"
-        case .sports: "Sports"
-        case .news: "News"
-        case .kids: "Kids"
-        }
-    }
-
-    /// Lowercased, diacritic-free substrings that mark a programme as belonging to this
-    /// category. Empty for `.all`/`.live` (handled specially in ``matches(_:)``).
-    private var keywords: [String] {
-        switch self {
-        case .all, .live: []
-        case .movies: ["film", "movie", "cinema"]
-        case .sports: ["sport", "fotbal", "soccer", "tenis", "tennis", "match", "meci"]
-        case .news: ["news", "stiri", "stire", "actualit", "jurnal"]
-        case .kids: ["kids", "copii", "desene", "children", "cartoon", "animat", "junior"]
-        }
-    }
-
-    /// Whether a channel showing `programme` right now belongs to this category.
-    /// `.all` always matches; `.live` matches any channel that has a current programme.
-    func matches(_ programme: EPGProgramme?) -> Bool {
-        switch self {
-        case .all:
-            return true
-        case .live:
-            return programme != nil
-        default:
-            guard let programme else { return false }
-            let haystack = (programme.categories.joined(separator: " ") + " " + programme.title)
-                .folding(options: [.diacriticInsensitive, .caseInsensitive], locale: .current)
-            return keywords.contains { haystack.contains($0) }
-        }
     }
 }

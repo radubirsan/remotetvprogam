@@ -1,435 +1,230 @@
-import Combine
 import RemoteTVCore
 import SwiftUI
 
-/// TV Guide screen — a dark, skeuomorphic channel guide redesigned to match the
-/// `design_handoff_another_remote` "TV Guide" mock. Shows what's on Romanian TV right
-/// now (featured "Live Now" card + per-channel now/next rows) with drill-in for a full
-/// per-channel daily schedule.
+/// EPG screen: shows what's on Romanian TV right now, with drill-in for a full per-channel
+/// daily schedule. Pushed as its own screen from ``RemoteView``'s TV Guide toolbar button
+/// (it fills its frame; the navigation bar supplies the title and back button).
 ///
-/// Pushed as its own screen from ``RemoteView``'s TV Guide toolbar button — the
-/// navigation (push/pop, the "TV Guide" nav title, the back button) is unchanged; only
-/// the content is restyled. The two internal states are still driven by
-/// `vm.selectedChannelID`:
-///   * `nil` → search + filter + the channel list.
-///   * non-nil → today's schedule for that channel, with an in-content Back button that
-///     clears the selection.
+/// Two-state internal layout driven by `vm.selectedChannelID`:
+///   * `nil` → search-able list of all 360+ channels with current programme inline.
+///   * non-nil → today's schedule for that channel, with a Back button that clears the
+///     selection.
 @MainActor
 struct RemoteSidePanelEPG: View {
     @Bindable var vm: EPGViewModel
     /// Dispatches a sequence of TV commands. Supplied by `RemoteView` so the panel can
     /// fire the Tune-to-channel macro through the same `RemoteViewModel.send` path the
-    /// rest of the remote uses.
+    /// rest of the remote uses. Each command is awaited in order so the TV sees them
+    /// as a clean digit-by-digit sequence rather than racing batch.
     let onDispatchMacro: ([TVCommand]) async -> Void
 
-    /// Drives live progress bars + "Ends in N min". Bumped every 30s so the guide stays
-    /// honest without a per-frame timeline.
-    @State private var now: Date = .now
-
     var body: some View {
-        ZStack {
-            GuidePalette.screenBackground.ignoresSafeArea()
+        VStack(alignment: .leading, spacing: 12) {
+            header
 
-            Group {
-                if let error = vm.lastError, vm.guide == nil {
-                    errorView(error)
-                        .padding(.horizontal, 20)
-                } else if vm.isLoading && vm.guide == nil {
-                    ProgressView()
-                        .tint(GuidePalette.accent)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                } else if vm.selectedChannel != nil {
-                    scheduleDetail
-                } else {
-                    channelListScreen
-                }
+            if let error = vm.lastError {
+                errorView(error)
+            } else if vm.isLoading && vm.guide == nil {
+                ProgressView()
+                    .frame(maxWidth: .infinity, minHeight: 60)
+            } else if vm.guide == nil {
+                Text("Tap Refresh to load today's TV guide.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            } else if let _ = vm.selectedChannel {
+                scheduleDetail
+            } else {
+                channelList
             }
+
+            Spacer(minLength: 0)
         }
+        .padding(16)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .colorScheme(.dark)
-        .task { await vm.loadIfNeeded() }
-        .onReceive(Timer.publish(every: 30, on: .main, in: .common).autoconnect()) { now = $0 }
+        .task {
+            await vm.loadIfNeeded()
+        }
     }
 
-    // MARK: - List screen
+    // MARK: - Header
 
     @ViewBuilder
-    private var channelListScreen: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            headerRow
-            searchBar
-            categoryChips
-
-            if let featuredID = vm.featuredChannelID(at: now),
-               let featured = vm.channel(withID: featuredID) {
-                featuredCard(featured)
-            }
-
-            listHeader
-            channelScroll
-        }
-        .padding(.horizontal, 20)
-        .padding(.top, 8)
-    }
-
-    private var headerRow: some View {
-        HStack(alignment: .top) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text("TV Guide")
-                    .font(.system(size: 28, weight: .bold))
-                    .tracking(-0.5)
+    private var header: some View {
+        HStack(spacing: 8) {
+            if let selected = vm.selectedChannel {
+                // No in-panel back button here — the nav bar's single context-aware back
+                // (in `RemoteView`) handles "schedule → channel list → leave guide".
+                Text(selected.primaryName)
+                    .font(.title3.bold())
+                    .lineLimit(1)
                     .foregroundStyle(.white)
-                Text(now.formatted(.dateTime.weekday(.wide).month(.wide).day()) + " · "
-                     + now.formatted(date: .omitted, time: .shortened))
-                    .font(.system(size: 12.5))
-                    .foregroundStyle(GuidePalette.tertiary)
-            }
 
-            Spacer()
+                Spacer()
+
+                if let number = vm.tvChannelNumber(for: selected.id) {
+                    Button {
+                        Task {
+                            // Fire the digit sequence then pin so the "Now on TV"
+                            // pill matches what we just told the TV to tune to.
+                            if let commands = vm.tuneCommands(for: selected.id) {
+                                await onDispatchMacro(commands)
+                            }
+                            vm.pinnedChannelID = selected.id
+                        }
+                    } label: {
+                        Label("Tune \(number)", systemImage: "tv.badge.wifi")
+                            .labelStyle(.titleAndIcon)
+                            .font(.caption.bold())
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .accessibilityLabel("Tune the TV to channel \(number), \(selected.primaryName)")
+                }
+
+                Button {
+                    vm.togglePin(selected.id)
+                } label: {
+                    Image(systemName: vm.isPinned(selected.id) ? "pin.fill" : "pin")
+                        .frame(width: 32, height: 32)
+                }
+                .buttonStyle(.bordered)
+                .tint(vm.isPinned(selected.id) ? .yellow : .accentColor)
+                .accessibilityLabel(
+                    vm.isPinned(selected.id)
+                        ? "Unpin from remote"
+                        : "Pin as TV's current channel"
+                )
+            } else {
+                // List mode: the navigation bar supplies the "TV Guide" title, so the header
+                // just holds the trailing Refresh control.
+                Spacer()
+            }
 
             Button {
                 Task { await vm.reload() }
             } label: {
                 Image(systemName: "arrow.clockwise")
-                    .font(.system(size: 16, weight: .medium))
-                    .foregroundStyle(GuidePalette.secondary)
-                    .frame(width: 40, height: 40)
-                    .background(Circle().fill(.white.opacity(0.05)))
-                    .overlay {
-                        if vm.isLoading {
-                            ProgressView().tint(GuidePalette.secondary)
-                        }
-                    }
+                    .frame(width: 32, height: 32)
             }
+            .buttonStyle(.bordered)
             .disabled(vm.isLoading)
             .accessibilityLabel("Refresh TV guide")
         }
     }
 
-    private var searchBar: some View {
-        HStack(spacing: 8) {
-            Image(systemName: "magnifyingglass")
-                .font(.system(size: 15, weight: .medium))
-                .foregroundStyle(GuidePalette.tertiary)
-            TextField(
-                "",
-                text: $vm.searchText,
-                prompt: Text("Search channels & shows").foregroundColor(GuidePalette.tertiary)
-            )
-            .textFieldStyle(.plain)
-            .font(.system(size: 14))
-            .foregroundStyle(.white)
-            .tint(GuidePalette.accent)
+    // MARK: - List mode
+
+    @ViewBuilder
+    private var channelList: some View {
+        TextField("Search channels", text: $vm.searchText)
+            .textFieldStyle(.roundedBorder)
             .textInputAutocapitalization(.never)
             .autocorrectionDisabled()
 
-            if !vm.searchText.isEmpty {
-                Button {
-                    vm.searchText = ""
-                } label: {
-                    Image(systemName: "xmark.circle.fill")
-                        .foregroundStyle(GuidePalette.tertiary)
-                }
-                .accessibilityLabel("Clear search")
-            }
-        }
-        .padding(.horizontal, 14)
-        .frame(height: 40)
-        .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(.white.opacity(0.05)))
-    }
-
-    private var categoryChips: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 8) {
-                ForEach(GuideCategory.allCases) { category in
-                    let selected = vm.selectedCategory == category
-                    Button {
-                        vm.selectedCategory = category
-                    } label: {
-                        Text(category.title)
-                            .font(.system(size: 12.5, weight: .semibold))
-                            .foregroundStyle(selected ? GuidePalette.chipSelectedText : GuidePalette.chipText)
-                            .padding(.horizontal, 14)
-                            .padding(.vertical, 6)
-                            .background(
-                                Capsule().fill(selected ? GuidePalette.accent : Color.white.opacity(0.06))
-                            )
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityAddTraits(selected ? [.isSelected] : [])
-                }
-            }
-        }
-    }
-
-    private var listHeader: some View {
-        HStack {
-            Text(vm.selectedCategory == .all ? "ALL CHANNELS" : vm.selectedCategory.title.uppercased())
-                .font(.system(size: 11, weight: .bold))
-                .tracking(1.4)
-                .foregroundStyle(GuidePalette.faint)
-            Spacer()
-            Text("On Now")
-                .font(.system(size: 11, weight: .semibold))
-                .foregroundStyle(GuidePalette.accent)
-        }
-        .padding(.bottom, -4)
-    }
-
-    private var channelScroll: some View {
         let channels = vm.filteredChannels
-        return Group {
-            if channels.isEmpty {
-                Text(emptyListMessage)
-                    .font(.footnote)
-                    .foregroundStyle(GuidePalette.secondary)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.top, 8)
-                Spacer(minLength: 0)
-            } else {
-                ScrollView {
-                    LazyVStack(spacing: 0) {
-                        ForEach(channels) { channel in
+        if channels.isEmpty {
+            Text("No channels match \"\(vm.searchText)\".")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+        } else {
+            ScrollView {
+                LazyVStack(spacing: 6) {
+                    ForEach(channels) { channel in
+                        Button {
+                            vm.selectedChannelID = channel.id
+                        } label: {
                             channelRow(channel)
                         }
-                    }
-                }
-                .scrollIndicators(.hidden)
-            }
-        }
-    }
-
-    private var emptyListMessage: String {
-        if !vm.searchText.isEmpty {
-            "No channels match \"\(vm.searchText)\"."
-        } else {
-            "Nothing in \(vm.selectedCategory.title) right now."
-        }
-    }
-
-    // MARK: - Featured card
-
-    @ViewBuilder
-    private func featuredCard(_ channel: EPGChannel) -> some View {
-        let tint = GuidePalette.tint(for: vm.tvChannelNumber(for: channel.id))
-        let programme = vm.nowPlaying(for: channel.id, at: now)
-
-        Button {
-            vm.selectedChannelID = channel.id
-        } label: {
-            ZStack(alignment: .bottomLeading) {
-                // Badges
-                VStack {
-                    HStack(alignment: .top) {
-                        liveBadge
-                        Spacer()
-                        Text("CH \(vm.tvChannelNumber(for: channel.id).map(String.init) ?? "–") · \(channel.primaryName)")
-                            .font(.system(size: 11, weight: .semibold))
-                            .foregroundStyle(.white.opacity(0.85))
-                            .lineLimit(1)
-                    }
-                    Spacer()
-                }
-
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(programme?.title ?? channel.primaryName)
-                        .font(.system(size: 18, weight: .bold))
-                        .foregroundStyle(.white)
-                        .lineLimit(1)
-                        .shadow(color: .black.opacity(0.4), radius: 2, y: 1)
-                    if let programme {
-                        Text(timeRange(programme) + endsInSuffix(programme))
-                            .font(.system(size: 12))
-                            .foregroundStyle(.white.opacity(0.85))
-                            .lineLimit(1)
+                        .buttonStyle(.plain)
+                        .contextMenu {
+                            if let number = vm.tvChannelNumber(for: channel.id) {
+                                Button(
+                                    "Tune to channel \(number)",
+                                    systemImage: "tv.badge.wifi"
+                                ) {
+                                    Task {
+                                        if let commands = vm.tuneCommands(for: channel.id) {
+                                            await onDispatchMacro(commands)
+                                        }
+                                        vm.pinnedChannelID = channel.id
+                                    }
+                                }
+                            }
+                            Button(
+                                vm.isPinned(channel.id)
+                                    ? "Unpin from remote"
+                                    : "Pin as TV's current channel",
+                                systemImage: vm.isPinned(channel.id) ? "pin.slash" : "pin"
+                            ) {
+                                vm.togglePin(channel.id)
+                            }
+                        }
+                        .accessibilityElement(children: .combine)
+                        .accessibilityLabel(accessibilityLabel(for: channel))
                     }
                 }
             }
-            .padding(16)
-            .frame(height: 120)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(
-                LinearGradient(
-                    stops: [
-                        .init(color: tint.opacity(0.8), location: 0),
-                        .init(color: GuidePalette.cardFade, location: 0.75),
-                        .init(color: GuidePalette.cardFade, location: 1),
-                    ],
-                    startPoint: .topLeading, endPoint: .bottomTrailing
-                )
-            )
-            .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-            .shadow(color: tint.opacity(0.25), radius: 10, y: 4)
+            .scrollIndicators(.hidden)
         }
-        .buttonStyle(.plain)
-        .contextMenu { rowMenu(for: channel) }
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel("Live now on \(channel.primaryName): \(programme?.title ?? "unknown programme")")
     }
-
-    private var liveBadge: some View {
-        HStack(spacing: 6) {
-            Circle()
-                .fill(GuidePalette.liveDot)
-                .frame(width: 6, height: 6)
-                .shadow(color: GuidePalette.liveDot, radius: 3)
-            Text("LIVE NOW")
-                .font(.system(size: 10, weight: .bold))
-                .tracking(0.8)
-                .foregroundStyle(.white)
-        }
-        .padding(.horizontal, 9)
-        .padding(.vertical, 4)
-        .background(Capsule().fill(.black.opacity(0.3)))
-    }
-
-    // MARK: - Channel row
 
     @ViewBuilder
     private func channelRow(_ channel: EPGChannel) -> some View {
-        Button {
-            vm.selectedChannelID = channel.id
-        } label: {
-            HStack(alignment: .center, spacing: 12) {
-                channelBadge(channel)
-                programInfo(channel)
-            }
-            .padding(.vertical, 12)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .contentShape(Rectangle())
-            .overlay(alignment: .bottom) {
-                Rectangle().fill(.white.opacity(0.05)).frame(height: 1)
-            }
-        }
-        .buttonStyle(.plain)
-        .contextMenu { rowMenu(for: channel) }
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel(accessibilityLabel(for: channel))
-    }
-
-    private func channelBadge(_ channel: EPGChannel) -> some View {
-        let tint = GuidePalette.tint(for: vm.tvChannelNumber(for: channel.id))
+        let now = vm.nowPlaying(for: channel.id)
         let pinned = vm.isPinned(channel.id)
-        return VStack(spacing: 3) {
-            ZStack(alignment: .topTrailing) {
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .fill(
-                        LinearGradient(
-                            colors: [tint, tint.opacity(0.6)],
-                            startPoint: .topLeading, endPoint: .bottomTrailing
-                        )
+        let number = vm.tvChannelNumber(for: channel.id)
+        HStack(alignment: .top, spacing: 6) {
+            if let number {
+                Text("\(number)")
+                    .font(.caption2.monospacedDigit().bold())
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(
+                        RoundedRectangle(cornerRadius: 4, style: .continuous)
+                            .fill(Color.accentColor.opacity(0.35))
                     )
-                    .frame(width: 44, height: 44)
-                    .overlay {
-                        Text(vm.tvChannelNumber(for: channel.id).map(String.init) ?? "–")
-                            .font(.system(size: 16, weight: .heavy).monospacedDigit())
-                            .foregroundStyle(.white)
-                    }
-                    .shadow(color: tint.opacity(0.25), radius: 8, y: 3)
-
-                if pinned {
-                    Image(systemName: "pin.fill")
-                        .font(.system(size: 9))
-                        .foregroundStyle(.white)
-                        .padding(3)
-                        .background(Circle().fill(.black.opacity(0.45)))
-                        .offset(x: 5, y: -5)
-                }
+                    .accessibilityLabel("Channel \(number)")
             }
-            Text(channel.primaryName)
-                .font(.system(size: 8.5, weight: .semibold))
-                .foregroundStyle(GuidePalette.tertiary)
-                .multilineTextAlignment(.center)
-                .lineLimit(2)
-                .frame(width: 52)
-        }
-        .frame(width: 52)
-    }
 
-    @ViewBuilder
-    private func programInfo(_ channel: EPGChannel) -> some View {
-        let programme = vm.nowPlaying(for: channel.id, at: now)
-        VStack(alignment: .leading, spacing: 3) {
-            if let programme {
-                HStack(spacing: 7) {
-                    categoryTag(for: programme)
-                    Text(timeRange(programme))
-                        .font(.system(size: 11).monospacedDigit())
-                        .foregroundStyle(GuidePalette.tertiary)
-                }
-                Text(programme.title)
-                    .font(.system(size: 14.5, weight: .semibold))
-                    .foregroundStyle(GuidePalette.primaryText)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(channel.primaryName)
+                    .font(.subheadline.bold())
+                    .foregroundStyle(.white)
                     .lineLimit(1)
+                if let now {
+                    Text(now.title)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                } else {
+                    Text("No data for now")
+                        .font(.caption)
+                        .foregroundStyle(.tertiary)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
 
-                ProgressTrack(fraction: vm.progress(of: programme, at: now))
-                    .padding(.top, 4)
-
-                nextLine(for: channel)
-            } else {
-                Text("No guide data right now")
-                    .font(.system(size: 13))
-                    .foregroundStyle(GuidePalette.tertiary)
-                    .padding(.vertical, 6)
+            if pinned {
+                Image(systemName: "pin.fill")
+                    .font(.caption2)
+                    .foregroundStyle(.yellow)
+                    .accessibilityLabel("Pinned to remote")
             }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 8)
+        .background(
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .fill(pinned ? Color.yellow.opacity(0.10) : Color.white.opacity(0.05))
+        )
     }
 
-    @ViewBuilder
-    private func nextLine(for channel: EPGChannel) -> some View {
-        if let next = vm.nextProgramme(for: channel.id, after: now) {
-            (
-                Text(next.start, format: .dateTime.hour().minute())
-                    .foregroundColor(GuidePalette.nextTime).bold()
-                + Text("  Next: \(next.title)")
-                    .foregroundColor(GuidePalette.faint)
-            )
-            .font(.system(size: 11))
-            .lineLimit(1)
-            .padding(.top, 2)
-        }
-    }
-
-    private func categoryTag(for programme: EPGProgramme) -> some View {
-        let raw = programme.categories.first ?? "Now"
-        let isLive = raw.folding(options: [.diacriticInsensitive, .caseInsensitive], locale: .current)
-            .contains("live")
-        return Text(raw.uppercased())
-            .font(.system(size: 9, weight: .bold))
-            .tracking(0.5)
-            .foregroundStyle(isLive ? GuidePalette.liveText : GuidePalette.secondary)
-            .padding(.horizontal, 6)
-            .padding(.vertical, 2)
-            .background(
-                RoundedRectangle(cornerRadius: 5, style: .continuous)
-                    .fill(isLive ? GuidePalette.liveTagBg : Color.white.opacity(0.06))
-            )
-            .lineLimit(1)
-    }
-
-    // MARK: - Row context menu (shared by rows + featured)
-
-    @ViewBuilder
-    private func rowMenu(for channel: EPGChannel) -> some View {
-        if let number = vm.tvChannelNumber(for: channel.id) {
-            Button("Tune to channel \(number)", systemImage: "tv.badge.wifi") {
-                tune(channel)
-            }
-        }
-        Button(
-            vm.isPinned(channel.id) ? "Unpin from remote" : "Pin as TV's current channel",
-            systemImage: vm.isPinned(channel.id) ? "pin.slash" : "pin"
-        ) {
-            vm.togglePin(channel.id)
-        }
-    }
-
-    private func tune(_ channel: EPGChannel) {
-        Task {
-            if let commands = vm.tuneCommands(for: channel.id) {
-                await onDispatchMacro(commands)
-            }
-            vm.pinnedChannelID = channel.id
+    private func accessibilityLabel(for channel: EPGChannel) -> String {
+        if let now = vm.nowPlaying(for: channel.id) {
+            "\(channel.primaryName), now playing \(now.title)"
+        } else {
+            "\(channel.primaryName), no current programme"
         }
     }
 
@@ -437,164 +232,63 @@ struct RemoteSidePanelEPG: View {
 
     @ViewBuilder
     private var scheduleDetail: some View {
-        if let channel = vm.selectedChannel {
-            VStack(alignment: .leading, spacing: 12) {
-                detailHeader(channel)
+        Text(Date.now, format: .dateTime.weekday(.wide).day().month())
+            .font(.caption)
+            .foregroundStyle(.secondary)
 
-                Text(now, format: .dateTime.weekday(.wide).day().month())
-                    .font(.system(size: 12))
-                    .foregroundStyle(GuidePalette.tertiary)
-
-                let programmes = vm.programmesForSelected
-                if programmes.isEmpty {
-                    Text("No programmes in the feed for today.")
-                        .font(.footnote)
-                        .foregroundStyle(GuidePalette.secondary)
-                    Spacer(minLength: 0)
-                } else {
-                    ScrollView {
-                        LazyVStack(spacing: 6) {
-                            ForEach(programmes) { programmeRow($0) }
-                        }
+        let programmes = vm.programmesForSelected
+        if programmes.isEmpty {
+            Text("No programmes in the feed for today.")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+        } else {
+            ScrollView {
+                LazyVStack(spacing: 4) {
+                    ForEach(programmes) { programme in
+                        programmeRow(programme)
                     }
-                    .scrollIndicators(.hidden)
                 }
             }
-            .padding(.horizontal, 20)
-            .padding(.top, 8)
+            .scrollIndicators(.hidden)
         }
     }
 
-    private func detailHeader(_ channel: EPGChannel) -> some View {
-        let tint = GuidePalette.tint(for: vm.tvChannelNumber(for: channel.id))
-        return HStack(spacing: 12) {
-            Button {
-                vm.selectedChannelID = nil
-            } label: {
-                Image(systemName: "chevron.left")
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundStyle(.white)
-                    .frame(width: 36, height: 36)
-                    .background(Circle().fill(.white.opacity(0.06)))
-            }
-            .accessibilityLabel("Back to channel list")
-
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .fill(LinearGradient(colors: [tint, tint.opacity(0.6)],
-                                     startPoint: .topLeading, endPoint: .bottomTrailing))
-                .frame(width: 38, height: 38)
-                .overlay {
-                    Text(vm.tvChannelNumber(for: channel.id).map(String.init) ?? "–")
-                        .font(.system(size: 14, weight: .heavy).monospacedDigit())
-                        .foregroundStyle(.white)
-                }
-
-            Text(channel.primaryName)
-                .font(.system(size: 18, weight: .bold))
-                .foregroundStyle(.white)
-                .lineLimit(1)
-
-            Spacer(minLength: 4)
-
-            if let number = vm.tvChannelNumber(for: channel.id) {
-                Button {
-                    tune(channel)
-                } label: {
-                    Label("Tune", systemImage: "tv.badge.wifi")
-                        .font(.system(size: 13, weight: .bold))
-                        .foregroundStyle(GuidePalette.chipSelectedText)
-                        .padding(.horizontal, 12)
-                        .frame(height: 36)
-                        .background(Capsule().fill(GuidePalette.accent))
-                }
-                .accessibilityLabel("Tune the TV to channel \(number), \(channel.primaryName)")
-            }
-
-            Button {
-                vm.togglePin(channel.id)
-            } label: {
-                Image(systemName: vm.isPinned(channel.id) ? "pin.fill" : "pin")
-                    .font(.system(size: 15))
-                    .foregroundStyle(vm.isPinned(channel.id) ? GuidePalette.accent : GuidePalette.secondary)
-                    .frame(width: 36, height: 36)
-                    .background(Circle().fill(.white.opacity(0.06)))
-            }
-            .accessibilityLabel(vm.isPinned(channel.id) ? "Unpin from remote" : "Pin as TV's current channel")
-        }
-    }
-
+    @ViewBuilder
     private func programmeRow(_ programme: EPGProgramme) -> some View {
-        let isLive = programme.isLive(at: now)
-        return HStack(alignment: .top, spacing: 12) {
+        let isLive = programme.isLive()
+        HStack(alignment: .top, spacing: 10) {
             VStack(alignment: .leading, spacing: 0) {
                 Text(programme.start, format: .dateTime.hour().minute())
-                    .font(.system(size: 13).monospacedDigit())
-                    .foregroundStyle(isLive ? .white : GuidePalette.secondary)
+                    .font(.caption.monospacedDigit())
+                    .foregroundStyle(isLive ? .white : .secondary)
                 Text(programme.stop, format: .dateTime.hour().minute())
-                    .font(.system(size: 11).monospacedDigit())
-                    .foregroundStyle(GuidePalette.tertiary)
+                    .font(.caption2.monospacedDigit())
+                    .foregroundStyle(.tertiary)
             }
-            .frame(width: 48, alignment: .leading)
+            .frame(width: 44, alignment: .leading)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(programme.title)
-                    .font(.system(size: 14, weight: isLive ? .bold : .regular))
-                    .foregroundStyle(GuidePalette.primaryText)
+                    .font(.caption.weight(isLive ? .bold : .regular))
+                    .foregroundStyle(.white)
                     .lineLimit(2)
                 if let subtitle = programme.subtitle, !subtitle.isEmpty {
                     Text(subtitle)
-                        .font(.system(size: 12))
-                        .foregroundStyle(GuidePalette.secondary)
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
                         .lineLimit(1)
-                }
-                if isLive {
-                    ProgressTrack(fraction: vm.progress(of: programme, at: now))
-                        .padding(.top, 4)
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 10)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
         .background(
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .fill(isLive ? GuidePalette.accent.opacity(0.12) : Color.white.opacity(0.04))
+            RoundedRectangle(cornerRadius: 6, style: .continuous)
+                .fill(isLive ? Color.white.opacity(0.10) : Color.white.opacity(0.04))
         )
-        .overlay(alignment: .leading) {
-            if isLive {
-                RoundedRectangle(cornerRadius: 2)
-                    .fill(GuidePalette.accent)
-                    .frame(width: 3)
-                    .padding(.vertical, 8)
-            }
-        }
         .accessibilityElement(children: .combine)
         .accessibilityLabel(accessibilityLabel(for: programme, isLive: isLive))
-    }
-
-    // MARK: - Formatting helpers
-
-    private func timeRange(_ programme: EPGProgramme) -> String {
-        let start = programme.start.formatted(.dateTime.hour().minute())
-        let stop = programme.stop.formatted(.dateTime.hour().minute())
-        return "\(start) – \(stop)"
-    }
-
-    private func endsInSuffix(_ programme: EPGProgramme) -> String {
-        let remaining = programme.stop.timeIntervalSince(now)
-        guard remaining > 0 else { return "" }
-        let minutes = Int((remaining / 60).rounded())
-        return minutes > 0 ? " · Ends in \(minutes) min" : ""
-    }
-
-    // MARK: - Accessibility
-
-    private func accessibilityLabel(for channel: EPGChannel) -> String {
-        if let now = vm.nowPlaying(for: channel.id, at: now) {
-            "\(channel.primaryName), now playing \(now.title)"
-        } else {
-            "\(channel.primaryName), no current programme"
-        }
     }
 
     private func accessibilityLabel(for programme: EPGProgramme, isLive: Bool) -> String {
@@ -607,89 +301,18 @@ struct RemoteSidePanelEPG: View {
 
     @ViewBuilder
     private func errorView(_ error: String) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 6) {
             Label("Couldn't load TV guide", systemImage: "exclamationmark.triangle")
                 .font(.footnote.bold())
                 .foregroundStyle(.orange)
             Text(error)
                 .font(.caption2)
-                .foregroundStyle(GuidePalette.secondary)
+                .foregroundStyle(.secondary)
                 .lineLimit(3)
             Button("Retry") {
                 Task { await vm.reload() }
             }
-            .buttonStyle(.borderedProminent)
-            .tint(GuidePalette.accent)
+            .buttonStyle(.bordered)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-    }
-}
-
-// MARK: - Progress track
-
-/// 3 pt accent-filled progress bar over a faint white track. Used by both the channel
-/// rows and the featured card.
-private struct ProgressTrack: View {
-    let fraction: Double
-
-    var body: some View {
-        GeometryReader { geo in
-            ZStack(alignment: .leading) {
-                Capsule().fill(.white.opacity(0.08))
-                Capsule()
-                    .fill(GuidePalette.accent)
-                    .frame(width: max(0, geo.size.width * min(max(fraction, 0), 1)))
-            }
-        }
-        .frame(height: 3)
-    }
-}
-
-// MARK: - Palette
-
-/// Design tokens for the redesigned TV Guide, lifted from
-/// `design_handoff_another_remote/README.md` (dark-mode only).
-private enum GuidePalette {
-    static let screenBackground = LinearGradient(
-        colors: [Color(hex: 0x121214), Color(hex: 0x08080A)],
-        startPoint: .top, endPoint: .bottom
-    )
-    static let cardFade = Color(hex: 0x1A1A1D)
-
-    static let accent = Color(hex: 0xFF6B5A)            // Ember (default)
-    static let primaryText = Color(hex: 0xE8E8EA)
-    static let secondary = Color(hex: 0x9A9A9E)
-    static let tertiary = Color(hex: 0x6A6A6E)
-    static let faint = Color(hex: 0x5A5A5E)
-    static let nextTime = Color(hex: 0x7A7A7E)
-
-    static let chipText = Color(hex: 0xB0B0B4)
-    static let chipSelectedText = Color(hex: 0x1A1A1D)
-
-    static let liveDot = Color(hex: 0xFF4444)
-    static let liveText = Color(hex: 0xFF6B6B)
-    static let liveTagBg = Color(red: 230.0 / 255, green: 57.0 / 255, blue: 70.0 / 255).opacity(0.18)
-
-    /// Channel-badge tints (guide). Assigned deterministically by TV channel number so a
-    /// channel keeps the same colour across launches; falls back to grey when unknown.
-    private static let tints: [Color] = [
-        0xE63946, 0x2A9D8F, 0xE9C46A, 0x457B9D,
-        0xF4A261, 0x8367C7, 0xEF476F, 0x06A77D,
-    ].map { Color(hex: $0) }
-
-    static func tint(for channelNumber: Int?) -> Color {
-        guard let n = channelNumber else { return Color(hex: 0x4A4A4E) }
-        return tints[abs(n) % tints.count]
-    }
-}
-
-private extension Color {
-    /// `0xRRGGBB` literal → `Color`.
-    init(hex: UInt32) {
-        self.init(
-            red: Double((hex >> 16) & 0xFF) / 255,
-            green: Double((hex >> 8) & 0xFF) / 255,
-            blue: Double(hex & 0xFF) / 255
-        )
     }
 }
