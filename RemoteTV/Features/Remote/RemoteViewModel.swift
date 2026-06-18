@@ -23,11 +23,17 @@ final class RemoteViewModel {
     let device: TVDevice
     let service: any TVService
     private(set) var lastError: String?
-    /// Non-nil while a mute timer is running. Drives the toolbar countdown + the
-    /// in-remote mute-timer dial.
+    /// The app's tracked mute state — `true` once we've muted the TV, `false` once unmuted.
+    /// Tizen never reports mute over the socket, so this reflects our own intent; the
+    /// deterministic volume-nudge mute/unmute keeps it honest even if someone uses the
+    /// physical remote. Drives the Mute button's filled state and whether the central area
+    /// shows the auto-unmute scheduler.
+    private(set) var isMuted: Bool = false
+    /// Non-nil while an auto-unmute countdown is running. Drives the toolbar countdown + the
+    /// in-remote scheduler dial.
     private(set) var commercialMuteRemaining: Duration?
-    /// Total seconds of the running mute timer — lets the mute-timer dial draw an
-    /// accurate countdown ring. Nil when no timer is running.
+    /// Total seconds of the running countdown — lets the scheduler dial draw an accurate
+    /// ring. Nil when no countdown is running.
     private(set) var commercialMuteTotalSeconds: Int?
     /// Nil until the user has asked the TV for its app list at least once.
     private(set) var installedApps: [InstalledApp]?
@@ -35,6 +41,9 @@ final class RemoteViewModel {
 
     private var commercialMuteTask: Task<Void, Never>?
     private let commercialMuteDurationSeconds: Int = 120
+    /// Gap between the two volume keys of the deterministic mute/unmute nudge, so the TV
+    /// registers them as distinct presses (same pacing rationale as the tune macro).
+    private let muteNudgeDelayMs = 120
     /// Optional — when injected, the power button switches to "wake mode" while the
     /// WebSocket isn't reachable, and a tap fires a Wake-on-LAN magic packet instead
     /// of `KEY_POWER`. Nil in tests or in any host that doesn't ship a wake service.
@@ -283,6 +292,7 @@ final class RemoteViewModel {
 
     func disconnect() async {
         cancelCommercialMute()
+        isMuted = false
         await service.disconnect()
     }
 
@@ -366,29 +376,49 @@ final class RemoteViewModel {
         }
     }
 
-    /// Toggles the default 2-minute "commercial break" mute (the toolbar control). Starts a
-    /// fresh timer when idle, otherwise stops and unmutes now.
-    func toggleCommercialMute() async {
-        if commercialMuteRemaining != nil {
-            await stopMuteTimer()
+    /// Mute button on the remote — instantly mutes or unmutes the TV (deterministically, so a
+    /// physical-remote press can't desync it). Muting reveals the auto-unmute scheduler in the
+    /// central area; unmuting also cancels any pending auto-unmute.
+    func toggleMute() async {
+        if isMuted {
+            await unmuteNow()
         } else {
-            await startMuteTimer(seconds: commercialMuteDurationSeconds)
+            await forceMute()
+            isMuted = true
         }
     }
 
-    /// Mutes the TV and auto-unmutes after `seconds`. Samsung's mute key is a toggle, so we
-    /// send `KEY_MUTE` once now (only if not already muted by a running timer) and once more
-    /// when the countdown elapses. Calling this while a timer is already running just
-    /// re-schedules the existing mute to the new duration — it doesn't double-toggle.
-    func startMuteTimer(seconds: Int) async {
-        let alreadyMuted = commercialMuteRemaining != nil
-        commercialMuteTask?.cancel()
-        commercialMuteTask = nil
+    /// Unmutes the TV now and cancels any pending auto-unmute. No-op when already unmuted.
+    func unmuteNow() async {
+        cancelCommercialMute()
+        guard isMuted else { return }
+        await forceUnmute()
+        isMuted = false
+    }
 
-        if !alreadyMuted {
-            await send(.mute)
+    /// Schedules the TV to auto-unmute after `seconds` — the scheduler dial's "Auto-unmute
+    /// in …" action. Mutes first if it isn't already, then starts/replaces the countdown.
+    func scheduleUnmute(after seconds: Int) async {
+        if !isMuted {
+            await forceMute()
+            isMuted = true
         }
+        startUnmuteCountdown(seconds)
+    }
 
+    /// Toolbar "commercial break" control: tap to mute + auto-unmute after the default 2
+    /// minutes; tap again to unmute now.
+    func toggleCommercialMute() async {
+        if isMuted {
+            await unmuteNow()
+        } else {
+            await scheduleUnmute(after: commercialMuteDurationSeconds)
+        }
+    }
+
+    /// Starts (or replaces) the auto-unmute countdown. Assumes the TV is already muted.
+    private func startUnmuteCountdown(_ seconds: Int) {
+        commercialMuteTask?.cancel()
         let total = max(1, seconds)
         commercialMuteTotalSeconds = total
         commercialMuteRemaining = .seconds(total)
@@ -406,14 +436,26 @@ final class RemoteViewModel {
             self.commercialMuteRemaining = nil
             self.commercialMuteTotalSeconds = nil
             self.commercialMuteTask = nil
-            await self.send(.mute)
+            await self.forceUnmute()
+            self.isMuted = false
         }
     }
 
-    /// Stops a running mute timer and unmutes the TV immediately. No-op when idle.
-    func stopMuteTimer() async {
-        guard commercialMuteRemaining != nil else { return }
-        cancelCommercialMute()
+    /// Deterministically unmutes the TV. On Samsung, volume keys *always* cancel mute (they
+    /// never toggle it), so a net-zero up→down nudge guarantees the TV ends unmuted no matter
+    /// what state it was in — including after a physical-remote mute press. Side effects: a
+    /// brief volume OSD, and ±1 step only at the volume extremes.
+    private func forceUnmute() async {
+        await send(.volumeUp)
+        try? await Task.sleep(for: .milliseconds(muteNudgeDelayMs))
+        await send(.volumeDown)
+    }
+
+    /// Deterministically mutes the TV: normalise to a known *unmuted* state via the volume
+    /// nudge, then a single `KEY_MUTE` lands on muted.
+    private func forceMute() async {
+        await forceUnmute()
+        try? await Task.sleep(for: .milliseconds(muteNudgeDelayMs))
         await send(.mute)
     }
 

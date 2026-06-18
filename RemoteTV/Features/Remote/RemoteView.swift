@@ -151,12 +151,13 @@ struct RemoteView: View {
                                     Task { await viewModel.send(.sleepTimer) }
                                 }
                             },
+                            isMuted: viewModel.isMuted,
                             muteRemaining: viewModel.commercialMuteRemaining,
                             muteTotalSeconds: viewModel.commercialMuteTotalSeconds,
-                            onStartMuteTimer: { seconds in
-                                Task { await viewModel.startMuteTimer(seconds: seconds) }
-                            },
-                            onStopMuteTimer: { Task { await viewModel.stopMuteTimer() } }
+                            onToggleMute: { Task { await viewModel.toggleMute() } },
+                            onScheduleUnmute: { seconds in
+                                Task { await viewModel.scheduleUnmute(after: seconds) }
+                            }
                         )
                         .frame(width: bodyWidth, height: bodyHeight)
                         .offset(x: bodyLeading, y: bodyTop)
@@ -227,14 +228,14 @@ struct RemoteView: View {
                     onToggle: viewModel.toggleCommercialMute
                 )
             }
-            ToolbarItem(placement: .topBarTrailing) {
-                Button {
-                    showTVGuide = true
-                } label: {
-                    Label("TV Guide", systemImage: "tv")
-                }
-                .accessibilityLabel("Open TV Guide")
-            }
+//            ToolbarItem(placement: .topBarTrailing) {
+//                Button {
+//                    showTVGuide = true
+//                } label: {
+//                    Label("TV Guide", systemImage: "tv")
+//                }
+//                .accessibilityLabel("Open TV Guide")
+//            }
             ToolbarItem(placement: .topBarTrailing) {
                 Menu {
                     Picker("Input mode", selection: $inputMode) {

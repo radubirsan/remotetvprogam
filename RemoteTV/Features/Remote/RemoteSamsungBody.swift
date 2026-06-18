@@ -39,20 +39,22 @@ struct RemoteSamsungBody: View {
     /// magic packet might not be arriving.
     let onPowerLongPress: () -> Void
 
-    /// Mute-timer state + actions, surfaced in the central control when the user taps Mute.
-    /// `muteRemaining` is non-nil while a timer counts down; `muteTotalSeconds` lets the dial
-    /// draw the countdown ring.
+    /// Mute state + actions. The Mute button toggles `isMuted` (instant mute/unmute) and
+    /// reveals the auto-unmute scheduler in the central control. `muteRemaining` is non-nil
+    /// while a scheduled auto-unmute counts down; `muteTotalSeconds` draws the ring.
+    let isMuted: Bool
     let muteRemaining: Duration?
     let muteTotalSeconds: Int?
-    let onStartMuteTimer: (Int) -> Void
-    let onStopMuteTimer: () -> Void
+    let onToggleMute: () -> Void
+    let onScheduleUnmute: (Int) -> Void
 
     /// Drives the modal number-pad sheet that the 123 button summons. Local to the
     /// body since no other surface needs to read it.
     @State private var showNumberPad: Bool = false
 
-    /// When true the central area shows the ``MuteTimerControl`` dial instead of the
-    /// D-pad / trackpad. Toggled by the Mute button.
+    /// Whether the auto-unmute scheduler is showing in the central area. Set when the Mute
+    /// button mutes; the scheduler's close button clears it (back to the D-pad) without
+    /// unmuting. Gated by `isMuted` so it hides automatically on unmute / countdown end.
     @State private var showMuteTimer: Bool = false
 
     var body: some View {
@@ -109,9 +111,11 @@ struct RemoteSamsungBody: View {
             }
             .position(x: 75, y: 159)
 
-            // CENTRAL CONTROL — D-Pad wheel or virtual trackpad, swappable from the gear menu.
+            // CENTRAL CONTROL — D-Pad wheel / virtual trackpad, or the auto-unmute
+            // scheduler while the TV is muted.
             centralControl
                 .position(x: Self.width / 2, y: 365)
+                .animation(.snappy, value: isMuted)
 
             // ROW 4: Back / Home / Play-Pause.
             CircleButton(size: 70, accessibilityLabel: "Back") {
@@ -178,16 +182,18 @@ struct RemoteSamsungBody: View {
                 .accessibilityLabel("Closed captions")
 
                 Button {
-                    withAnimation(.snappy) { showMuteTimer.toggle() }
+                    let willMute = !isMuted
+                    onToggleMute()
+                    withAnimation(.snappy) { showMuteTimer = willMute }
                 } label: {
-                    Image(systemName: muteRemaining != nil ? "speaker.slash.fill" : "speaker.slash")
+                    Image(systemName: isMuted ? "speaker.slash.fill" : "speaker.slash")
                         .font(.system(size: 14, weight: .regular))
-                        .foregroundStyle(muteRemaining != nil ? RemoteTheme.accent : Color(white: 0.48))
+                        .foregroundStyle(isMuted ? RemoteTheme.accent : Color(white: 0.48))
                         .frame(minWidth: 44, minHeight: 36)
                         .contentShape(.rect)
                 }
                 .buttonStyle(.hapticPress)
-                .accessibilityLabel(showMuteTimer ? "Hide mute timer" : "Mute timer")
+                .accessibilityLabel(isMuted ? "Unmute" : "Mute")
             }
             .font(.system(size: 11, weight: .bold))
             .tracking(0.6)
@@ -228,12 +234,11 @@ struct RemoteSamsungBody: View {
 
     @ViewBuilder
     private var centralControl: some View {
-        if showMuteTimer {
+        if isMuted && showMuteTimer {
             MuteTimerControl(
                 remaining: muteRemaining,
                 totalSeconds: muteTotalSeconds,
-                onStart: onStartMuteTimer,
-                onStop: onStopMuteTimer,
+                onSchedule: onScheduleUnmute,
                 onClose: { withAnimation(.snappy) { showMuteTimer = false } }
             )
             .transition(.scale(scale: 0.9).combined(with: .opacity))
