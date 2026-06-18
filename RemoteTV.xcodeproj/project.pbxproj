@@ -20,6 +20,7 @@
 		B2000000000000000000F012 /* RemoteButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F012 /* RemoteButton.swift */; };
 		B2000000000000000000F013 /* DPadSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F013 /* DPadSection.swift */; };
 		B2000000000000000000F07C /* MuteTimerControl.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F07C /* MuteTimerControl.swift */; };
+		B2000000000000000000F07D /* AppSlotConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F07D /* AppSlotConfig.swift */; };
 		B2000000000000000000F014 /* VolumeSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F014 /* VolumeSection.swift */; };
 		B2000000000000000000F015 /* BottomActionsSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F015 /* BottomActionsSection.swift */; };
 		B2000000000000000000F016 /* StatusPill.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F016 /* StatusPill.swift */; };
@@ -140,6 +141,7 @@
 		A2000000000000000000F012 /* RemoteButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteButton.swift; sourceTree = "<group>"; };
 		A2000000000000000000F013 /* DPadSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DPadSection.swift; sourceTree = "<group>"; };
 		A2000000000000000000F07C /* MuteTimerControl.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MuteTimerControl.swift; sourceTree = "<group>"; };
+		A2000000000000000000F07D /* AppSlotConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSlotConfig.swift; sourceTree = "<group>"; };
 		A2000000000000000000F014 /* VolumeSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VolumeSection.swift; sourceTree = "<group>"; };
 		A2000000000000000000F015 /* BottomActionsSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BottomActionsSection.swift; sourceTree = "<group>"; };
 		A2000000000000000000F016 /* StatusPill.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusPill.swift; sourceTree = "<group>"; };
@@ -380,6 +382,7 @@
 				A2000000000000000000F012 /* RemoteButton.swift */,
 				A2000000000000000000F013 /* DPadSection.swift */,
 				A2000000000000000000F07C /* MuteTimerControl.swift */,
+				A2000000000000000000F07D /* AppSlotConfig.swift */,
 				A2000000000000000000F014 /* VolumeSection.swift */,
 				A2000000000000000000F015 /* BottomActionsSection.swift */,
 				A2000000000000000000F016 /* StatusPill.swift */,
@@ -623,6 +626,7 @@
 				B2000000000000000000F012 /* RemoteButton.swift in Sources */,
 				B2000000000000000000F013 /* DPadSection.swift in Sources */,
 				B2000000000000000000F07C /* MuteTimerControl.swift in Sources */,
+				B2000000000000000000F07D /* AppSlotConfig.swift in Sources */,
 				B2000000000000000000F014 /* VolumeSection.swift in Sources */,
 				B2000000000000000000F015 /* BottomActionsSection.swift in Sources */,
 				B2000000000000000000F016 /* StatusPill.swift in Sources */,

@@ -139,7 +139,6 @@ struct RemoteView: View {
                             powerState: viewModel.tvPowerState,
                             hasError: viewModel.lastError != nil,
                             inputMode: inputMode,
-                            installedApps: viewModel.installedApps,
                             onCommand: viewModel.send,
                             onLiveTV: viewModel.goLive,
                             onLaunchApp: viewModel.launchApp,

@@ -28,7 +28,6 @@ struct RemoteSamsungBody: View {
     let powerState: TVPowerState
     let hasError: Bool
     let inputMode: RemoteInputMode
-    let installedApps: [InstalledApp]?
     let onCommand: (TVCommand) async -> Void
     let onLiveTV: () async -> Void
     let onLaunchApp: (String) async -> Void
@@ -90,6 +89,14 @@ struct RemoteSamsungBody: View {
     /// Live channel scroll-picker selection (nil = the "Scroll to pick" placeholder row, so
     /// opening the picker doesn't tune). Each non-nil change live-tunes the TV.
     @State private var pickerChannelNumber: Int?
+
+    /// Persisted launch targets for the three bottom app-slots (empty = unconfigured). The
+    /// centre defaults to Live TV; tap launches, long-press opens ``AppSlotConfigSheet``.
+    @AppStorage("remoteAppSlotLeft") private var slotLeftID = ""
+    @AppStorage("remoteAppSlotCenter") private var slotCenterID = RemoteAppShortcut.liveTVID
+    @AppStorage("remoteAppSlotRight") private var slotRightID = ""
+    /// The slot whose app-picker sheet is currently presented, if any.
+    @State private var configuringSlot: SlotPosition?
 
     /// The tunable lineup for the wake + channel pickers, from `KnownChannelNumbers`
     /// (number + name), ordered by channel number and de-duplicated.
@@ -290,19 +297,34 @@ struct RemoteSamsungBody: View {
             .accessibilityLabel("Channel picker")
             .position(x: 255, y: 724)
 
-            // ROW 6: App slots — three slots (APP 1, LIVE, APP 2). APP 1 / APP 2 bind
-            // dynamically to the first two installed apps the TV surfaces (placeholders
-            // until the user opens the Installed Apps panel and taps "Load Apps").
-            appSlot(at: 0, size: 70)
-                .position(x: 75, y: 787)
+            // ROW 6: App slots — three user-configurable launch buttons. Tap launches the
+            // mapped app (or opens the picker when unset); long-press re-maps. Mappings
+            // persist via `@AppStorage`. Centre defaults to Live TV.
+            ConfigurableAppSlot(
+                size: 70,
+                shortcut: RemoteAppShortcut.named(slotLeftID),
+                placeholderNumber: 1,
+                onTap: { tapSlot(.left) },
+                onLongPress: { configuringSlot = .left }
+            )
+            .position(x: 75, y: 787)
 
-            AppSlot(size: 80, label: "LIVE", sublabel: "TV", accessibilityName: "Live TV") {
-                Task { await onLiveTV() }
-            }
+            ConfigurableAppSlot(
+                size: 80,
+                shortcut: RemoteAppShortcut.named(slotCenterID),
+                onTap: { tapSlot(.center) },
+                onLongPress: { configuringSlot = .center }
+            )
             .position(x: Self.width / 2, y: 787)
 
-            appSlot(at: 1, size: 70)
-                .position(x: 265, y: 787)
+            ConfigurableAppSlot(
+                size: 70,
+                shortcut: RemoteAppShortcut.named(slotRightID),
+                placeholderNumber: 2,
+                onTap: { tapSlot(.right) },
+                onLongPress: { configuringSlot = .right }
+            )
+            .position(x: 265, y: 787)
 
             // Brand label.
             Text("ANOTHER REMOTE")
@@ -319,6 +341,9 @@ struct RemoteSamsungBody: View {
             NumberPadView(onCommand: onCommand)
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
+        }
+        .sheet(item: $configuringSlot) { slot in
+            AppSlotConfigSheet(selectedID: slotBinding(for: slot))
         }
         // Drop the mute dial when the TV unmutes (button or auto-unmute) so it doesn't linger.
         .onChange(of: isMuted) { _, muted in
@@ -388,38 +413,35 @@ struct RemoteSamsungBody: View {
         }
     }
 
-    /// Builds an app slot bound to the n-th installed app, falling back to a numbered
-    /// placeholder when fewer than `index + 1` apps have been detected (or the user
-    /// hasn't opened the Installed Apps panel and tapped "Load Apps" yet).
-    @ViewBuilder
-    private func appSlot(at index: Int, size: CGFloat) -> some View {
-        let app = appAtIndex(index)
-        AppSlot(
-            size: size,
-            label: slotLabel(for: app),
-            sublabel: app == nil ? "\(index + 1)" : nil,
-            accessibilityName: a11yName(for: app, index: index)
-        ) {
-            if let app {
-                Task { await onLaunchApp(app.appID) }
-            }
+    /// The stored mapping id for a slot.
+    private func slotID(_ slot: SlotPosition) -> String {
+        switch slot {
+        case .left: slotLeftID
+        case .center: slotCenterID
+        case .right: slotRightID
         }
     }
 
-    private func appAtIndex(_ index: Int) -> InstalledApp? {
-        guard let apps = installedApps, apps.indices.contains(index) else { return nil }
-        return apps[index]
+    /// Binding to a slot's stored mapping, for ``AppSlotConfigSheet``.
+    private func slotBinding(for slot: SlotPosition) -> Binding<String> {
+        switch slot {
+        case .left: $slotLeftID
+        case .center: $slotCenterID
+        case .right: $slotRightID
+        }
     }
 
-    private func slotLabel(for app: InstalledApp?) -> String {
-        guard let app else { return "APP" }
-        let upper = app.name.uppercased()
-        return String(upper.prefix(6))
-    }
-
-    private func a11yName(for app: InstalledApp?, index: Int) -> String {
-        guard let app else { return "App slot \(index + 1) (empty)" }
-        return "Launch \(app.name)"
+    /// Tap handler: launch the mapped app (or Live TV), or open the picker when unset.
+    private func tapSlot(_ slot: SlotPosition) {
+        guard let shortcut = RemoteAppShortcut.named(slotID(slot)) else {
+            configuringSlot = slot
+            return
+        }
+        if shortcut.isLiveTV {
+            Task { await onLiveTV() }
+        } else {
+            Task { await onLaunchApp(shortcut.id) }
+        }
     }
 
     private func fire(_ command: TVCommand) {
