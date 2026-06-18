@@ -35,11 +35,17 @@ final class RemoteViewModel {
     /// Total seconds of the running countdown — lets the scheduler dial draw an accurate
     /// ring. Nil when no countdown is running.
     private(set) var commercialMuteTotalSeconds: Int?
+    /// Non-nil while a sleep timer is counting down; when it elapses the TV is put to sleep
+    /// (standby). Drives the sleep-timer dial's ring.
+    private(set) var sleepTimerRemaining: Duration?
+    /// Total seconds of the running sleep timer — drives the dial's ring fraction.
+    private(set) var sleepTimerTotalSeconds: Int?
     /// Nil until the user has asked the TV for its app list at least once.
     private(set) var installedApps: [InstalledApp]?
     private(set) var isLoadingInstalledApps: Bool = false
 
     private var commercialMuteTask: Task<Void, Never>?
+    private var sleepTimerTask: Task<Void, Never>?
     private let commercialMuteDurationSeconds: Int = 120
     /// Gap between the two volume keys of the deterministic mute/unmute nudge, so the TV
     /// registers them as distinct presses (same pacing rationale as the tune macro).
@@ -292,6 +298,7 @@ final class RemoteViewModel {
 
     func disconnect() async {
         cancelCommercialMute()
+        cancelSleepTimer()
         isMuted = false
         await service.disconnect()
     }
@@ -439,6 +446,44 @@ final class RemoteViewModel {
             await self.forceUnmute()
             self.isMuted = false
         }
+    }
+
+    // MARK: - Sleep timer
+
+    /// Schedules the TV to sleep (standby) after `seconds`. The sleep-timer dial's
+    /// "Sleep in …" action. Replaces any existing sleep timer; the close button leaves the
+    /// countdown running so the TV still sleeps after the dial is dismissed.
+    func scheduleSleep(after seconds: Int) {
+        sleepTimerTask?.cancel()
+        let total = max(1, seconds)
+        sleepTimerTotalSeconds = total
+        sleepTimerRemaining = .seconds(total)
+
+        sleepTimerTask = Task { [weak self] in
+            for remaining in stride(from: total - 1, through: 0, by: -1) {
+                try? await Task.sleep(for: .seconds(1))
+                if Task.isCancelled { return }
+                guard let self else { return }
+                if remaining > 0 {
+                    self.sleepTimerRemaining = .seconds(remaining)
+                }
+            }
+            guard let self else { return }
+            self.sleepTimerRemaining = nil
+            self.sleepTimerTotalSeconds = nil
+            self.sleepTimerTask = nil
+            // KEY_POWER toggles standby — on a TV that's awake (it has to be, to be running
+            // the timer) this puts it to sleep.
+            await self.send(.power)
+        }
+    }
+
+    /// Cancels a pending sleep timer (the dial's Cancel button). No-op when idle.
+    func cancelSleepTimer() {
+        sleepTimerTask?.cancel()
+        sleepTimerTask = nil
+        sleepTimerRemaining = nil
+        sleepTimerTotalSeconds = nil
     }
 
     /// Deterministically unmutes the TV. On Samsung, volume keys *always* cancel mute (they

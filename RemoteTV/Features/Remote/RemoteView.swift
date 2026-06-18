@@ -42,6 +42,9 @@ struct RemoteView: View {
     /// Drives the push navigation to the full TV Guide screen (toolbar button + the
     /// "Now on TV" pill both set this).
     @State private var showTVGuide: Bool = false
+    /// Which timer dial (mute / sleep) occupies the remote's central area, if any. The Mute
+    /// button and the gear-menu "Sleep timer" item drive this.
+    @State private var centralOverlay: RemoteCentralOverlay = .none
     /// Presents the on-screen keyboard relay from the gear menu.
     @State private var showKeyboard: Bool = false
     /// Lets us auto-recover the WebSocket when the user unlocks the phone or returns
@@ -151,13 +154,18 @@ struct RemoteView: View {
                                     Task { await viewModel.send(.sleepTimer) }
                                 }
                             },
+                            centralOverlay: $centralOverlay,
                             isMuted: viewModel.isMuted,
                             muteRemaining: viewModel.commercialMuteRemaining,
                             muteTotalSeconds: viewModel.commercialMuteTotalSeconds,
                             onToggleMute: { Task { await viewModel.toggleMute() } },
                             onScheduleUnmute: { seconds in
                                 Task { await viewModel.scheduleUnmute(after: seconds) }
-                            }
+                            },
+                            sleepRemaining: viewModel.sleepTimerRemaining,
+                            sleepTotalSeconds: viewModel.sleepTimerTotalSeconds,
+                            onScheduleSleep: { seconds in viewModel.scheduleSleep(after: seconds) },
+                            onCancelSleep: { viewModel.cancelSleepTimer() }
                         )
                         .frame(width: bodyWidth, height: bodyHeight)
                         .offset(x: bodyLeading, y: bodyTop)
@@ -254,6 +262,9 @@ struct RemoteView: View {
 
                     Divider()
 
+                    Button("Sleep timer", systemImage: "moon.zzz") {
+                        withAnimation(.snappy) { centralOverlay = .sleep }
+                    }
                     Button("Keyboard", systemImage: "keyboard") {
                         showKeyboard = true
                     }

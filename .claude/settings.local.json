@@ -45,7 +45,8 @@
       "WebFetch(domain:zachwaugh.com)",
       "Bash(git merge-base *)",
       "Bash(git merge --no-ff parallel-work -m 'Merge parallel-work \\(TV Guide redesign\\) into main *)",
-      "Bash(git checkout *)"
+      "Bash(git checkout *)",
+      "Bash(cd *)"
     ]
   }
 }

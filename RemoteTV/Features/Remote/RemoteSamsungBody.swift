@@ -1,6 +1,13 @@
 import RemoteTVCore
 import SwiftUI
 
+/// Which scheduler dial occupies the remote's central area instead of the D-pad / trackpad.
+enum RemoteCentralOverlay {
+    case none
+    case mute
+    case sleep
+}
+
 /// The contents of the Samsung-style remote shell — every control that lives *inside*
 /// the rounded body, laid out at the design's coordinates with all interactive
 /// elements scaled +25% from the previous iteration for a more comfortable hit area.
@@ -39,23 +46,30 @@ struct RemoteSamsungBody: View {
     /// magic packet might not be arriving.
     let onPowerLongPress: () -> Void
 
+    /// Which timer dial (if any) replaces the D-pad / trackpad in the central area. Owned by
+    /// `RemoteView` so the gear menu can open the sleep timer; the Mute button and the dials'
+    /// close buttons write it too.
+    @Binding var centralOverlay: RemoteCentralOverlay
+
     /// Mute state + actions. The Mute button toggles `isMuted` (instant mute/unmute) and
-    /// reveals the auto-unmute scheduler in the central control. `muteRemaining` is non-nil
-    /// while a scheduled auto-unmute counts down; `muteTotalSeconds` draws the ring.
+    /// reveals the auto-unmute scheduler. `muteRemaining` is non-nil while a scheduled
+    /// auto-unmute counts down; `muteTotalSeconds` draws the ring.
     let isMuted: Bool
     let muteRemaining: Duration?
     let muteTotalSeconds: Int?
     let onToggleMute: () -> Void
     let onScheduleUnmute: (Int) -> Void
 
+    /// Sleep-timer state + actions (the gear-menu "Sleep timer"). `sleepRemaining` is
+    /// non-nil while counting down to standby.
+    let sleepRemaining: Duration?
+    let sleepTotalSeconds: Int?
+    let onScheduleSleep: (Int) -> Void
+    let onCancelSleep: () -> Void
+
     /// Drives the modal number-pad sheet that the 123 button summons. Local to the
     /// body since no other surface needs to read it.
     @State private var showNumberPad: Bool = false
-
-    /// Whether the auto-unmute scheduler is showing in the central area. Set when the Mute
-    /// button mutes; the scheduler's close button clears it (back to the D-pad) without
-    /// unmuting. Gated by `isMuted` so it hides automatically on unmute / countdown end.
-    @State private var showMuteTimer: Bool = false
 
     var body: some View {
         ZStack(alignment: .topLeading) {
@@ -111,11 +125,11 @@ struct RemoteSamsungBody: View {
             }
             .position(x: 75, y: 159)
 
-            // CENTRAL CONTROL — D-Pad wheel / virtual trackpad, or the auto-unmute
-            // scheduler while the TV is muted.
+            // CENTRAL CONTROL — D-Pad wheel / virtual trackpad, or a mute / sleep timer dial.
             centralControl
                 .position(x: Self.width / 2, y: 365)
                 .animation(.snappy, value: isMuted)
+                .animation(.snappy, value: centralOverlay)
 
             // ROW 4: Back / Home / Play-Pause.
             CircleButton(size: 70, accessibilityLabel: "Back") {
@@ -184,7 +198,7 @@ struct RemoteSamsungBody: View {
                 Button {
                     let willMute = !isMuted
                     onToggleMute()
-                    withAnimation(.snappy) { showMuteTimer = willMute }
+                    withAnimation(.snappy) { centralOverlay = willMute ? .mute : .none }
                 } label: {
                     Image(systemName: isMuted ? "speaker.slash.fill" : "speaker.slash")
                         .font(.system(size: 14, weight: .regular))
@@ -230,16 +244,31 @@ struct RemoteSamsungBody: View {
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
         }
+        // Drop the mute dial when the TV unmutes (button or auto-unmute) so it doesn't linger.
+        .onChange(of: isMuted) { _, muted in
+            if !muted && centralOverlay == .mute { centralOverlay = .none }
+        }
     }
 
     @ViewBuilder
     private var centralControl: some View {
-        if isMuted && showMuteTimer {
-            MuteTimerControl(
+        if centralOverlay == .mute && isMuted {
+            CircularTimerControl(
+                config: .mute,
                 remaining: muteRemaining,
                 totalSeconds: muteTotalSeconds,
                 onSchedule: onScheduleUnmute,
-                onClose: { withAnimation(.snappy) { showMuteTimer = false } }
+                onClose: { withAnimation(.snappy) { centralOverlay = .none } }
+            )
+            .transition(.scale(scale: 0.9).combined(with: .opacity))
+        } else if centralOverlay == .sleep {
+            CircularTimerControl(
+                config: .sleep,
+                remaining: sleepRemaining,
+                totalSeconds: sleepTotalSeconds,
+                onSchedule: onScheduleSleep,
+                onClose: { withAnimation(.snappy) { centralOverlay = .none } },
+                onCancelCountdown: { onCancelSleep() }
             )
             .transition(.scale(scale: 0.9).combined(with: .opacity))
         } else {
