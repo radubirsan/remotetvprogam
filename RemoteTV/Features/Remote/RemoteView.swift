@@ -165,7 +165,13 @@ struct RemoteView: View {
                             sleepRemaining: viewModel.sleepTimerRemaining,
                             sleepTotalSeconds: viewModel.sleepTimerTotalSeconds,
                             onScheduleSleep: { seconds in viewModel.scheduleSleep(after: seconds) },
-                            onCancelSleep: { viewModel.cancelSleepTimer() }
+                            onCancelSleep: { viewModel.cancelSleepTimer() },
+                            wakeRemaining: viewModel.wakeTimerRemaining,
+                            wakeTotalSeconds: viewModel.wakeTimerTotalSeconds,
+                            onScheduleWake: { seconds, channel in
+                                viewModel.scheduleWake(after: seconds, channel: channel)
+                            },
+                            onCancelWake: { viewModel.cancelWakeTimer() }
                         )
                         .frame(width: bodyWidth, height: bodyHeight)
                         .offset(x: bodyLeading, y: bodyTop)
@@ -262,9 +268,6 @@ struct RemoteView: View {
 
                     Divider()
 
-                    Button("Sleep timer", systemImage: "moon.zzz") {
-                        withAnimation(.snappy) { centralOverlay = .sleep }
-                    }
                     Button("Keyboard", systemImage: "keyboard") {
                         showKeyboard = true
                     }

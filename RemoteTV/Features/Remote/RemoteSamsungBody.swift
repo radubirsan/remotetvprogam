@@ -6,6 +6,7 @@ enum RemoteCentralOverlay {
     case none
     case mute
     case sleep
+    case wake
 }
 
 /// The contents of the Samsung-style remote shell — every control that lives *inside*
@@ -60,16 +61,40 @@ struct RemoteSamsungBody: View {
     let onToggleMute: () -> Void
     let onScheduleUnmute: (Int) -> Void
 
-    /// Sleep-timer state + actions (the gear-menu "Sleep timer"). `sleepRemaining` is
+    /// Sleep-timer state + actions (the moon button under Power). `sleepRemaining` is
     /// non-nil while counting down to standby.
     let sleepRemaining: Duration?
     let sleepTotalSeconds: Int?
     let onScheduleSleep: (Int) -> Void
     let onCancelSleep: () -> Void
 
+    /// Wake-timer state + actions (the alarm button under Power). After the countdown the
+    /// parent sends Wake-on-LAN and tunes to the entered channel. `wakeRemaining` is non-nil
+    /// while counting down.
+    let wakeRemaining: Duration?
+    let wakeTotalSeconds: Int?
+    let onScheduleWake: (_ seconds: Int, _ channel: Int?) -> Void
+    let onCancelWake: () -> Void
+
     /// Drives the modal number-pad sheet that the 123 button summons. Local to the
     /// body since no other surface needs to read it.
     @State private var showNumberPad: Bool = false
+
+    /// Channel number the wake timer should tune to once the TV is up (nil = just wake).
+    /// Owned here so the dial's picker and the schedule action share it.
+    @State private var wakeChannelNumber: Int?
+
+    /// The tunable lineup for the wake picker, from `KnownChannelNumbers` (number + name),
+    /// ordered by channel number and de-duplicated.
+    private var wakeChannels: [CircularTimerControl.Channel] {
+        var seen = Set<Int>()
+        var result: [CircularTimerControl.Channel] = []
+        for id in KnownChannelNumbers.orderedIDs {
+            guard let number = KnownChannelNumbers.number(for: id), seen.insert(number).inserted else { continue }
+            result.append(.init(number: number, name: KnownChannelNumbers.displayName(for: id)))
+        }
+        return result
+    }
 
     var body: some View {
         ZStack(alignment: .topLeading) {
@@ -109,9 +134,33 @@ struct RemoteSamsungBody: View {
             HoldToTalkMic(size: 70, onDown: onMicDown, onUp: onMicUp)
                 .position(x: 265, y: 71)
 
-            // ROW 2: Settings/123 (under power). Opens the modal `NumberPadView` so
-            // the user can tap a channel number — each digit dispatches `KEY_<n>` to
-            // the TV the same way a physical remote does.
+            // Sleep / wake timer buttons, tucked under the Power button — they open the
+            // matching dial in the central area. Tint accent while their timer is running.
+            CircleButton(
+                size: 36,
+                iconColor: sleepRemaining != nil ? RemoteTheme.accent : RemoteTheme.iconColor,
+                accessibilityLabel: "Sleep timer"
+            ) {
+                withAnimation(.snappy) { centralOverlay = centralOverlay == .sleep ? .none : .sleep }
+            } content: {
+                Image(systemName: "moon.fill").font(.system(size: 14))
+            }
+            .position(x: 55, y: 127)
+
+            CircleButton(
+                size: 36,
+                iconColor: wakeRemaining != nil ? RemoteTheme.accent : RemoteTheme.iconColor,
+                accessibilityLabel: "Wake timer"
+            ) {
+                withAnimation(.snappy) { centralOverlay = centralOverlay == .wake ? .none : .wake }
+            } content: {
+                Image(systemName: "alarm.fill").font(.system(size: 14))
+            }
+            .position(x: 95, y: 127)
+
+            // ROW 2: Settings/123. Opens the modal `NumberPadView` so the user can tap a
+            // channel number — each digit dispatches `KEY_<n>` to the TV the same way a
+            // physical remote does.
             CircleButton(size: 70, accessibilityLabel: "Number pad") {
                 showNumberPad = true
             } content: {
@@ -123,7 +172,7 @@ struct RemoteSamsungBody: View {
                         .tracking(0.5)
                 }
             }
-            .position(x: 75, y: 159)
+            .position(x: 75, y: 186)
 
             // CENTRAL CONTROL — D-Pad wheel / virtual trackpad, or a mute / sleep timer dial.
             centralControl
@@ -269,6 +318,18 @@ struct RemoteSamsungBody: View {
                 onSchedule: onScheduleSleep,
                 onClose: { withAnimation(.snappy) { centralOverlay = .none } },
                 onCancelCountdown: { onCancelSleep() }
+            )
+            .transition(.scale(scale: 0.9).combined(with: .opacity))
+        } else if centralOverlay == .wake {
+            CircularTimerControl(
+                config: .wake,
+                remaining: wakeRemaining,
+                totalSeconds: wakeTotalSeconds,
+                onSchedule: { seconds in onScheduleWake(seconds, wakeChannelNumber) },
+                onClose: { withAnimation(.snappy) { centralOverlay = .none } },
+                onCancelCountdown: { onCancelWake() },
+                channels: wakeChannels,
+                selectedChannel: $wakeChannelNumber
             )
             .transition(.scale(scale: 0.9).combined(with: .opacity))
         } else {

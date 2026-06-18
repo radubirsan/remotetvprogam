@@ -40,12 +40,23 @@ final class RemoteViewModel {
     private(set) var sleepTimerRemaining: Duration?
     /// Total seconds of the running sleep timer — drives the dial's ring fraction.
     private(set) var sleepTimerTotalSeconds: Int?
+    /// Non-nil while a wake timer is counting down; when it elapses the TV is woken via
+    /// Wake-on-LAN and (optionally) tuned to a channel. Drives the wake-timer dial's ring.
+    private(set) var wakeTimerRemaining: Duration?
+    /// Total seconds of the running wake timer — drives the dial's ring fraction.
+    private(set) var wakeTimerTotalSeconds: Int?
     /// Nil until the user has asked the TV for its app list at least once.
     private(set) var installedApps: [InstalledApp]?
     private(set) var isLoadingInstalledApps: Bool = false
 
     private var commercialMuteTask: Task<Void, Never>?
     private var sleepTimerTask: Task<Void, Never>?
+    private var wakeTimerTask: Task<Void, Never>?
+    /// Pacing between digits of the post-wake tune macro (matches the EPG tune delay).
+    private let tuneInterKeyDelayMs = 120
+    /// Extra wait after the post-wake reconnect before sending channel digits — the socket
+    /// often connects several seconds before the TV input is ready to accept a channel.
+    private let postWakeTuneSettleSeconds = 15
     private let commercialMuteDurationSeconds: Int = 120
     /// Gap between the two volume keys of the deterministic mute/unmute nudge, so the TV
     /// registers them as distinct presses (same pacing rationale as the tune macro).
@@ -299,6 +310,7 @@ final class RemoteViewModel {
     func disconnect() async {
         cancelCommercialMute()
         cancelSleepTimer()
+        cancelWakeTimer()
         isMuted = false
         await service.disconnect()
     }
@@ -484,6 +496,65 @@ final class RemoteViewModel {
         sleepTimerTask = nil
         sleepTimerRemaining = nil
         sleepTimerTotalSeconds = nil
+    }
+
+    // MARK: - Wake timer
+
+    /// Schedules the TV to wake after `seconds`: when the countdown ends it sends a
+    /// Wake-on-LAN magic packet, reconnects as the TV boots, then (if `channel` is given)
+    /// tunes to that channel. Replaces any existing wake timer.
+    func scheduleWake(after seconds: Int, channel: Int?) {
+        wakeTimerTask?.cancel()
+        let total = max(1, seconds)
+        wakeTimerTotalSeconds = total
+        wakeTimerRemaining = .seconds(total)
+
+        wakeTimerTask = Task { [weak self] in
+            for remaining in stride(from: total - 1, through: 0, by: -1) {
+                try? await Task.sleep(for: .seconds(1))
+                if Task.isCancelled { return }
+                guard let self else { return }
+                if remaining > 0 {
+                    self.wakeTimerRemaining = .seconds(remaining)
+                }
+            }
+            guard let self else { return }
+            self.wakeTimerRemaining = nil
+            self.wakeTimerTotalSeconds = nil
+            self.wakeTimerTask = nil
+            // Wake-on-LAN + reconnect (retries while the TV boots).
+            await self.wakeAndReconnect()
+            guard let channel else { return }
+            // The socket can come up before the TV input is ready to accept channel digits,
+            // so wait an extra settle period (and re-ensure the connection) before tuning —
+            // otherwise the digits land on a still-booting TV and the channel never changes.
+            try? await Task.sleep(for: .seconds(self.postWakeTuneSettleSeconds))
+            if self.service.state != .connected { await self.connect() }
+            if self.service.state == .connected {
+                await self.tune(to: channel)
+            }
+        }
+    }
+
+    /// Cancels a pending wake timer (the dial's Cancel button). No-op when idle.
+    func cancelWakeTimer() {
+        wakeTimerTask?.cancel()
+        wakeTimerTask = nil
+        wakeTimerRemaining = nil
+        wakeTimerTotalSeconds = nil
+    }
+
+    /// Tunes to a channel number by sending its digits followed by `KEY_ENTER`, paced so
+    /// Tizen doesn't drop fast-arriving digits (same rationale as the EPG tune macro).
+    private func tune(to channel: Int) async {
+        let digits = String(channel).compactMap(\.wholeNumberValue)
+        let commands = digits.compactMap(TVCommand.digit) + [.enter]
+        for (index, command) in commands.enumerated() {
+            await send(command)
+            if index < commands.count - 1 {
+                try? await Task.sleep(for: .milliseconds(tuneInterKeyDelayMs))
+            }
+        }
     }
 
     /// Deterministically unmutes the TV. On Samsung, volume keys *always* cancel mute (they
