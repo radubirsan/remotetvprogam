@@ -44,6 +44,11 @@ enum RemoteTheme {
         startRadius: 0, endRadius: 60
     )
     static let powerRed   = Color(red: 0.902, green: 0.224, blue: 0.275)
+    /// Ember accent (#FF6B5A) — the app's primary tint, shared with the onboarding and
+    /// TV Guide surfaces. Used to colour navigation-bar icons and back buttons.
+    static let accent     = Color(red: 1.0, green: 0.420, blue: 0.353)
+    /// Dark ink (#1A1A1D) that rides on top of the accent fill (accent-filled buttons).
+    static let bgInk      = Color(red: 0.102, green: 0.102, blue: 0.114)
     static let labelDim   = Color(red: 0.353, green: 0.353, blue: 0.369)
     static let labelText  = Color(red: 0.812, green: 0.812, blue: 0.831)
     static let iconColor  = Color(red: 0.863, green: 0.863, blue: 0.871)

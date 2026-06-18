@@ -6,7 +6,7 @@ struct OnboardingPairStep: View {
     var body: some View {
         OnboardingStepScaffold(
             symbol: vm.pairingFailed ? "exclamationmark.triangle.fill" : "hand.tap.fill",
-            symbolColor: vm.pairingFailed ? .yellow : .accentColor,
+            symbolColor: vm.pairingFailed ? .yellow : OnboardingStyle.accent,
             title: vm.pairingFailed ? "Couldn't connect" : "Allow on your TV",
             subtitle: subtitle
         ) {

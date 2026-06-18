@@ -66,6 +66,7 @@ struct NumberPadView: View {
                 }
             }
         }
+        .tint(RemoteTheme.accent)
         .preferredColorScheme(.dark)
     }
 

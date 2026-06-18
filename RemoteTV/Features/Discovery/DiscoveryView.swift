@@ -45,6 +45,7 @@ struct DiscoveryView: View {
                     .presentationDetents([.medium])
             }
         }
+        .tint(RemoteTheme.accent)
         .task {
             restoreStoredMode()
             await viewModel.loadRemembered()

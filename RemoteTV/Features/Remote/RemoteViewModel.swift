@@ -23,8 +23,12 @@ final class RemoteViewModel {
     let device: TVDevice
     let service: any TVService
     private(set) var lastError: String?
-    /// Non-nil while a "Mute 2 Min" timer is running. Drives the big-button UI.
+    /// Non-nil while a mute timer is running. Drives the toolbar countdown + the
+    /// in-remote mute-timer dial.
     private(set) var commercialMuteRemaining: Duration?
+    /// Total seconds of the running mute timer — lets the mute-timer dial draw an
+    /// accurate countdown ring. Nil when no timer is running.
+    private(set) var commercialMuteTotalSeconds: Int?
     /// Nil until the user has asked the TV for its app list at least once.
     private(set) var installedApps: [InstalledApp]?
     private(set) var isLoadingInstalledApps: Bool = false
@@ -362,18 +366,31 @@ final class RemoteViewModel {
         }
     }
 
-    /// Toggles a 2-minute "commercial break" mute. Sends `KEY_MUTE` immediately and again
-    /// once the timer elapses — Samsung's mute key is a toggle, so the second press restores
-    /// audio. Tapping the button while the timer is running cancels early and unmutes now.
+    /// Toggles the default 2-minute "commercial break" mute (the toolbar control). Starts a
+    /// fresh timer when idle, otherwise stops and unmutes now.
     func toggleCommercialMute() async {
         if commercialMuteRemaining != nil {
-            cancelCommercialMute()
+            await stopMuteTimer()
+        } else {
+            await startMuteTimer(seconds: commercialMuteDurationSeconds)
+        }
+    }
+
+    /// Mutes the TV and auto-unmutes after `seconds`. Samsung's mute key is a toggle, so we
+    /// send `KEY_MUTE` once now (only if not already muted by a running timer) and once more
+    /// when the countdown elapses. Calling this while a timer is already running just
+    /// re-schedules the existing mute to the new duration — it doesn't double-toggle.
+    func startMuteTimer(seconds: Int) async {
+        let alreadyMuted = commercialMuteRemaining != nil
+        commercialMuteTask?.cancel()
+        commercialMuteTask = nil
+
+        if !alreadyMuted {
             await send(.mute)
-            return
         }
 
-        await send(.mute)
-        let total = commercialMuteDurationSeconds
+        let total = max(1, seconds)
+        commercialMuteTotalSeconds = total
         commercialMuteRemaining = .seconds(total)
 
         commercialMuteTask = Task { [weak self] in
@@ -387,9 +404,17 @@ final class RemoteViewModel {
             }
             guard let self else { return }
             self.commercialMuteRemaining = nil
+            self.commercialMuteTotalSeconds = nil
             self.commercialMuteTask = nil
             await self.send(.mute)
         }
+    }
+
+    /// Stops a running mute timer and unmutes the TV immediately. No-op when idle.
+    func stopMuteTimer() async {
+        guard commercialMuteRemaining != nil else { return }
+        cancelCommercialMute()
+        await send(.mute)
     }
 
     /// Clears any cached app list and asks the TV for a fresh one. Per the UI spec: one tap
@@ -409,5 +434,6 @@ final class RemoteViewModel {
         commercialMuteTask?.cancel()
         commercialMuteTask = nil
         commercialMuteRemaining = nil
+        commercialMuteTotalSeconds = nil
     }
 }

@@ -39,9 +39,21 @@ struct RemoteSamsungBody: View {
     /// magic packet might not be arriving.
     let onPowerLongPress: () -> Void
 
+    /// Mute-timer state + actions, surfaced in the central control when the user taps Mute.
+    /// `muteRemaining` is non-nil while a timer counts down; `muteTotalSeconds` lets the dial
+    /// draw the countdown ring.
+    let muteRemaining: Duration?
+    let muteTotalSeconds: Int?
+    let onStartMuteTimer: (Int) -> Void
+    let onStopMuteTimer: () -> Void
+
     /// Drives the modal number-pad sheet that the 123 button summons. Local to the
     /// body since no other surface needs to read it.
     @State private var showNumberPad: Bool = false
+
+    /// When true the central area shows the ``MuteTimerControl`` dial instead of the
+    /// D-pad / trackpad. Toggled by the Mute button.
+    @State private var showMuteTimer: Bool = false
 
     var body: some View {
         ZStack(alignment: .topLeading) {
@@ -166,15 +178,16 @@ struct RemoteSamsungBody: View {
                 .accessibilityLabel("Closed captions")
 
                 Button {
-                    fire(.mute)
+                    withAnimation(.snappy) { showMuteTimer.toggle() }
                 } label: {
-                    Image(systemName: "speaker.slash")
+                    Image(systemName: muteRemaining != nil ? "speaker.slash.fill" : "speaker.slash")
                         .font(.system(size: 14, weight: .regular))
+                        .foregroundStyle(muteRemaining != nil ? RemoteTheme.accent : Color(white: 0.48))
                         .frame(minWidth: 44, minHeight: 36)
                         .contentShape(.rect)
                 }
                 .buttonStyle(.hapticPress)
-                .accessibilityLabel("Mute")
+                .accessibilityLabel(showMuteTimer ? "Hide mute timer" : "Mute timer")
             }
             .font(.system(size: 11, weight: .bold))
             .tracking(0.6)
@@ -215,19 +228,30 @@ struct RemoteSamsungBody: View {
 
     @ViewBuilder
     private var centralControl: some View {
-        switch inputMode {
-        case .dpad:
-            DPad(
-                outerSize: 275,
-                innerSize: 120,
-                onUp: { fire(.up) },
-                onDown: { fire(.down) },
-                onLeft: { fire(.left) },
-                onRight: { fire(.right) },
-                onOK: { fire(.enter) }
+        if showMuteTimer {
+            MuteTimerControl(
+                remaining: muteRemaining,
+                totalSeconds: muteTotalSeconds,
+                onStart: onStartMuteTimer,
+                onStop: onStopMuteTimer,
+                onClose: { withAnimation(.snappy) { showMuteTimer = false } }
             )
-        case .trackpad:
-            TrackpadSection(diameter: 275, onCommand: onCommand)
+            .transition(.scale(scale: 0.9).combined(with: .opacity))
+        } else {
+            switch inputMode {
+            case .dpad:
+                DPad(
+                    outerSize: 275,
+                    innerSize: 120,
+                    onUp: { fire(.up) },
+                    onDown: { fire(.down) },
+                    onLeft: { fire(.left) },
+                    onRight: { fire(.right) },
+                    onOK: { fire(.enter) }
+                )
+            case .trackpad:
+                TrackpadSection(diameter: 275, onCommand: onCommand)
+            }
         }
     }
 

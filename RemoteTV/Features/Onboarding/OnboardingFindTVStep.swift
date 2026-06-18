@@ -74,6 +74,7 @@ struct OnboardingFindTVStep: View {
                     .textFieldStyle(.roundedBorder)
                     .keyboardType(.numbersAndPunctuation)
                     .autocorrectionDisabled()
+                    .tint(OnboardingStyle.accent)
                 Button("Connect") { Task { await vm.useManualIP() } }
                     .buttonStyle(.borderedProminent)
                     .tint(OnboardingStyle.accent)

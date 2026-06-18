@@ -28,5 +28,6 @@ struct PowerOnHelpSheet: View {
                 }
             }
         }
+        .tint(RemoteTheme.accent)
     }
 }

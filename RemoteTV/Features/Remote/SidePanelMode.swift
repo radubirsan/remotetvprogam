@@ -19,6 +19,17 @@ enum SidePanelMode: String, CaseIterable, Identifiable {
 
     var id: String { rawValue }
 
+    /// Panels offered in the side-panel menu. **Installed Apps** and **Sniff Log** are
+    /// developer tools (Tizen app-ID harvesting + raw WebSocket traffic), so they're only
+    /// surfaced in DEBUG builds; release builds get just Hidden + Shortcuts.
+    static var selectableCases: [SidePanelMode] {
+        #if DEBUG
+        allCases
+        #else
+        []
+        #endif
+    }
+
     var label: LocalizedStringKey {
         switch self {
         case .none:           "Hidden"

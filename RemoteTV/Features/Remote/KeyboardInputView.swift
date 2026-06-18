@@ -75,6 +75,7 @@ struct KeyboardInputView: View {
             }
             .onAppear { focused = true }
         }
+        .tint(RemoteTheme.accent)
         .presentationDetents([.medium, .large])
     }
 }

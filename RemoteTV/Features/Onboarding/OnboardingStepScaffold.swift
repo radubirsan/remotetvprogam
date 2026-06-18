@@ -4,7 +4,7 @@ import SwiftUI
 /// middle content, and a bottom action area — keeps every step visually consistent.
 struct OnboardingStepScaffold<Content: View, Actions: View>: View {
     let symbol: String
-    var symbolColor: Color = .accentColor
+    var symbolColor: Color = OnboardingStyle.accent
     let title: String
     let subtitle: String
     @ViewBuilder var content: () -> Content

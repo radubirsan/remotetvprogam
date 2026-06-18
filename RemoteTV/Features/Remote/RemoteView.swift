@@ -104,22 +104,6 @@ struct RemoteView: View {
             RemoteTheme.bg.ignoresSafeArea()
 
             VStack(spacing: 0) {
-                // "Now on TV" pill — only rendered when the user has pinned a channel
-                // in the TV Guide panel. Tapping it opens that panel scrolled to the
-                // pinned channel's schedule. Loads the EPG lazily on first appearance
-                // so unpinned-by-default users don't pay the network cost.
-                if let pinned = epgViewModel.pinnedChannel {
-                    NowOnTVPill(
-                        channel: pinned,
-                        programme: epgViewModel.pinnedNowPlaying,
-                        onTap: {
-                            epgViewModel.selectedChannelID = pinned.id
-                            showTVGuide = true
-                        }
-                    )
-                    .transition(.opacity.combined(with: .move(edge: .top)))
-                }
-
                 HStack(spacing: 0) {
                 if sidePanel == .shortcuts {
                     RemoteSidePanelShortcuts(
@@ -130,6 +114,8 @@ struct RemoteView: View {
                         .transition(.move(edge: .leading).combined(with: .opacity))
                 }
 
+                #if DEBUG
+                // Developer tool — only available in debug builds.
                 if sidePanel == .installedApps {
                     RemoteSidePanelInstalledApps(
                         installedApps: viewModel.installedApps,
@@ -140,6 +126,7 @@ struct RemoteView: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .transition(.move(edge: .leading).combined(with: .opacity))
                 }
+                #endif
 
                 GeometryReader { geo in
                     let scale = min(geo.size.width / canvasWidth, geo.size.height / canvasHeight)
@@ -163,7 +150,13 @@ struct RemoteView: View {
                                 } else {
                                     Task { await viewModel.send(.sleepTimer) }
                                 }
-                            }
+                            },
+                            muteRemaining: viewModel.commercialMuteRemaining,
+                            muteTotalSeconds: viewModel.commercialMuteTotalSeconds,
+                            onStartMuteTimer: { seconds in
+                                Task { await viewModel.startMuteTimer(seconds: seconds) }
+                            },
+                            onStopMuteTimer: { Task { await viewModel.stopMuteTimer() } }
                         )
                         .frame(width: bodyWidth, height: bodyHeight)
                         .offset(x: bodyLeading, y: bodyTop)
@@ -175,6 +168,8 @@ struct RemoteView: View {
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
 
+                #if DEBUG
+                // Developer tool — only available in debug builds.
                 if sidePanel == .sniffLog {
                     RemoteSidePanelSniffLog(
                         entries: viewModel.sniffLog,
@@ -186,11 +181,29 @@ struct RemoteView: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .transition(.move(edge: .trailing).combined(with: .opacity))
                 }
+                #endif
 
                 // TV Guide is presented full-screen (see `.fullScreenCover` below), not as a
                 // side column — it's a browsing surface that wants the whole screen.
             }
             .animation(.snappy, value: sidePanel)
+            // "Now on TV" pill — always shown. With a pinned channel it surfaces what's on
+            // now and opens that channel's schedule; otherwise it's a "Check out TV Guide"
+            // prompt that opens the main guide. Floated as a top overlay (rather than
+            // stacked above the remote) so it occupies the empty space above the remote
+            // body instead of shrinking the height-constrained remote canvas.
+            .overlay(alignment: .top) {
+                NowOnTVPill(
+                    channel: epgViewModel.pinnedChannel,
+                    programme: epgViewModel.pinnedNowPlaying,
+                    onTap: {
+                        // Pinned → open that channel's schedule; otherwise the main list.
+                        epgViewModel.selectedChannelID = epgViewModel.pinnedChannel?.id
+                        showTVGuide = true
+                    }
+                )
+                .transition(.opacity.combined(with: .move(edge: .top)))
+            }
             }  // close outer VStack added for the NowOnTVPill
             .animation(.snappy, value: epgViewModel.pinnedChannelID)
             .task {
@@ -232,7 +245,7 @@ struct RemoteView: View {
                     .pickerStyle(.inline)
 
                     Picker("Side panel", selection: $sidePanel) {
-                        ForEach(SidePanelMode.allCases) { mode in
+                        ForEach(SidePanelMode.selectableCases) { mode in
                             Label(mode.label, systemImage: mode.systemImage).tag(mode)
                         }
                     }
@@ -291,5 +304,9 @@ struct RemoteView: View {
                 .toolbarBackground(.visible, for: .navigationBar)
         }
         }
+        // Tint nav-bar icons + back buttons (RemoteView's toolbar and the pushed
+        // TV Guide / schedule) with the app accent. Inner controls keep their explicit
+        // tints, so only the otherwise-default-blue bar items pick this up.
+        .tint(RemoteTheme.accent)
     }
 }
