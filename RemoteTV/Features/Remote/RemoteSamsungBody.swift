@@ -7,6 +7,7 @@ enum RemoteCentralOverlay {
     case mute
     case sleep
     case wake
+    case channel
 }
 
 /// The contents of the Samsung-style remote shell — every control that lives *inside*
@@ -76,6 +77,9 @@ struct RemoteSamsungBody: View {
     let onScheduleWake: (_ seconds: Int, _ channel: Int?) -> Void
     let onCancelWake: () -> Void
 
+    /// Live-tune from the channel scroll-picker (the list button under the Channel rocker).
+    let onTuneChannel: (Int) -> Void
+
     /// Drives the modal number-pad sheet that the 123 button summons. Local to the
     /// body since no other surface needs to read it.
     @State private var showNumberPad: Bool = false
@@ -83,10 +87,13 @@ struct RemoteSamsungBody: View {
     /// Channel number the wake timer should tune to once the TV is up (nil = just wake).
     /// Owned here so the dial's picker and the schedule action share it.
     @State private var wakeChannelNumber: Int?
+    /// Live channel scroll-picker selection (nil = the "Scroll to pick" placeholder row, so
+    /// opening the picker doesn't tune). Each non-nil change live-tunes the TV.
+    @State private var pickerChannelNumber: Int?
 
-    /// The tunable lineup for the wake picker, from `KnownChannelNumbers` (number + name),
-    /// ordered by channel number and de-duplicated.
-    private var wakeChannels: [CircularTimerControl.Channel] {
+    /// The tunable lineup for the wake + channel pickers, from `KnownChannelNumbers`
+    /// (number + name), ordered by channel number and de-duplicated.
+    private var tunableChannels: [CircularTimerControl.Channel] {
         var seen = Set<Int>()
         var result: [CircularTimerControl.Channel] = []
         for id in KnownChannelNumbers.orderedIDs {
@@ -263,6 +270,26 @@ struct RemoteSamsungBody: View {
             .foregroundStyle(Color(white: 0.48))
             .position(x: 85, y: 724)
 
+            // Channel scroll-picker button, beneath the Channel rocker — mirrors the mute
+            // button. Opens a live-tuning channel wheel in the central area.
+            Button {
+                if centralOverlay == .channel {
+                    withAnimation(.snappy) { centralOverlay = .none }
+                } else {
+                    pickerChannelNumber = nil
+                    withAnimation(.snappy) { centralOverlay = .channel }
+                }
+            } label: {
+                Image(systemName: "list.bullet")
+                    .font(.system(size: 15, weight: .regular))
+                    .foregroundStyle(centralOverlay == .channel ? RemoteTheme.accent : Color(white: 0.48))
+                    .frame(minWidth: 44, minHeight: 36)
+                    .contentShape(.rect)
+            }
+            .buttonStyle(.hapticPress)
+            .accessibilityLabel("Channel picker")
+            .position(x: 255, y: 724)
+
             // ROW 6: App slots — three slots (APP 1, LIVE, APP 2). APP 1 / APP 2 bind
             // dynamically to the first two installed apps the TV surfaces (placeholders
             // until the user opens the Installed Apps panel and taps "Load Apps").
@@ -297,6 +324,10 @@ struct RemoteSamsungBody: View {
         .onChange(of: isMuted) { _, muted in
             if !muted && centralOverlay == .mute { centralOverlay = .none }
         }
+        // Live-tune as the channel picker scrolls (nil = the "Scroll to pick" row → no tune).
+        .onChange(of: pickerChannelNumber) { _, number in
+            if let number { onTuneChannel(number) }
+        }
     }
 
     @ViewBuilder
@@ -328,8 +359,15 @@ struct RemoteSamsungBody: View {
                 onSchedule: { seconds in onScheduleWake(seconds, wakeChannelNumber) },
                 onClose: { withAnimation(.snappy) { centralOverlay = .none } },
                 onCancelCountdown: { onCancelWake() },
-                channels: wakeChannels,
+                channels: tunableChannels,
                 selectedChannel: $wakeChannelNumber
+            )
+            .transition(.scale(scale: 0.9).combined(with: .opacity))
+        } else if centralOverlay == .channel {
+            ChannelPickerControl(
+                channels: tunableChannels,
+                selected: $pickerChannelNumber,
+                onClose: { withAnimation(.snappy) { centralOverlay = .none } }
             )
             .transition(.scale(scale: 0.9).combined(with: .opacity))
         } else {

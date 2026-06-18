@@ -52,8 +52,12 @@ final class RemoteViewModel {
     private var commercialMuteTask: Task<Void, Never>?
     private var sleepTimerTask: Task<Void, Never>?
     private var wakeTimerTask: Task<Void, Never>?
+    private var liveTuneTask: Task<Void, Never>?
     /// Pacing between digits of the post-wake tune macro (matches the EPG tune delay).
     private let tuneInterKeyDelayMs = 120
+    /// Settle time before the channel scroll-picker actually tunes, so flicking the wheel
+    /// doesn't fire a tune per row.
+    private let liveTuneDebounceMs = 250
     /// Extra wait after the post-wake reconnect before sending channel digits — the socket
     /// often connects several seconds before the TV input is ready to accept a channel.
     private let postWakeTuneSettleSeconds = 15
@@ -311,6 +315,8 @@ final class RemoteViewModel {
         cancelCommercialMute()
         cancelSleepTimer()
         cancelWakeTimer()
+        liveTuneTask?.cancel()
+        liveTuneTask = nil
         isMuted = false
         await service.disconnect()
     }
@@ -542,6 +548,19 @@ final class RemoteViewModel {
         wakeTimerTask = nil
         wakeTimerRemaining = nil
         wakeTimerTotalSeconds = nil
+    }
+
+    /// Live tune from the channel scroll-picker: tunes to `channel` after a short debounce,
+    /// cancelling any pending tune. The debounce means flicking through the wheel doesn't
+    /// flood the TV — it switches once the selection settles for a moment.
+    func tuneLive(to channel: Int) {
+        liveTuneTask?.cancel()
+        liveTuneTask = Task { [weak self] in
+            try? await Task.sleep(for: .milliseconds(liveTuneDebounceMs))
+            if Task.isCancelled { return }
+            guard let self else { return }
+            await self.tune(to: channel)
+        }
     }
 
     /// Tunes to a channel number by sending its digits followed by `KEY_ENTER`, paced so

@@ -171,7 +171,8 @@ struct RemoteView: View {
                             onScheduleWake: { seconds, channel in
                                 viewModel.scheduleWake(after: seconds, channel: channel)
                             },
-                            onCancelWake: { viewModel.cancelWakeTimer() }
+                            onCancelWake: { viewModel.cancelWakeTimer() },
+                            onTuneChannel: { channel in viewModel.tuneLive(to: channel) }
                         )
                         .frame(width: bodyWidth, height: bodyHeight)
                         .offset(x: bodyLeading, y: bodyTop)

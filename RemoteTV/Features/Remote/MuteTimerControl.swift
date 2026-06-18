@@ -288,6 +288,56 @@ struct CircularTimerControl: View {
     private func seconds(_ d: Duration) -> Int { Int(d.components.seconds) }
 }
 
+/// A standalone scrolling channel picker shown in the remote's central area (in place of
+/// the D-pad / trackpad). Reuses the wake timer's wheel style, but tunes **live** — the
+/// parent switches the TV to the selected channel as the wheel settles. The leading
+/// "Scroll to pick" row (selection `nil`) means "no tune yet", so opening the picker
+/// doesn't change the channel.
+@MainActor
+struct ChannelPickerControl: View {
+    let channels: [CircularTimerControl.Channel]
+    @Binding var selected: Int?
+    let onClose: () -> Void
+
+    var body: some View {
+        VStack(spacing: 8) {
+            ZStack {
+                Text("CHANNEL")
+                    .font(.system(size: 11, weight: .bold))
+                    .tracking(1.4)
+                    .foregroundStyle(Color(white: 0.42))
+                HStack {
+                    Spacer()
+                    Button(action: onClose) {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 13, weight: .bold))
+                            .foregroundStyle(Color(white: 0.6))
+                            .frame(width: 34, height: 34)
+                            .background(Circle().fill(.white.opacity(0.06)))
+                            .contentShape(.circle)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Return to D-pad")
+                }
+            }
+
+            Picker("Channel", selection: $selected) {
+                Text("Scroll to pick").tag(Int?.none)
+                ForEach(channels) { ch in
+                    Text("\(ch.number)  \(ch.name)")
+                        .lineLimit(1)
+                        .tag(Int?.some(ch.number))
+                }
+            }
+            .pickerStyle(.wheel)
+            .frame(width: 250, height: 200)
+            .clipped()
+            .accessibilityLabel("Channel")
+        }
+        .frame(width: 275)
+    }
+}
+
 extension CircularTimerControl.Config {
     /// Mute timer: auto-unmute the TV after the chosen delay. No Cancel button — the Mute
     /// button is the cancel affordance.
