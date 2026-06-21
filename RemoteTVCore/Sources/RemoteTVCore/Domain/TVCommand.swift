@@ -7,6 +7,8 @@ public enum TVCommand: String, CaseIterable, Sendable, Identifiable {
     case mute = "KEY_MUTE"
     case channelUp = "KEY_CHUP"
     case channelDown = "KEY_CHDOWN"
+    /// Opens the TV's on-screen programme guide.
+    case guide = "KEY_GUIDE"
     case up = "KEY_UP"
     case down = "KEY_DOWN"
     case left = "KEY_LEFT"
@@ -18,6 +20,10 @@ public enum TVCommand: String, CaseIterable, Sendable, Identifiable {
     /// because `KEY_TV` alone is intercepted by Netflix/HBO/etc. and never reaches Tizen.
     case exit = "KEY_EXIT"
     case liveTV = "KEY_TV"
+    /// Live-TV / digital-tuner keys used by the "Live TV" shortcut on models where `KEY_TV`
+    /// and channel digits don't select the tuner.
+    case live = "KEY_LIVE"
+    case dtv = "KEY_DTV"
     /// Plain power-button press — toggles the TV between awake and standby. Wired to
     /// a *short* tap on the on-screen power control; a long press fires
     /// ``sleepTimer`` instead so the user can reach the menu without juggling two
@@ -46,6 +52,24 @@ public enum TVCommand: String, CaseIterable, Sendable, Identifiable {
     case digit9 = "KEY_9"
 
     public var id: String { rawValue }
+
+    /// The numeric value 0–9 for the digit keys, `nil` for every other command. Lets the
+    /// view model reconstruct a typed channel number from the digit keys it sends.
+    public var digitValue: Int? {
+        switch self {
+        case .digit0: 0
+        case .digit1: 1
+        case .digit2: 2
+        case .digit3: 3
+        case .digit4: 4
+        case .digit5: 5
+        case .digit6: 6
+        case .digit7: 7
+        case .digit8: 8
+        case .digit9: 9
+        default: nil
+        }
+    }
 
     /// Returns the matching `KEY_<n>` command for a single decimal digit. Used by the
     /// on-screen number pad to dispatch each tap without a switch ladder at the call

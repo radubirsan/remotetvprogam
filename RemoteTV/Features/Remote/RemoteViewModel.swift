@@ -61,6 +61,25 @@ final class RemoteViewModel {
     /// Extra wait after the post-wake reconnect before sending channel digits — the socket
     /// often connects several seconds before the TV input is ready to accept a channel.
     private let postWakeTuneSettleSeconds = 15
+    /// Time for the Smart Hub home to settle after `KEY_EXIT` before the channel digits can
+    /// land when going to live TV (too-soon digits are eaten by the home-screen transition).
+    private let goLiveSettleDelay: Duration = .milliseconds(2500)
+    /// Best-effort current channel number, tracked from the commands the app sends (tune,
+    /// channel ▲/▼, number-pad digits). Used by the Guide button and the "Live TV" shortcut.
+    /// Defaults to 1; can drift if the channel is changed on the physical remote (Tizen
+    /// doesn't report channel state back over the socket).
+    private var lastTunedChannel = 1
+    /// Accumulates digit keypresses into a channel number until `KEY_ENTER` or a short idle
+    /// (the TV's own auto-tune behaviour) finalises them.
+    private var channelEntryBuffer = ""
+    private var channelEntryFinalizeTask: Task<Void, Never>?
+    /// How long after the last digit to treat a number-pad entry as the new channel (matches
+    /// the TV's auto-tune-after-typing delay).
+    private let channelEntryFinalizeDelay: Duration = .seconds(2)
+    /// Settle waits for the Guide sequence: after `KEY_HOME` (home screen), and after
+    /// `KEY_GUIDE` (guide opens) before typing the channel digits.
+    private let guideHomeSettleDelay: Duration = .milliseconds(1200)
+    private let guideOpenSettleDelay: Duration = .milliseconds(1500)
     private let commercialMuteDurationSeconds: Int = 120
     /// Gap between the two volume keys of the deterministic mute/unmute nudge, so the TV
     /// registers them as distinct presses (same pacing rationale as the tune macro).
@@ -143,6 +162,7 @@ final class RemoteViewModel {
     }
 
     func send(_ command: TVCommand) async {
+        trackChannel(command)
         await perform { try await service.send(command) }
     }
 
@@ -305,10 +325,89 @@ final class RemoteViewModel {
     /// up to Tizen), waits for the app to tear down, then selects the tuner with `KEY_TV`.
     /// Pressing `KEY_TV` alone from inside Netflix/HBO does nothing because the app has
     /// input focus and doesn't handle that key.
+    /// Returns to live TV. `KEY_TV` / `KEY_LIVE` / `KEY_DTV` / channel keys don't select the
+    /// tuner on this model — but **typing a channel number does** (it opens the channel-entry
+    /// overlay and the tuner takes over). So we:
+    ///   1. revive the socket (`reconnectIfNeeded`) — a stale socket is why commands
+    ///      intermittently "stop working", including the manual keypad;
+    ///   2. `KEY_EXIT` out of the app to the Smart Hub / Discover home;
+    ///   3. wait for that home to settle so the digits aren't eaten by the transition;
+    ///   4. type the channel digits with **no** `KEY_ENTER`, letting the TV auto-tune —
+    ///      matching the bare digit press that worked manually.
     func goLive() async {
+        await reconnectIfNeeded()
         await send(.exit)
-        try? await Task.sleep(for: .milliseconds(500))
-        await send(.liveTV)
+        try? await Task.sleep(for: goLiveSettleDelay)
+        await typeChannel(lastTunedChannel)
+    }
+
+    /// The Guide button: drop to the home screen, open the TV's on-screen guide, then type
+    /// the last channel that was on so the guide lands on it. Each step waits for the TV to
+    /// settle so the next key isn't eaten by the transition.
+    func openGuide() async {
+        await send(.home)
+        try? await Task.sleep(for: guideHomeSettleDelay)
+        await send(.guide)
+        try? await Task.sleep(for: guideOpenSettleDelay)
+        await typeChannel(lastTunedChannel)
+        try? await Task.sleep(for: .seconds(1))
+        await send(.enter)
+    }
+
+    /// Types a channel number digit-by-digit (no `KEY_ENTER`), paced so Tizen doesn't drop
+    /// fast-arriving digits.
+    private func typeChannel(_ channel: Int) async {
+        for digit in String(channel).compactMap(\.wholeNumberValue) {
+            guard let command = TVCommand.digit(digit) else { continue }
+            await send(command)
+            try? await Task.sleep(for: .milliseconds(tuneInterKeyDelayMs))
+        }
+    }
+
+    // MARK: - Channel tracking
+
+    /// Updates ``lastTunedChannel`` from the commands we send, so the Guide / Live TV actions
+    /// can replay the current channel. Digits accumulate into a number that's committed on
+    /// `KEY_ENTER` or after a short idle (mirroring the TV's auto-tune); channel ▲/▼ step it.
+    private func trackChannel(_ command: TVCommand) {
+        if let digit = command.digitValue {
+            channelEntryBuffer += String(digit)
+            scheduleChannelEntryFinalize()
+            return
+        }
+        switch command {
+        case .enter:
+            finalizeChannelEntry()
+        case .channelUp:
+            finalizeChannelEntry()
+            lastTunedChannel += 1
+        case .channelDown:
+            finalizeChannelEntry()
+            lastTunedChannel = max(1, lastTunedChannel - 1)
+        default:
+            // Any other key abandons a half-typed number.
+            channelEntryFinalizeTask?.cancel()
+            channelEntryFinalizeTask = nil
+            channelEntryBuffer = ""
+        }
+    }
+
+    private func finalizeChannelEntry() {
+        channelEntryFinalizeTask?.cancel()
+        channelEntryFinalizeTask = nil
+        if let number = Int(channelEntryBuffer), number > 0 {
+            lastTunedChannel = number
+        }
+        channelEntryBuffer = ""
+    }
+
+    private func scheduleChannelEntryFinalize() {
+        channelEntryFinalizeTask?.cancel()
+        channelEntryFinalizeTask = Task { [weak self] in
+            try? await Task.sleep(for: self?.channelEntryFinalizeDelay ?? .seconds(2))
+            if Task.isCancelled { return }
+            self?.finalizeChannelEntry()
+        }
     }
 
     func disconnect() async {
@@ -317,6 +416,8 @@ final class RemoteViewModel {
         cancelWakeTimer()
         liveTuneTask?.cancel()
         liveTuneTask = nil
+        channelEntryFinalizeTask?.cancel()
+        channelEntryFinalizeTask = nil
         isMuted = false
         await service.disconnect()
     }
@@ -566,6 +667,7 @@ final class RemoteViewModel {
     /// Tunes to a channel number by sending its digits followed by `KEY_ENTER`, paced so
     /// Tizen doesn't drop fast-arriving digits (same rationale as the EPG tune macro).
     private func tune(to channel: Int) async {
+        lastTunedChannel = channel
         let digits = String(channel).compactMap(\.wholeNumberValue)
         let commands = digits.compactMap(TVCommand.digit) + [.enter]
         for (index, command) in commands.enumerated() {

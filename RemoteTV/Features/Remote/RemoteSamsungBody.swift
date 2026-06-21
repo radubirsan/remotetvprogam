@@ -78,6 +78,8 @@ struct RemoteSamsungBody: View {
 
     /// Live-tune from the channel scroll-picker (the list button under the Channel rocker).
     let onTuneChannel: (Int) -> Void
+    /// Guide button action — HOME → KEY_GUIDE → digits of the last channel on the TV.
+    let onOpenGuide: () -> Void
 
     /// Drives the modal number-pad sheet that the 123 button summons. Local to the
     /// body since no other surface needs to read it.
@@ -284,6 +286,7 @@ struct RemoteSamsungBody: View {
                     withAnimation(.snappy) { centralOverlay = .none }
                 } else {
                     pickerChannelNumber = nil
+                    onOpenGuide()   // HOME → KEY_GUIDE → digits of the last channel on the TV
                     withAnimation(.snappy) { centralOverlay = .channel }
                 }
             } label: {

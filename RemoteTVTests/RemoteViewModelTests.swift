@@ -222,7 +222,38 @@ struct RemoteViewModelTests {
 
         await vm.goLive()
 
-        #expect(service.sentCommands == [.exit, .liveTV])
+        // EXIT to the Smart Hub home, then type the channel digits (default 1, no KEY_ENTER)
+        // so the tuner auto-takes-over — the only thing that selects live on this model.
+        #expect(service.sentCommands == [.exit, .digit1])
+    }
+
+    @Test func openGuideFiresHomeGuideThenTrackedChannel() async {
+        let service = FakeTVService()
+        service.state = .connected
+        let vm = RemoteViewModel(device: makeDevice(), service: service)
+
+        // Tracked channel: type 1,2 then ENTER → channel 12.
+        await vm.send(.digit1)
+        await vm.send(.digit2)
+        await vm.send(.enter)
+
+        await vm.openGuide()
+
+        #expect(service.sentCommands == [.digit1, .digit2, .enter, .home, .guide, .digit1, .digit2, .enter])
+    }
+
+    @Test func channelUpDownStepsTheTrackedChannel() async {
+        let service = FakeTVService()
+        service.state = .connected
+        let vm = RemoteViewModel(device: makeDevice(), service: service)
+
+        // Default 1 → up to 3 → down to 2, then the Guide types "2".
+        await vm.send(.channelUp)
+        await vm.send(.channelUp)
+        await vm.send(.channelDown)
+        await vm.openGuide()
+
+        #expect(service.sentCommands == [.channelUp, .channelUp, .channelDown, .home, .guide, .digit2, .enter])
     }
 
     @Test func reconnectIfNeededDelegatesToService() async {
