@@ -358,6 +358,21 @@ enum KnownChannelNumbers {
         mapping[channelID]
     }
 
+    /// TV channel number → EPG channel id — the inverse of ``mapping``, built once. Lets the
+    /// remote turn a tuned channel *number* (all it can know from the digits it sent) back
+    /// into a channel id so the "Now on TV" pill can show what's playing. Numbers are unique
+    /// in the table, so the inverse is unambiguous; the `uniquingKeysWith` is belt-and-braces.
+    static let idByNumber: [Int: String] = Dictionary(
+        mapping.map { ($0.value, $0.key) },
+        uniquingKeysWith: { existing, _ in existing }
+    )
+
+    /// The EPG channel id at TV channel `number`, or nil when that number isn't in the
+    /// lineup — in which case the caller shows nothing rather than guessing a wrong channel.
+    static func channelID(forNumber number: Int) -> String? {
+        idByNumber[number]
+    }
+
     /// All ids that are known and tunable. Used by the EPG list to show a small
     /// channel-number badge next to known channels.
     static var knownIDs: Set<String> { Set(mapping.keys) }

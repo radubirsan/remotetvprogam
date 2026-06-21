@@ -48,6 +48,15 @@ final class EPGViewModel {
         didSet { Self.userDefaults.set(pinnedChannelID, forKey: Self.pinnedKey) }
     }
 
+    /// Best-effort guess at the channel the TV is on *right now*, inferred from the tuning
+    /// commands the remote itself sends (number-pad digits, the tune macro, channel ▲/▼ —
+    /// fed in via `RemoteViewModel.onChannelEstimated`). Unlike ``pinnedChannelID`` this is
+    /// **not** persisted and **not** ground truth: Tizen never reports channel state back, so
+    /// the guess drifts the moment the channel is changed on the physical remote. It is
+    /// superseded by an explicit pin and surfaced with a distinct "≈ auto" treatment in the
+    /// pill (see ``nowOnTVIsEstimated``) so it never masquerades as confirmed.
+    var estimatedChannelID: String?
+
     private static let userDefaults: UserDefaults = .standard
     private static let pinnedKey = "pinnedTVChannelID"
 
@@ -194,6 +203,36 @@ final class EPGViewModel {
     func togglePin(_ channelID: String) {
         pinnedChannelID = (pinnedChannelID == channelID) ? nil : channelID
     }
+
+    // MARK: - Estimated channel (best-effort, from the remote's own tuning)
+
+    /// Records the channel *number* the remote believes it just tuned to, mapping it back to
+    /// an EPG id for the "Now on TV" pill. A number outside the known lineup clears the
+    /// estimate — we'd rather show nothing than the wrong channel. Kicks a guide load when one
+    /// hasn't happened yet so the pill can fill in the live programme.
+    func noteTunedChannel(_ number: Int) {
+        estimatedChannelID = KnownChannelNumbers.channelID(forNumber: number)
+        if estimatedChannelID != nil, guide == nil {
+            Task { await loadIfNeeded() }
+        }
+    }
+
+    /// The channel to surface in the "Now on TV" pill: an explicit user pin wins; otherwise
+    /// the best-effort estimate inferred from the remote's own tuning. Nil when neither exists.
+    var nowOnTVChannelID: String? { pinnedChannelID ?? estimatedChannelID }
+
+    /// The resolved channel object for ``nowOnTVChannelID``.
+    var nowOnTVChannel: EPGChannel? { nowOnTVChannelID.flatMap(channel(for:)) }
+
+    /// What's airing on ``nowOnTVChannelID`` right now, if the feed overlaps `Date.now`.
+    var nowOnTVNowPlaying: EPGProgramme? {
+        guard let id = nowOnTVChannelID else { return nil }
+        return guide?.nowPlaying(on: id)
+    }
+
+    /// True when the pill is showing the inferred estimate rather than a user-confirmed pin —
+    /// drives the distinct "≈ auto" styling so the guess never looks authoritative.
+    var nowOnTVIsEstimated: Bool { pinnedChannelID == nil && estimatedChannelID != nil }
 
     // MARK: - Tune macro
 

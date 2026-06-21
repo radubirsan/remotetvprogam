@@ -215,31 +215,30 @@ struct RemoteViewModelTests {
         #expect(service.launchedAppIDs == ["111299001912"])
     }
 
-    @Test func goLiveSendsExitThenLiveTV() async {
+    @Test func goLiveRunsTheGuideSequence() async {
         let service = FakeTVService()
         service.state = .connected
         let vm = RemoteViewModel(device: makeDevice(), service: service)
 
         await vm.goLive()
 
-        // EXIT to the Smart Hub home, then type the channel digits (default 1, no KEY_ENTER)
-        // so the tuner auto-takes-over — the only thing that selects live on this model.
-        #expect(service.sentCommands == [.exit, .digit1])
+        // Live TV reuses the Guide combo: HOME → KEY_GUIDE → channel digits (default 1) → ENTER.
+        #expect(service.sentCommands == [.home, .guide, .digit1, .enter])
     }
 
-    @Test func openGuideFiresHomeGuideThenTrackedChannel() async {
+    @Test func openGuideOnlyOpensTheGuide() async {
         let service = FakeTVService()
         service.state = .connected
         let vm = RemoteViewModel(device: makeDevice(), service: service)
 
-        // Tracked channel: type 1,2 then ENTER → channel 12.
+        // Even with a tracked channel, the Guide button just opens the guide — no digits/ENTER.
         await vm.send(.digit1)
         await vm.send(.digit2)
         await vm.send(.enter)
 
         await vm.openGuide()
 
-        #expect(service.sentCommands == [.digit1, .digit2, .enter, .home, .guide, .digit1, .digit2, .enter])
+        #expect(service.sentCommands == [.digit1, .digit2, .enter, .home, .guide])
     }
 
     @Test func channelUpDownStepsTheTrackedChannel() async {
@@ -247,13 +246,31 @@ struct RemoteViewModelTests {
         service.state = .connected
         let vm = RemoteViewModel(device: makeDevice(), service: service)
 
-        // Default 1 → up to 3 → down to 2, then the Guide types "2".
+        // Default 1 → up to 3 → down to 2, then goLive replays the tracked channel "2".
         await vm.send(.channelUp)
         await vm.send(.channelUp)
         await vm.send(.channelDown)
-        await vm.openGuide()
+        await vm.goLive()
 
         #expect(service.sentCommands == [.channelUp, .channelUp, .channelDown, .home, .guide, .digit2, .enter])
+    }
+
+    @Test func onChannelEstimatedReportsTheTrackedChannel() async {
+        let service = FakeTVService()
+        service.state = .connected
+        let vm = RemoteViewModel(device: makeDevice(), service: service)
+
+        var estimates: [Int] = []
+        vm.onChannelEstimated = { estimates.append($0) }
+
+        // Number-pad entry: 5,9 then ENTER finalises to channel 59.
+        await vm.send(.digit5)
+        await vm.send(.digit9)
+        await vm.send(.enter)
+        // Then a channel ▲ steps it to 60.
+        await vm.send(.channelUp)
+
+        #expect(estimates == [59, 60])
     }
 
     @Test func reconnectIfNeededDelegatesToService() async {

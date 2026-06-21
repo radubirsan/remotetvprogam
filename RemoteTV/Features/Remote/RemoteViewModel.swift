@@ -61,14 +61,16 @@ final class RemoteViewModel {
     /// Extra wait after the post-wake reconnect before sending channel digits — the socket
     /// often connects several seconds before the TV input is ready to accept a channel.
     private let postWakeTuneSettleSeconds = 15
-    /// Time for the Smart Hub home to settle after `KEY_EXIT` before the channel digits can
-    /// land when going to live TV (too-soon digits are eaten by the home-screen transition).
-    private let goLiveSettleDelay: Duration = .milliseconds(2500)
     /// Best-effort current channel number, tracked from the commands the app sends (tune,
     /// channel ▲/▼, number-pad digits). Used by the Guide button and the "Live TV" shortcut.
     /// Defaults to 1; can drift if the channel is changed on the physical remote (Tizen
     /// doesn't report channel state back over the socket).
     private var lastTunedChannel = 1
+    /// Fired whenever the best-effort current channel changes — number-pad entry finalised,
+    /// a tune macro, or a channel ▲/▼ step. The host wires this to
+    /// `EPGViewModel.noteTunedChannel` so the "Now on TV" pill tracks what the remote believes
+    /// is on the screen. Best-effort only, with the same drift caveat as ``lastTunedChannel``.
+    var onChannelEstimated: ((Int) -> Void)?
     /// Accumulates digit keypresses into a channel number until `KEY_ENTER` or a short idle
     /// (the TV's own auto-tune behaviour) finalises them.
     private var channelEntryBuffer = ""
@@ -320,31 +322,13 @@ final class RemoteViewModel {
         return (videoId, listId, startSeconds)
     }
 
-    /// "Get me back to live TV" — a compound action that works from inside apps that would
-    /// otherwise swallow `KEY_TV`. First sends `KEY_EXIT` (apps generally let this bubble
-    /// up to Tizen), waits for the app to tear down, then selects the tuner with `KEY_TV`.
-    /// Pressing `KEY_TV` alone from inside Netflix/HBO does nothing because the app has
-    /// input focus and doesn't handle that key.
-    /// Returns to live TV. `KEY_TV` / `KEY_LIVE` / `KEY_DTV` / channel keys don't select the
-    /// tuner on this model — but **typing a channel number does** (it opens the channel-entry
-    /// overlay and the tuner takes over). So we:
-    ///   1. revive the socket (`reconnectIfNeeded`) — a stale socket is why commands
-    ///      intermittently "stop working", including the manual keypad;
-    ///   2. `KEY_EXIT` out of the app to the Smart Hub / Discover home;
-    ///   3. wait for that home to settle so the digits aren't eaten by the transition;
-    ///   4. type the channel digits with **no** `KEY_ENTER`, letting the TV auto-tune —
-    ///      matching the bare digit press that worked manually.
+    /// "Get me back to live TV": HOME → `KEY_GUIDE` → channel digits → `KEY_ENTER`. This combo
+    /// reliably drops out of an app and lands the tuner on the last channel on this model
+    /// (`KEY_TV` / `KEY_LIVE` / `KEY_DTV` are all swallowed by the foreground app). Revives a
+    /// stale socket first, since that's what makes commands intermittently "stop working".
+    /// Each step waits for the TV to settle so the next key isn't eaten by the transition.
     func goLive() async {
         await reconnectIfNeeded()
-        await send(.exit)
-        try? await Task.sleep(for: goLiveSettleDelay)
-        await typeChannel(lastTunedChannel)
-    }
-
-    /// The Guide button: drop to the home screen, open the TV's on-screen guide, then type
-    /// the last channel that was on so the guide lands on it. Each step waits for the TV to
-    /// settle so the next key isn't eaten by the transition.
-    func openGuide() async {
         await send(.home)
         try? await Task.sleep(for: guideHomeSettleDelay)
         await send(.guide)
@@ -352,6 +336,15 @@ final class RemoteViewModel {
         await typeChannel(lastTunedChannel)
         try? await Task.sleep(for: .seconds(1))
         await send(.enter)
+    }
+
+    /// The Guide button: drop to the home screen and open the TV's on-screen guide — nothing
+    /// more. Unlike ``goLive`` it does **not** type the channel digits or `KEY_ENTER`; the user
+    /// just wants the guide on screen to browse, not to tune.
+    func openGuide() async {
+        await send(.home)
+        try? await Task.sleep(for: guideHomeSettleDelay)
+        await send(.guide)
     }
 
     /// Types a channel number digit-by-digit (no `KEY_ENTER`), paced so Tizen doesn't drop
@@ -380,10 +373,10 @@ final class RemoteViewModel {
             finalizeChannelEntry()
         case .channelUp:
             finalizeChannelEntry()
-            lastTunedChannel += 1
+            setTrackedChannel(lastTunedChannel + 1)
         case .channelDown:
             finalizeChannelEntry()
-            lastTunedChannel = max(1, lastTunedChannel - 1)
+            setTrackedChannel(lastTunedChannel - 1)
         default:
             // Any other key abandons a half-typed number.
             channelEntryFinalizeTask?.cancel()
@@ -396,9 +389,17 @@ final class RemoteViewModel {
         channelEntryFinalizeTask?.cancel()
         channelEntryFinalizeTask = nil
         if let number = Int(channelEntryBuffer), number > 0 {
-            lastTunedChannel = number
+            setTrackedChannel(number)
         }
         channelEntryBuffer = ""
+    }
+
+    /// The single funnel for every write to ``lastTunedChannel``: clamps to a valid channel
+    /// and notifies the host (`onChannelEstimated`) so the "Now on TV" pill stays in sync.
+    /// Fires on every set — including a re-tune to the same number — so the pill re-resolves.
+    private func setTrackedChannel(_ channel: Int) {
+        lastTunedChannel = max(1, channel)
+        onChannelEstimated?(lastTunedChannel)
     }
 
     private func scheduleChannelEntryFinalize() {
@@ -667,7 +668,7 @@ final class RemoteViewModel {
     /// Tunes to a channel number by sending its digits followed by `KEY_ENTER`, paced so
     /// Tizen doesn't drop fast-arriving digits (same rationale as the EPG tune macro).
     private func tune(to channel: Int) async {
-        lastTunedChannel = channel
+        setTrackedChannel(channel)
         let digits = String(channel).compactMap(\.wholeNumberValue)
         let commands = digits.compactMap(TVCommand.digit) + [.enter]
         for (index, command) in commands.enumerated() {

@@ -210,19 +210,26 @@ struct RemoteView: View {
             // body instead of shrinking the height-constrained remote canvas.
             .overlay(alignment: .top) {
                 NowOnTVPill(
-                    channel: epgViewModel.pinnedChannel,
-                    programme: epgViewModel.pinnedNowPlaying,
+                    channel: epgViewModel.nowOnTVChannel,
+                    programme: epgViewModel.nowOnTVNowPlaying,
+                    isEstimated: epgViewModel.nowOnTVIsEstimated,
                     onTap: {
-                        // Pinned → open that channel's schedule; otherwise the main list.
-                        epgViewModel.selectedChannelID = epgViewModel.pinnedChannel?.id
+                        // Pinned/estimated → open that channel's schedule; otherwise the list.
+                        epgViewModel.selectedChannelID = epgViewModel.nowOnTVChannel?.id
                         showTVGuide = true
                     }
                 )
                 .transition(.opacity.combined(with: .move(edge: .top)))
             }
             }  // close outer VStack added for the NowOnTVPill
-            .animation(.snappy, value: epgViewModel.pinnedChannelID)
+            .animation(.snappy, value: epgViewModel.nowOnTVChannelID)
             .task {
+                // Keep the "Now on TV" pill's best-effort estimate in sync with whatever the
+                // remote tunes to (number-pad, tune macro, channel ▲/▼). Reassigned on each
+                // appear — idempotent. Weak so the closure can't retain the EPG view model.
+                viewModel.onChannelEstimated = { [weak epgViewModel] number in
+                    epgViewModel?.noteTunedChannel(number)
+                }
                 // Pre-warm the EPG so the pinned-channel pill can populate immediately
                 // on first launch (otherwise the pill would render with no programme
                 // data until the user opened the TV Guide panel).
