@@ -82,7 +82,6 @@ final class RemoteViewModel {
     /// `KEY_GUIDE` (guide opens) before typing the channel digits.
     private let guideHomeSettleDelay: Duration = .milliseconds(1200)
     private let guideOpenSettleDelay: Duration = .milliseconds(1500)
-    private let commercialMuteDurationSeconds: Int = 120
     /// Gap between the two volume keys of the deterministic mute/unmute nudge, so the TV
     /// registers them as distinct presses (same pacing rationale as the tune macro).
     private let muteNudgeDelayMs = 120
@@ -531,16 +530,6 @@ final class RemoteViewModel {
             isMuted = true
         }
         startUnmuteCountdown(seconds)
-    }
-
-    /// Toolbar "commercial break" control: tap to mute + auto-unmute after the default 2
-    /// minutes; tap again to unmute now.
-    func toggleCommercialMute() async {
-        if isMuted {
-            await unmuteNow()
-        } else {
-            await scheduleUnmute(after: commercialMuteDurationSeconds)
-        }
     }
 
     /// Starts (or replaces) the auto-unmute countdown. Assumes the TV is already muted.

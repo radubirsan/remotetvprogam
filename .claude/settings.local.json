@@ -46,7 +46,8 @@
       "Bash(git merge-base *)",
       "Bash(git merge --no-ff parallel-work -m 'Merge parallel-work \\(TV Guide redesign\\) into main *)",
       "Bash(git checkout *)",
-      "Bash(cd *)"
+      "Bash(cd *)",
+      "Bash(grep -E \"error:|BUILD FAILED|TEST SUCCEEDED|Test run with|passed after [0-9.]+ seconds\\\\.$\")"
     ]
   }
 }

@@ -98,10 +98,62 @@ struct RemoteView: View {
         self.onDisconnect = onDisconnect
     }
 
+    /// The Settings menu — moved out of the (now hidden) navigation bar into the top pill
+    /// strip. Styled as a compact circular icon button matching the pill's dark glass look.
+    private var settingsMenu: some View {
+        Menu {
+            Picker("Input mode", selection: $inputMode) {
+                ForEach(RemoteInputMode.allCases) { mode in
+                    Text(mode.label).tag(mode)
+                }
+            }
+            .pickerStyle(.inline)
+
+            Picker("Side panel", selection: $sidePanel) {
+                ForEach(SidePanelMode.selectableCases) { mode in
+                    Label(mode.label, systemImage: mode.systemImage).tag(mode)
+                }
+            }
+            .pickerStyle(.inline)
+
+            Divider()
+
+            Button("Keyboard", systemImage: "keyboard") {
+                showKeyboard = true
+            }
+            Button("Setup guide", systemImage: "sparkles") {
+                onboardingReplayRequested = true
+            }
+            Button("Disconnect & switch mode", systemImage: "arrow.left.arrow.right") {
+                Task {
+                    await viewModel.disconnect()
+                    onDisconnect()
+                }
+            }
+            Button("Forget this TV", systemImage: "trash", role: .destructive) {
+                Task {
+                    await viewModel.forgetTV()
+                    onDisconnect()
+                }
+            }
+        } label: {
+            Image(systemName: "gearshape")
+                .font(.caption)
+                .foregroundStyle(.white)
+                .frame(width: 30, height: 30)
+                .background(
+                    Circle()
+                        .fill(.black.opacity(0.45))
+                        .overlay(Circle().stroke(RemoteTheme.accent.opacity(0.35), lineWidth: 0.5))
+                )
+        }
+        .accessibilityLabel("Settings")
+    }
+
     var body: some View {
         // Wrapped in `NavigationStack` because `RemoteView` is now installed as a
         // root view by ``RootView`` rather than pushed onto the discovery stack —
-        // the toolbar and `.navigationTitle` need a stack ancestor to render.
+        // the navigation destinations (TV Guide push) need a stack ancestor.
         NavigationStack {
         ZStack {
             RemoteTheme.bg.ignoresSafeArea()
@@ -203,22 +255,28 @@ struct RemoteView: View {
                 // side column — it's a browsing surface that wants the whole screen.
             }
             .animation(.snappy, value: sidePanel)
-            // "Now on TV" pill — always shown. With a pinned channel it surfaces what's on
-            // now and opens that channel's schedule; otherwise it's a "Check out TV Guide"
-            // prompt that opens the main guide. Floated as a top overlay (rather than
-            // stacked above the remote) so it occupies the empty space above the remote
-            // body instead of shrinking the height-constrained remote canvas.
+            // Top strip: the "Now on TV" pill + the Settings menu. The navigation bar is
+            // hidden (see `.toolbar(.hidden …)` below) to give the pill the full width of the
+            // freed space; the settings gear rides along on the pill's trailing edge so it's
+            // still one tap away. The pill is always shown — with a pinned/estimated channel
+            // it surfaces what's on and opens that channel's schedule, otherwise it's a
+            // "Check out TV Guide" prompt. Floated as a top overlay (rather than stacked above
+            // the remote) so it doesn't shrink the height-constrained remote canvas.
             .overlay(alignment: .top) {
-                NowOnTVPill(
-                    channel: epgViewModel.nowOnTVChannel,
-                    programme: epgViewModel.nowOnTVNowPlaying,
-                    isEstimated: epgViewModel.nowOnTVIsEstimated,
-                    onTap: {
-                        // Pinned/estimated → open that channel's schedule; otherwise the list.
-                        epgViewModel.selectedChannelID = epgViewModel.nowOnTVChannel?.id
-                        showTVGuide = true
-                    }
-                )
+                HStack(spacing: 0) {
+                    NowOnTVPill(
+                        channel: epgViewModel.nowOnTVChannel,
+                        programme: epgViewModel.nowOnTVNowPlaying,
+                        isEstimated: epgViewModel.nowOnTVIsEstimated,
+                        onTap: {
+                            // Pinned/estimated → open that channel's schedule; otherwise the list.
+                            epgViewModel.selectedChannelID = epgViewModel.nowOnTVChannel?.id
+                            showTVGuide = true
+                        }
+                    )
+                    settingsMenu
+                        .padding(.trailing, 12)
+                }
                 .transition(.opacity.combined(with: .move(edge: .top)))
             }
             }  // close outer VStack added for the NowOnTVPill
@@ -238,67 +296,11 @@ struct RemoteView: View {
                 }
             }
         }
-        .navigationTitle(viewModel.device.name)
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbarBackground(.hidden, for: .navigationBar)
-        .toolbarColorScheme(.dark, for: .navigationBar)
         .preferredColorScheme(.dark)
-        .toolbar {
-            ToolbarItem(placement: .topBarLeading) {
-                CompactCommercialMute(
-                    remaining: viewModel.commercialMuteRemaining,
-                    onToggle: viewModel.toggleCommercialMute
-                )
-            }
-//            ToolbarItem(placement: .topBarTrailing) {
-//                Button {
-//                    showTVGuide = true
-//                } label: {
-//                    Label("TV Guide", systemImage: "tv")
-//                }
-//                .accessibilityLabel("Open TV Guide")
-//            }
-            ToolbarItem(placement: .topBarTrailing) {
-                Menu {
-                    Picker("Input mode", selection: $inputMode) {
-                        ForEach(RemoteInputMode.allCases) { mode in
-                            Text(mode.label).tag(mode)
-                        }
-                    }
-                    .pickerStyle(.inline)
-
-                    Picker("Side panel", selection: $sidePanel) {
-                        ForEach(SidePanelMode.selectableCases) { mode in
-                            Label(mode.label, systemImage: mode.systemImage).tag(mode)
-                        }
-                    }
-                    .pickerStyle(.inline)
-
-                    Divider()
-
-                    Button("Keyboard", systemImage: "keyboard") {
-                        showKeyboard = true
-                    }
-                    Button("Setup guide", systemImage: "sparkles") {
-                        onboardingReplayRequested = true
-                    }
-                    Button("Disconnect & switch mode", systemImage: "arrow.left.arrow.right") {
-                        Task {
-                            await viewModel.disconnect()
-                            onDisconnect()
-                        }
-                    }
-                    Button("Forget this TV", systemImage: "trash", role: .destructive) {
-                        Task {
-                            await viewModel.forgetTV()
-                            onDisconnect()
-                        }
-                    }
-                } label: {
-                    Label("Settings", systemImage: "gearshape")
-                }
-            }
-        }
+        // Navigation bar removed entirely — the device-name title and the commercial-mute
+        // toolbar button were dropped to free vertical space for the top pill strip; the
+        // Settings menu moved into that strip (see `settingsMenu`).
+        .toolbar(.hidden, for: .navigationBar)
         .task {
             await viewModel.connect()
         }
