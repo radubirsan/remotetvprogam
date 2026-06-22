@@ -55,6 +55,12 @@ final class RemoteViewModel {
     private var liveTuneTask: Task<Void, Never>?
     /// Pacing between digits of the post-wake tune macro (matches the EPG tune delay).
     private let tuneInterKeyDelayMs = 120
+    /// Pacing between digits when typing the channel into the freshly-opened on-screen guide
+    /// (the Live TV button, ``typeChannel``). Deliberately *much* slower than
+    /// ``tuneInterKeyDelayMs``: the first digit spawns the guide's channel-entry box, and at
+    /// 120 ms the second digit lands while that box is still animating in and the TV drops it —
+    /// so a two-digit channel only registered its first digit. ~500 ms lets the box settle.
+    private let guideDigitDelayMs = 500
     /// Settle time before the channel scroll-picker actually tunes, so flicking the wheel
     /// doesn't fire a tune per row.
     private let liveTuneDebounceMs = 250
@@ -346,13 +352,14 @@ final class RemoteViewModel {
         await send(.guide)
     }
 
-    /// Types a channel number digit-by-digit (no `KEY_ENTER`), paced so Tizen doesn't drop
-    /// fast-arriving digits.
+    /// Types a channel number digit-by-digit (no `KEY_ENTER`) into the freshly-opened guide,
+    /// paced by ``guideDigitDelayMs`` so the guide's channel-entry box has time to appear
+    /// after the first digit — otherwise a two-digit channel loses its second digit.
     private func typeChannel(_ channel: Int) async {
         for digit in String(channel).compactMap(\.wholeNumberValue) {
             guard let command = TVCommand.digit(digit) else { continue }
             await send(command)
-            try? await Task.sleep(for: .milliseconds(tuneInterKeyDelayMs))
+            try? await Task.sleep(for: .milliseconds(guideDigitDelayMs))
         }
     }
 

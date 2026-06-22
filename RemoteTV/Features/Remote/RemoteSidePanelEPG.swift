@@ -52,22 +52,39 @@ struct RemoteSidePanelEPG: View {
 
     @ViewBuilder
     private var channelListScreen: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            if let featuredID = vm.featuredChannelID(at: now),
-               let featured = vm.channel(withID: featuredID) {
-                featuredCard(featured)
-            }
-           // headerRow
+        VStack(alignment: .leading, spacing: 12) {
             searchBar
             categoryChips
-
-            
-
-           // listHeader
-            channelScroll
+            gridScreen
         }
-        .padding(.horizontal, 20)
+        .padding(.horizontal, 14)
         .padding(.top, 8)
+    }
+
+    /// The 2-D EPG grid: channels down the (vertically scrollable) left column, time across
+    /// the (horizontally scrollable) timeline. Opens scrolled to whatever channel the remote
+    /// thinks the TV is on (``EPGViewModel/nowOnTVChannelID``).
+    @ViewBuilder
+    private var gridScreen: some View {
+        let channels = vm.filteredChannels
+        if channels.isEmpty {
+            Text(emptyListMessage)
+                .font(.footnote)
+                .foregroundStyle(GuidePalette.secondary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.top, 8)
+            Spacer(minLength: 0)
+        } else {
+            EPGTimelineGrid(
+                vm: vm,
+                channels: channels,
+                now: now,
+                tunedChannelID: vm.nowOnTVChannelID,
+                onOpen: { vm.selectedChannelID = $0 },
+                onTune: { tune($0) },
+                rowMenu: { channel in AnyView(rowMenu(for: channel)) }
+            )
+        }
     }
 
     private var headerRow: some View {
@@ -479,6 +496,357 @@ struct RemoteSidePanelEPG: View {
     }
 }
 
+// MARK: - Timeline grid
+
+/// Holds the timeline's horizontal scroll offset as an `@Observable` reference so that only
+/// the ruler (which reads `x`) re-renders while the user scrolls sideways — the heavy row
+/// content, which doesn't depend on the offset, is left untouched. The rows themselves move
+/// because they live *inside* the horizontal `ScrollView`; only the detached ruler needs the
+/// value mirrored to it.
+/// Mirrors the grid's scroll offset for the two pinned overlays. The ruler reads only `x`,
+/// the frozen channel column reads only `y` — and the offsets are written independently — so
+/// scrolling one axis never re-renders the overlay that tracks the other.
+@MainActor
+@Observable
+private final class GridScrollModel {
+    var x: CGFloat = 0
+    var y: CGFloat = 0
+}
+
+/// Two-axis EPG grid. Channels are rows in a frozen left column that scrolls vertically (the
+/// full lineup); programmes lay out left-to-right on a shared time axis that scrolls
+/// horizontally (now → later). A single horizontal `ScrollView` wraps every row so they stay
+/// in lock-step, and the channel column sits outside it so the names never scroll away. On
+/// appear it jumps vertically to ``tunedChannelID`` so you land on the channel the TV is on.
+@MainActor
+private struct EPGTimelineGrid: View {
+    @Bindable var vm: EPGViewModel
+    let channels: [EPGChannel]
+    let now: Date
+    let tunedChannelID: String?
+    let onOpen: (String) -> Void
+    /// Tune the TV to a channel id (digits + `KEY_ENTER`). Wired to a tap on a column cell.
+    let onTune: (String) -> Void
+    let rowMenu: (EPGChannel) -> AnyView
+
+    // Layout metrics.
+    private let colWidth: CGFloat = 60
+    private let rowHeight: CGFloat = 56
+    private let rowSpacing: CGFloat = 6
+    private let pointsPerMinute: CGFloat = 4
+    private let rulerHeight: CGFloat = 22
+    private let horizonHours: Double = 8
+
+    @State private var scroll = GridScrollModel()
+    @State private var didAutoScroll = false
+
+    // MARK: Time window
+
+    /// Window start: `now` floored to the previous half hour, so the live show is visible at
+    /// the left with a little lead-in and the axis only shifts twice an hour.
+    private var windowStart: Date {
+        let cal = Calendar.current
+        var c = cal.dateComponents([.year, .month, .day, .hour, .minute], from: now)
+        c.minute = ((c.minute ?? 0) / 30) * 30
+        c.second = 0
+        return cal.date(from: c) ?? now
+    }
+    private var windowEnd: Date { windowStart.addingTimeInterval(horizonHours * 3600) }
+    private var contentWidth: CGFloat { x(for: windowEnd) }
+    private func x(for date: Date) -> CGFloat {
+        CGFloat(date.timeIntervalSince(windowStart) / 60) * pointsPerMinute
+    }
+
+    /// Half-hour marks spanning the window — drive the ruler labels and grid lines.
+    private var ticks: [Date] {
+        var result: [Date] = []
+        var t = windowStart
+        while t < windowEnd {
+            result.append(t)
+            t = t.addingTimeInterval(1800)
+        }
+        return result
+    }
+
+    var body: some View {
+        ScrollViewReader { proxy in
+            scroller
+                .scrollIndicators(.hidden)
+                // Frozen channel column: an overlay OUTSIDE the scroll view, so it physically
+                // can't be dragged sideways. It follows the vertical offset only.
+                .overlay(alignment: .topLeading) {
+                    FrozenColumn(
+                        vm: vm,
+                        model: scroll,
+                        channels: channels,
+                        colWidth: colWidth,
+                        rowHeight: rowHeight,
+                        rowSpacing: rowSpacing,
+                        rulerHeight: rulerHeight,
+                        onTune: onTune,
+                        rowMenu: rowMenu
+                    )
+                }
+                // Time ruler: pinned to the top, follows the horizontal offset only. Added last
+                // so it sits above the column and covers its top strip (the empty corner).
+                .overlay(alignment: .topLeading) {
+                    EPGRuler(
+                        model: scroll,
+                        ticks: ticks,
+                        colWidth: colWidth,
+                        rulerHeight: rulerHeight,
+                        contentWidth: contentWidth,
+                        x: x
+                    )
+                    .allowsHitTesting(false)   // never swallow the scroll gesture
+                }
+                .onAppear { autoScroll(proxy) }
+        }
+    }
+
+    /// A single 2-D scroll surface holding only the timelines (the channel column is a separate
+    /// pinned overlay). One scroller — not nested — so neither axis fights the other. Each row
+    /// is inset by `colWidth` on the left to leave room behind the column overlay. The scroll
+    /// offset is mirrored into `scroll` for the two overlays.
+    @ViewBuilder
+    private var scroller: some View {
+        let grid = ScrollView([.horizontal, .vertical]) {
+            LazyVStack(spacing: rowSpacing) {
+                ForEach(channels) { channel in
+                    timelineRow(channel)
+                        .padding(.leading, colWidth)
+                        .id(channel.id)
+                }
+            }
+            .frame(width: colWidth + contentWidth, alignment: .topLeading)
+            .padding(.top, rulerHeight)   // clear the pinned ruler
+        }
+
+        // `onScrollGeometryChange` is iOS 18+; on the 17.0 floor the overlays just don't track
+        // the offset (no device in play actually runs < iOS 26). Each axis is written only when
+        // it actually changes, so a horizontal scroll never re-renders the (y-tracking) column.
+        if #available(iOS 18.0, *) {
+            grid.onScrollGeometryChange(for: CGPoint.self) { $0.contentOffset } action: { _, p in
+                let nx = max(0, p.x), ny = max(0, p.y)
+                if scroll.x != nx { scroll.x = nx }
+                if scroll.y != ny { scroll.y = ny }
+            }
+        } else {
+            grid
+        }
+    }
+
+    // MARK: Timeline row
+
+    private func timelineRow(_ channel: EPGChannel) -> some View {
+        let programmes = (vm.programmesByChannel[channel.id] ?? []).filter {
+            $0.stop > windowStart && $0.start < windowEnd
+        }
+        return ZStack(alignment: .topLeading) {
+            // Half-hour grid lines + the accent "now" marker. Drawn per row (one cheap Canvas
+            // each) so the lines stay lazy with the rows; they align across rows because every
+            // row uses the same tick x-positions.
+            Canvas { ctx, size in
+                for tick in ticks {
+                    let gx = x(for: tick)
+                    var p = Path()
+                    p.move(to: CGPoint(x: gx, y: 0))
+                    p.addLine(to: CGPoint(x: gx, y: size.height))
+                    ctx.stroke(p, with: .color(.white.opacity(0.05)), lineWidth: 0.5)
+                }
+                let nx = x(for: now)
+                var np = Path()
+                np.move(to: CGPoint(x: nx, y: 0))
+                np.addLine(to: CGPoint(x: nx, y: size.height))
+                ctx.stroke(np, with: .color(GuidePalette.accent), lineWidth: 1.5)
+            }
+            .frame(width: contentWidth, height: rowHeight)
+
+            ForEach(programmes) { programme in
+                programmeBlock(programme, channel: channel)
+                    .offset(x: max(0, x(for: programme.start)))
+            }
+        }
+        .frame(width: contentWidth, height: rowHeight, alignment: .topLeading)
+    }
+
+    private func programmeBlock(_ programme: EPGProgramme, channel: EPGChannel) -> some View {
+        let startX = max(0, x(for: programme.start))
+        let endX = min(contentWidth, x(for: programme.stop))
+        let width = max(endX - startX, 2)
+        let isLive = programme.isLive(at: now)
+        let tint = GuidePalette.tint(for: vm.tvChannelNumber(for: channel.id))
+        return Button { onOpen(channel.id) } label: {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(programme.title)
+                    .font(.system(size: 11.5, weight: isLive ? .bold : .semibold))
+                    .foregroundStyle(isLive ? .white : GuidePalette.primaryText)
+                    .lineLimit(1)
+                Text(programme.start, format: .dateTime.hour().minute())
+                    .font(.system(size: 9.5).monospacedDigit())
+                    .foregroundStyle(isLive ? .white.opacity(0.85) : GuidePalette.tertiary)
+            }
+            .padding(.horizontal, 7)
+            .padding(.vertical, 5)
+            .frame(width: width, height: rowHeight, alignment: .topLeading)
+            .background(
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .fill(isLive ? tint.opacity(0.30) : Color.white.opacity(0.045))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .stroke(isLive ? tint.opacity(0.9) : Color.white.opacity(0.06),
+                            lineWidth: isLive ? 1 : 0.5)
+            )
+            .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .contextMenu { rowMenu(channel) }
+        .accessibilityLabel("\(channel.primaryName), \(programme.title) at \(programme.start.formatted(date: .omitted, time: .shortened))")
+    }
+
+    // MARK: Auto-scroll to the tuned channel
+
+    private func autoScroll(_ proxy: ScrollViewProxy) {
+        guard !didAutoScroll,
+              let id = tunedChannelID,
+              channels.contains(where: { $0.id == id }) else { return }
+        didAutoScroll = true
+        // A beat after first layout so the lazy rows for an off-screen channel exist.
+        // anchor x:0 keeps the timeline at "now" (left); y:0.5 centres the channel vertically.
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(60))
+            withAnimation(.easeInOut(duration: 0.35)) {
+                proxy.scrollTo(id, anchor: UnitPoint(x: 0, y: 0.5))
+            }
+        }
+    }
+}
+
+/// The frozen channel column. An overlay that lives OUTSIDE the scroll view, so it can never
+/// be dragged sideways (the previous in-content counter-offset lagged a frame on fast
+/// horizontal flicks and visibly travelled with the timeline). It follows the *vertical*
+/// scroll via ``GridScrollModel/y``; the heavy cell stack (`Cells`) is a nested view that
+/// doesn't read the offset, so vertical scrolling only re-applies the offset rather than
+/// rebuilding every cell.
+@MainActor
+private struct FrozenColumn: View {
+    @Bindable var vm: EPGViewModel
+    var model: GridScrollModel
+    let channels: [EPGChannel]
+    let colWidth: CGFloat
+    let rowHeight: CGFloat
+    let rowSpacing: CGFloat
+    let rulerHeight: CGFloat
+    let onTune: (String) -> Void
+    let rowMenu: (EPGChannel) -> AnyView
+
+    var body: some View {
+        Cells(vm: vm, channels: channels, colWidth: colWidth, rowHeight: rowHeight,
+              rowSpacing: rowSpacing, onTune: onTune, rowMenu: rowMenu)
+            .offset(y: rulerHeight - model.y)            // align with the rows; the top strip
+            .frame(width: colWidth, alignment: .top)     // is covered by the ruler overlay
+            .frame(maxHeight: .infinity, alignment: .top)
+            .clipped()
+            .background(GuidePalette.columnBackground)
+    }
+
+    /// The channel cells. Deliberately doesn't read `model`, so it's built once and a vertical
+    /// scroll just re-offsets it.
+    @MainActor
+    private struct Cells: View {
+        @Bindable var vm: EPGViewModel
+        let channels: [EPGChannel]
+        let colWidth: CGFloat
+        let rowHeight: CGFloat
+        let rowSpacing: CGFloat
+        let onTune: (String) -> Void
+        let rowMenu: (EPGChannel) -> AnyView
+
+        var body: some View {
+            VStack(spacing: rowSpacing) {
+                ForEach(channels) { channel in
+                    cell(channel)
+                }
+            }
+        }
+
+        private func cell(_ channel: EPGChannel) -> some View {
+            let tint = GuidePalette.tint(for: vm.tvChannelNumber(for: channel.id))
+            let pinned = vm.isPinned(channel.id)
+            // Tap = tune the TV to this channel (digits + ENTER). Long-press → menu (pin, etc.).
+            return Button { onTune(channel.id) } label: {
+                VStack(spacing: 3) {
+                    ZStack(alignment: .topTrailing) {
+                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            .fill(LinearGradient(colors: [tint, tint.opacity(0.6)],
+                                                 startPoint: .topLeading, endPoint: .bottomTrailing))
+                            .frame(width: 40, height: 28)
+                            .overlay {
+                                Text(vm.tvChannelNumber(for: channel.id).map(String.init) ?? "–")
+                                    .font(.system(size: 13, weight: .heavy).monospacedDigit())
+                                    .foregroundStyle(.white)
+                            }
+                        if pinned {
+                            Image(systemName: "pin.fill")
+                                .font(.system(size: 8))
+                                .foregroundStyle(.white)
+                                .padding(2.5)
+                                .background(Circle().fill(.black.opacity(0.5)))
+                                .offset(x: 4, y: -4)
+                        }
+                    }
+                    Text(channel.primaryName)
+                        .font(.system(size: 8, weight: .semibold))
+                        .foregroundStyle(GuidePalette.tertiary)
+                        .lineLimit(1)
+                        .frame(width: colWidth - 6)
+                }
+                .frame(width: colWidth, height: rowHeight)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .contextMenu { rowMenu(channel) }
+        }
+    }
+}
+
+/// The pinned time axis above the grid — a top overlay that doesn't scroll vertically. Reads
+/// ``GridScrollModel/x`` to track the timeline's horizontal scroll. The corner above the
+/// channel column is intentionally empty. Opaque so rows scroll cleanly beneath it.
+@MainActor
+private struct EPGRuler: View {
+    var model: GridScrollModel
+    let ticks: [Date]
+    let colWidth: CGFloat
+    let rulerHeight: CGFloat
+    let contentWidth: CGFloat
+    let x: (Date) -> CGFloat
+
+    var body: some View {
+        HStack(spacing: 0) {
+            // Empty corner above the channel column.
+            Color.clear.frame(width: colWidth, height: rulerHeight)
+
+            ZStack(alignment: .topLeading) {
+                ForEach(ticks, id: \.self) { tick in
+                    Text(tick, format: .dateTime.hour().minute())
+                        .font(.system(size: 9.5).monospacedDigit())
+                        .foregroundStyle(GuidePalette.tertiary)
+                        .offset(x: x(tick) + 3)
+                }
+            }
+            .frame(width: contentWidth, height: rulerHeight, alignment: .topLeading)
+            .offset(x: -model.x)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .clipped()
+        }
+        .frame(maxWidth: .infinity, minHeight: rulerHeight, alignment: .leading)
+        .background(GuidePalette.columnBackground)
+    }
+}
+
 // MARK: - Channel schedule (pushed)
 
 /// A single channel's full schedule for today — pushed onto the navigation stack from the
@@ -682,6 +1050,9 @@ private enum GuidePalette {
         startPoint: .top, endPoint: .bottom
     )
     static let cardFade = Color(hex: 0x1A1A1D)
+    /// Opaque fill behind the grid's sticky channel column + time ruler, so scrolling rows
+    /// pass cleanly underneath them.
+    static let columnBackground = Color(hex: 0x0D0D0F)
 
     static let accent = Color(hex: 0xFF6B5A)            // Ember (default)
     static let primaryText = Color(hex: 0xE8E8EA)

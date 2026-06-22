@@ -23,6 +23,12 @@ final class EPGViewModel {
     private(set) var isLoading: Bool = false
     private(set) var lastError: String?
 
+    /// Programmes grouped by channel id and sorted by start — rebuilt once each time a guide
+    /// loads. The timeline grid reads this per row instead of re-filtering the full programme
+    /// list (`EPGGuide.programmes(for:)` is O(all programmes)) on every render, which matters
+    /// when ~150 rows each ask for their schedule.
+    private(set) var programmesByChannel: [String: [EPGProgramme]] = [:]
+
     /// Two-way binding for the panel's `.searchable` field.
     var searchText: String = ""
 
@@ -91,7 +97,10 @@ final class EPGViewModel {
         lastError = nil
         defer { isLoading = false }
         do {
-            guide = try await client.loadGuide(forceRefresh: forceRefresh)
+            let loaded = try await client.loadGuide(forceRefresh: forceRefresh)
+            guide = loaded
+            programmesByChannel = Dictionary(grouping: loaded.programmes, by: \.channelID)
+                .mapValues { $0.sorted { $0.start < $1.start } }
         } catch {
             lastError = String(describing: error)
         }
