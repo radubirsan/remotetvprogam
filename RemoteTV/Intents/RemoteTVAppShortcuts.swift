@@ -2,7 +2,7 @@ import AppIntents
 
 /// Zero-setup Siri phrases — these work the moment the app is installed, no Shortcuts
 /// authoring needed. Every phrase must contain `applicationName` (Apple's rule), which
-/// is why they read "… with RemoteTV". The richer intents (tune to channel, open app,
+/// is why they read "… with Zapy". The richer intents (tune to channel, open app,
 /// volume by steps) are available in the Shortcuts app rather than here: parameterized
 /// phrases over a 100+-row channel list would bloat the Siri vocabulary for little gain.
 ///

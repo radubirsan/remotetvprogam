@@ -38,7 +38,7 @@ struct DiscoveryView: View {
             ZStack {
                 content
             }
-            .navigationTitle("RemoteTV")
+            .navigationTitle("Zapy")
             .toolbar { toolbar }
             .sheet(isPresented: $showPowerOnHelp) {
                 PowerOnHelpSheet()

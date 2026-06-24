@@ -62,7 +62,7 @@ struct RemoteSidePanelEPG: View {
     }
 
     /// The 2-D EPG grid: channels down the (vertically scrollable) left column, time across
-    /// the (horizontally scrollable) timeline. Opens scrolled to whatever channel the remote
+    /// the (horizontally scrollable) timeline  . Opens scrolled to whatever channel the remote
     /// thinks the TV is on (``EPGViewModel/nowOnTVChannelID``).
     @ViewBuilder
     private var gridScreen: some View {

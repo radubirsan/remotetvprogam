@@ -47,7 +47,11 @@
       "Bash(git merge --no-ff parallel-work -m 'Merge parallel-work \\(TV Guide redesign\\) into main *)",
       "Bash(git checkout *)",
       "Bash(cd *)",
-      "Bash(grep -E \"error:|BUILD FAILED|TEST SUCCEEDED|Test run with|passed after [0-9.]+ seconds\\\\.$\")"
+      "Bash(git push *)",
+      "Bash(git fetch *)",
+      "Bash(git merge *)",
+      "Bash(sips *)",
+      "Bash(python3 -c \"import PIL; print\\('PIL', PIL.__version__\\)\")"
     ]
   }
 }

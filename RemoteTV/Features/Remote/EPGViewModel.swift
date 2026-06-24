@@ -310,7 +310,7 @@ enum GuideCategory: String, CaseIterable, Identifiable {
         case .movies: ["film", "movie", "cinema"]
         case .sports: ["sport", "fotbal", "soccer", "tenis", "tennis", "match", "meci"]
         case .news: ["news", "stiri", "stire", "actualit", "jurnal"]
-        case .kids: ["kids", "copii", "desene", "children", "cartoon", "animat", "junior"]
+        case .kids: ["kids", "copii", "desene", "children", "cartoon", "animat", "junior", "disney"]
         }
     }
 

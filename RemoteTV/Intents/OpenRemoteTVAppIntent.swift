@@ -1,6 +1,6 @@
 import AppIntents
 
-/// Foregrounds the app for the Control Center "Open RemoteTV" control.
+/// Foregrounds the app for the Control Center "Open Zapy" control.
 ///
 /// This file is a member of BOTH the app target AND the `RemoteTVExtension` target — that
 /// dual membership is load-bearing. The control (in the extension) references this intent for
@@ -10,7 +10,7 @@ import AppIntents
 /// `RemoteTVCore` either — SwiftPM doesn't run the AppIntents metadata-extraction build phase,
 /// so a package-defined intent never registers. Hence: plain `.swift` file, both targets.
 struct OpenRemoteTVAppIntent: AppIntent {
-    static let title: LocalizedStringResource = "Open RemoteTV"
+    static let title: LocalizedStringResource = "Open Zapy"
     static let openAppWhenRun = true
 
     @MainActor

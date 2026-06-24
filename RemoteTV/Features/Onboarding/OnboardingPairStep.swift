@@ -30,7 +30,7 @@ struct OnboardingPairStep: View {
         }
         switch vm.connectionState {
         case .awaitingPairing:
-            return "Your TV is showing an **Allow** popup. Press **Allow** with the TV's physical remote to let RemoteTV control it."
+            return "Your TV is showing an **Allow** popup. Press **Allow** with the TV's physical remote to let Zapy control it."
         default:
             return "Connecting to \(vm.selectedDevice?.name ?? "your TV")…"
         }

@@ -259,8 +259,8 @@ struct RemoteView: View {
             // hidden (see `.toolbar(.hidden …)` below) to give the pill the full width of the
             // freed space; the settings gear rides along on the pill's trailing edge so it's
             // still one tap away. The pill is always shown — with a pinned/estimated channel
-            // it surfaces what's on and opens that channel's schedule, otherwise it's a
-            // "Check out TV Guide" prompt. Floated as a top overlay (rather than stacked above
+            // it surfaces what's on; tapping always opens the guide's channel-list screen
+            // (scrolled to that channel), never a drill-down. Floated as a top overlay (rather than stacked above
             // the remote) so it doesn't shrink the height-constrained remote canvas.
             .overlay(alignment: .top) {
                 HStack(spacing: 0) {
@@ -269,8 +269,11 @@ struct RemoteView: View {
                         programme: epgViewModel.nowOnTVNowPlaying,
                         isEstimated: epgViewModel.nowOnTVIsEstimated,
                         onTap: {
-                            // Pinned/estimated → open that channel's schedule; otherwise the list.
-                            epgViewModel.selectedChannelID = epgViewModel.nowOnTVChannel?.id
+                            // Always open the channel-list screen — never drill straight into a
+                            // channel's schedule. The grid auto-scrolls to the pinned/estimated
+                            // channel via `nowOnTVChannelID`. Clear any stale selection so a
+                            // previously-opened channel doesn't re-push its schedule.
+                            epgViewModel.selectedChannelID = nil
                             showTVGuide = true
                         }
                     )

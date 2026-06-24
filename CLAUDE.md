@@ -205,8 +205,10 @@ Entity catalogs are static on purpose (channels from `KnownChannelNumbers`, apps
 network. `RemoteTVAppShortcuts` phrase rules, learned the hard way:
 - Nothing that matches Siri's built-in home-control vocabulary ("turn on/off the TV") —
   it routes to HomeKit before app phrases and prompts HomeKit setup.
-- App-name-first forms ("<app> power") are the most reliable; `INAlternativeAppNames`
-  registers "Cobalt" because "RemoteTV" transcribes as ordinary TV vocabulary.
+- App-name-first forms ("<app> power") are the most reliable. The display name is **Zapy**
+  (`CFBundleDisplayName`), and `INAlternativeAppNames` re-registers "Zapy" with a
+  pronunciation hint ("zap-ee") so Siri maps the spoken brand reliably. (Was "RemoteTV" +
+  a "Cobalt" alias; "RemoteTV" transcribed as ordinary TV vocabulary.)
 - Parameter values must be IN the phrase as `\(\.$param)` — two static phrases
   ("channel up"/"channel down") would both run the intent with its default.
 - Entity-backed phrase parameters need the `updateAppShortcutParameters()` call in
@@ -470,10 +472,13 @@ owner/name changes, update that constant.
   permission prompt.
 - `NSAppTransportSecurity.NSAllowsArbitraryLoads = true` so the WebSocket can open against
   a plain `ws://` TV without ATS blocking it.
-- `INAlternativeAppNames` registers "Cobalt" as a Siri alias for the app — "RemoteTV"
-  transcribes poorly ("remote TV" is ordinary TV vocabulary), so App Shortcut phrases
-  match far more reliably via the alias ("Cobalt power"). Candidate for becoming the
-  real display name at App Store time.
+- `CFBundleDisplayName` is **Zapy** — the user-facing app name (home screen + Siri primary).
+  The Xcode target / `PRODUCT_NAME` / bundle id stay `RemoteTV` / `ro.remotetv.RemoteTV`
+  (renaming them would churn provisioning, the App Group, and the control `kind` ids for no
+  user benefit). `INAlternativeAppNames` re-registers "Zapy" with a pronunciation hint
+  ("zap-ee") — the hint can only attach to an *alternative* name, so this is how Siri gets a
+  pronunciation for the coined brand. (Earlier the name was "RemoteTV" with a "Cobalt"
+  alias, because "remote TV" is ordinary TV vocabulary Siri transcribed poorly.)
 
 ## Running
 

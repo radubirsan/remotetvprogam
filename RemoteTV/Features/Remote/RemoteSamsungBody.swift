@@ -330,7 +330,7 @@ struct RemoteSamsungBody: View {
             .position(x: 265, y: 787)
 
             // Brand label.
-            Text("ANOTHER REMOTE")
+            Text("ZAPY")
                 .font(.system(size: 11, weight: .bold))
                 .tracking(2)
                 .foregroundStyle(RemoteTheme.labelDim)

@@ -180,11 +180,11 @@ struct OpenRemoteTVAppControl: ControlWidget {
     var body: some ControlWidgetConfiguration {
         StaticControlConfiguration(kind: Self.kind) {
             ControlWidgetButton(action: OpenRemoteTVAppIntent()) {
-                Label("Open RemoteTV", systemImage: "appletvremote.gen4")
+                Label("Open Zapy", systemImage: "appletvremote.gen4")
             }
         }
-        .displayName("Open RemoteTV")
-        .description("Open the RemoteTV remote.")
+        .displayName("Open Zapy")
+        .description("Open the Zapy remote.")
     }
 }
 

@@ -43,7 +43,12 @@ enum KnownChannelNumbers {
         "Eurosport.1.ro":                9,    // listed as "Eurosport RO"
         "Eurosport.2.HD.ro":            10,
         "Eurosport.2.ro":               11,
-        "PRIMA.SPORT.1.ro":             12,
+        "PRIMA.SPORT.1.HD.ro":             12,
+        "PRIMA.SPORT.1.ro":             13,
+        "PRIMA.SPORT.2.HD.ro":             14,
+        "PRIMA.SPORT.2.ro":             15,
+        "PRIMA.SPORT.3.HD.ro":             16,
+        "PRIMA.SPORT.3.ro":             17,
         "PRO.X.HD.ro":                  19,    // rebranded as "PRO ARENA HD"
         "PRO.X.ro":                     20,    // rebranded as "PRO ARENA"
         "TVR.HD.ro":                    22,    // TVR 1 HD

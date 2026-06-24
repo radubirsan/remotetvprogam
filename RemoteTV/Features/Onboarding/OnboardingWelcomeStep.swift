@@ -66,13 +66,13 @@ struct OnboardingWelcomeStep: View {
                         .foregroundStyle(.white)
                 }
                 .shadow(color: OnboardingStyle.accent.opacity(0.33), radius: 7)
-            Text("REMOTETV")
+            Text("ZAPY")
                 .font(.system(size: 13, weight: .bold))
                 .tracking(1)
                 .foregroundStyle(OnboardingStyle.secondaryText)
         }
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("RemoteTV")
+        .accessibilityLabel("Zapy")
     }
 
     // MARK: Feature stage

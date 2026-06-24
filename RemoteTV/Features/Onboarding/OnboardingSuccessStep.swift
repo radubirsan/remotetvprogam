@@ -14,7 +14,7 @@ struct OnboardingSuccessStep: View {
                 .font(.title.bold())
                 .foregroundStyle(.white)
                 .multilineTextAlignment(.center)
-            Text("RemoteTV is paired with \(vm.selectedDevice?.name ?? "your TV"). Just a couple of optional tips to make it even better.")
+            Text("Zapy is paired with \(vm.selectedDevice?.name ?? "your TV"). Just a couple of optional tips to make it even better.")
                 .font(.body)
                 .foregroundStyle(.white.opacity(0.7))
                 .multilineTextAlignment(.center)
