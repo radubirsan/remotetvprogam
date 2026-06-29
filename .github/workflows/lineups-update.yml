@@ -1,0 +1,115 @@
+name: Update channel lineups
+
+# Monthly digi.ro/grila → lineups.json pipeline.
+#
+# Scrapes the per-county Digi channel grid (the "Post" = channel position column) with a
+# headless browser, matches names to our XMLTV ids, and publishes lineups.json on a dedicated
+# `lineup-data` branch. The iOS app reads from
+# https://raw.githubusercontent.com/<owner>/<repo>/lineup-data/lineups.json.
+#
+# SEPARATE branch from `epg-data` on purpose: epg-update.yml rewrites `epg-data` as an orphan
+# every day and would delete this file. Lineups change a few times a year, so monthly is plenty.
+
+on:
+  schedule:
+    - cron: "0 5 1 * *" # 05:00 UTC on the 1st of each month
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/lineups-update.yml"
+      - "tools/digi-lineup-scraper/**"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: lineups-update
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    env:
+      DATA_BRANCH: lineup-data
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install deps + Chromium
+        working-directory: tools/digi-lineup-scraper
+        run: |
+          npm install
+          npx playwright install --with-deps chromium
+
+      - name: Scrape digi.ro/grila
+        working-directory: tools/digi-lineup-scraper
+        run: node scrape.mjs
+
+      - name: Build lineups.json
+        working-directory: tools/digi-lineup-scraper
+        run: node build-lineups.mjs
+
+      - name: Summarize
+        working-directory: tools/digi-lineup-scraper
+        run: |
+          ls -lh lineups.json
+          python3 - <<'PY'
+          import json, pathlib
+          cat = json.loads(pathlib.Path("lineups.json").read_text())
+          print(f"lineups: {len(cat['lineups'])}")
+          tot = sum(len(l['numbers']) for l in cat['lineups'])
+          print(f"matched numbers: {tot}")
+          PY
+
+      # Guard: don't publish an empty/degenerate scrape over a good one (e.g. if the site
+      # layout changed and every county came back empty).
+      - name: Sanity gate
+        working-directory: tools/digi-lineup-scraper
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json, pathlib, sys
+          cat = json.loads(pathlib.Path("lineups.json").read_text())
+          tot = sum(len(l['numbers']) for l in cat['lineups'])
+          if len(cat['lineups']) < 1 or tot < 50:
+              print(f"::error::scrape looks degenerate ({len(cat['lineups'])} lineups, {tot} numbers) — not publishing")
+              sys.exit(1)
+          PY
+
+      - name: Publish to ${{ env.DATA_BRANCH }} branch
+        run: |
+          set -euo pipefail
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          rm -rf /tmp/lineup-publish
+          git worktree add --detach /tmp/lineup-publish
+          cd /tmp/lineup-publish
+          git checkout --orphan "$DATA_BRANCH"
+          git rm -rf . > /dev/null 2>&1 || true
+          cp "$GITHUB_WORKSPACE/tools/digi-lineup-scraper/lineups.json" .
+          cp "$GITHUB_WORKSPACE/tools/digi-lineup-scraper/unmatched-report.json" . 2>/dev/null || true
+
+          cat > README.md <<'MD'
+          # lineup-data
+
+          Auto-generated branch. Per-county Digi channel positions scraped monthly from
+          digi.ro/grila by `.github/workflows/lineups-update.yml` on `main`.
+
+          Consumed by the RemoteTV/Zapy iOS app (LineupClient). Do not edit by hand — the
+          workflow force-pushes this branch on every run. `unmatched-report.json` lists
+          scraped names that didn't map to an XMLTV id (extend aliases.json to fix).
+          MD
+
+          git add lineups.json README.md unmatched-report.json 2>/dev/null || git add lineups.json README.md
+          git commit -m "Lineup update $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          git push --force origin "$DATA_BRANCH"

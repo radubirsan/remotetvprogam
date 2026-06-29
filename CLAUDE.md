@@ -465,6 +465,33 @@ builds the CLI, fetches the epgshare01 RO feed, and force-pushes `guide.json` to
 `EPGClient.Configuration.defaultSourceURL` points at that branch's raw URL — if the repo
 owner/name changes, update that constant.
 
+## Channel-number lineups (replacing hardcoded `KnownChannelNumbers`)
+
+A channel **number** is a `(provider, zone, channel)` property — `Digi.24.HD.ro` is 59 on one
+Digi county, different on another, different on Orange — so it can't live as a single field in
+the daily-rewritten `guide.json`. Instead it's a **separate `lineups.json`**:
+`{schemaVersion, generatedAt, lineups:[{id, provider, region, regionCode, type, numbers:{xmltvID:Int}}]}`.
+
+- **Producer:** `tools/digi-lineup-scraper/` — Node + Playwright. A real browser is required:
+  digi.ro/grila serves the grid from a CSRF/cookie-protected `POST /api-get-grila` that plain
+  curl can't reach (GET = empty table, POST = 403); the grid's **"Post"** column is the channel
+  number, selectable per **county** (41 + București) and type. `scrape.mjs` captures the XHR
+  payload → `digi-raw.json`; `build-lineups.mjs` matches scraped names → our XMLTV ids
+  (`match.mjs` normalized-name index + `aliases.json` rebrand overrides) → `lineups.json` +
+  `unmatched-report.json`. Selectors in `scrape.mjs` were authored without a live browser run —
+  validate with `node scrape.mjs --county Cluj --headed` once and adjust.
+- **CI:** `.github/workflows/lineups-update.yml` runs monthly and force-pushes `lineups.json` to
+  the orphan **`lineup-data`** branch — a *separate* branch from `epg-data` on purpose, because
+  `epg-update.yml` rewrites `epg-data` as orphan daily and would delete it. Has a sanity gate
+  (won't publish a degenerate <50-number scrape over a good one).
+- **Seed/fallback:** `RemoteTV/Resources/lineups.json` — one `digi-national-digital` lineup
+  (129 numbers transcribed from the old `KnownChannelNumbers.mapping`); bundled as the offline
+  default.
+- **PENDING (not yet built):** the Swift consumer — `ChannelLineup` model + `LineupClient`
+  (fetch/cache like `EPGClient`) and a refactor of `KnownChannelNumbers` to prefer a selected
+  fetched lineup with the compiled table as fallback, plus a provider/county picker. Until then
+  `KnownChannelNumbers` is still the live source and `lineups.json` is unconsumed.
+
 ## Info.plist requirements
 
 - `NSBonjourServices` must contain `_samsungmsf._tcp`.
