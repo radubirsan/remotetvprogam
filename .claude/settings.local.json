@@ -47,7 +47,10 @@
       "Bash(git merge --no-ff parallel-work -m 'Merge parallel-work \\(TV Guide redesign\\) into main *)",
       "Bash(git checkout *)",
       "Bash(cd *)",
-      "Bash(grep -E \"error:|BUILD FAILED|TEST SUCCEEDED|Test run with|passed after [0-9.]+ seconds\\\\.$\")"
+      "Bash(grep -E \"error:|BUILD FAILED|TEST SUCCEEDED|Test run with|passed after [0-9.]+ seconds\\\\.$\")",
+      "Bash(sudo xcode-select -s /Applications/Xcode.app/Contents/Developer)",
+      "Bash(DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcodebuild test -project RemoteTV.xcodeproj -scheme RemoteTV -destination 'platform=iOS Simulator,name=iPhone 17' -only-testing:RemoteTVTests/JogWheelTrackerTests -only-testing:RemoteTVTests/TrackpadGestureMapperTests)",
+      "Bash(DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcodebuild build -project RemoteTV.xcodeproj -scheme RemoteTV -destination 'platform=iOS Simulator,name=iPhone 17')"
     ]
   }
 }
