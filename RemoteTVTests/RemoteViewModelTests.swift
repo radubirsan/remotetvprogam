@@ -68,6 +68,13 @@ private final class FakeTVService: TVService {
         try installedAppsResult.get()
     }
 
+    /// The app id the fake TV reports as foreground; `nil` = on live TV.
+    var foregroundAppID: String?
+    func foregroundApp(among appIDs: [String]) async -> String? {
+        guard let foregroundAppID, appIDs.contains(foregroundAppID) else { return nil }
+        return foregroundAppID
+    }
+
     func clearSniffLog() {
         sniffLog.removeAll()
     }
@@ -271,6 +278,60 @@ struct RemoteViewModelTests {
         await vm.send(.channelUp)
 
         #expect(estimates == [59, 60])
+    }
+
+    // MARK: - Foreground source detection
+
+    @Test func foregroundDetectionSwitchesToVisibleAppImmediately() async {
+        let service = FakeTVService()
+        service.state = .connected
+        let vm = RemoteViewModel(device: makeDevice(), service: service)
+
+        service.foregroundAppID = TVApp.netflix.appID
+        await vm.refreshForegroundSource()
+
+        #expect(vm.foregroundSource == .app(.netflix))
+    }
+
+    @Test func foregroundDetectionDebouncesBackToLiveTV() async {
+        let service = FakeTVService()
+        service.state = .connected
+        let vm = RemoteViewModel(device: makeDevice(), service: service)
+
+        service.foregroundAppID = TVApp.youtube.appID
+        await vm.refreshForegroundSource()
+        #expect(vm.foregroundSource == .app(.youtube))
+
+        // App closed → one miss isn't enough (debounced), two flips it to Live TV.
+        service.foregroundAppID = nil
+        await vm.refreshForegroundSource()
+        #expect(vm.foregroundSource == .app(.youtube))
+        await vm.refreshForegroundSource()
+        #expect(vm.foregroundSource == .liveTV)
+    }
+
+    @Test func launchingKnownAppOptimisticallySetsSource() async {
+        let service = FakeTVService()
+        service.state = .connected
+        let vm = RemoteViewModel(device: makeDevice(), service: service)
+
+        await vm.launchApp(appID: TVApp.youtube.appID)
+
+        #expect(vm.foregroundSource == .app(.youtube))
+    }
+
+    @Test func tuningAChannelSetsSourceToLiveTV() async {
+        let service = FakeTVService()
+        service.state = .connected
+        let vm = RemoteViewModel(device: makeDevice(), service: service)
+        // Start on an app, then a channel interaction should snap the pill back to Live TV.
+        await vm.launchApp(appID: TVApp.netflix.appID)
+        #expect(vm.foregroundSource == .app(.netflix))
+
+        await vm.send(.digit5)
+        await vm.send(.enter)
+
+        #expect(vm.foregroundSource == .liveTV)
     }
 
     @Test func reconnectIfNeededDelegatesToService() async {

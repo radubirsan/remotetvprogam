@@ -50,6 +50,13 @@ public protocol TVService: AnyObject {
     /// ``KnownTVApps``. Implementations probe `GET /api/v2/applications/<id>` per ID since
     /// `ed.installedApp.get` is no-op'd on recent Tizen builds.
     func requestInstalledApps() async throws -> [InstalledApp]
+    /// Best-effort detection of which of `appIDs` is currently in the foreground, probing
+    /// `GET /api/v2/applications/<id>` and treating `visible == true` as "on screen". Returns
+    /// the first id (in the given order) the TV reports visible, or `nil` when none are — i.e.
+    /// the TV is on live TV / a menu — or when the TV can't be reached. The WebSocket is silent
+    /// on app state, so this REST poll is the only foreground signal. A default no-op
+    /// implementation lets transports that don't support it (and test doubles) opt out.
+    func foregroundApp(among appIDs: [String]) async -> String?
     /// Rolling buffer of recent control-channel messages (inbound, outbound, and info
     /// events like connect/disconnect). Surfaced in the UI so the user can watch for
     /// interesting TV-originated frames — e.g. to harvest a Tizen app ID by launching
@@ -68,4 +75,10 @@ public protocol TVService: AnyObject {
     /// it's gone, while no-opping when the connection is healthy or a connect attempt
     /// is already in flight.
     func reconnectIfNeeded() async
+}
+
+public extension TVService {
+    /// Default: foreground-app detection unsupported. Concrete transports that can probe the
+    /// TV's REST app status override this; everything else (and test doubles) reports "unknown".
+    func foregroundApp(among appIDs: [String]) async -> String? { nil }
 }

@@ -17,6 +17,18 @@ enum RemoteWakeOutcome: Equatable, Sendable {
     case failed(String)
 }
 
+/// What the TV is showing right now, as far as the app can tell. Drives the "Now on TV"
+/// pill: ``liveTV`` shows the channel/guide content, ``app`` shows the streaming app.
+///
+/// Detected best-effort by polling the TV's REST app-status endpoint (``RemoteViewModel``'s
+/// foreground monitor) since Tizen's WebSocket is silent on app state. "Live TV" is the
+/// *absence* of a known foreground app — the TV could equally be on a menu, but for the
+/// pill's purpose that's treated as live.
+enum TVForegroundSource: Equatable {
+    case liveTV
+    case app(TVApp)
+}
+
 @MainActor
 @Observable
 final class RemoteViewModel {
@@ -48,6 +60,21 @@ final class RemoteViewModel {
     /// Nil until the user has asked the TV for its app list at least once.
     private(set) var installedApps: [InstalledApp]?
     private(set) var isLoadingInstalledApps: Bool = false
+
+    /// What the TV is currently showing (live TV vs a streaming app), as detected by the
+    /// foreground monitor. Drives the "Now on TV" pill. Defaults to ``TVForegroundSource/liveTV``.
+    private(set) var foregroundSource: TVForegroundSource = .liveTV
+
+    /// Apps the foreground monitor watches for, in priority order. A tap-launch of any of
+    /// these (or the TV being switched to one) flips the pill to that app.
+    private let foregroundCandidates: [TVApp] = [.netflix, .youtube, .disneyPlus]
+    /// How often the foreground monitor polls the TV's REST app status.
+    private let foregroundPollInterval: Duration = .seconds(3)
+    /// Consecutive "no app visible" polls required before the pill drops back to Live TV.
+    /// Debounces the gap right after launching an app (and transient probe misses) so the
+    /// pill doesn't flicker live → app. Upgrades to an app are immediate, downgrades are not.
+    private let liveTVConfirmCount = 2
+    private var liveTVMissStreak = 0
 
     private var commercialMuteTask: Task<Void, Never>?
     private var sleepTimerTask: Task<Void, Never>?
@@ -283,7 +310,48 @@ final class RemoteViewModel {
     }
 
     func launchApp(appID: String) async {
+        // Optimistically flip the pill the instant we ask the TV to open a known app, so it
+        // updates without waiting for the next foreground poll. The poll then confirms it.
+        if let app = foregroundCandidates.first(where: { $0.appID == appID }) {
+            noteForeground(.app(app))
+        }
         await perform { try await service.launch(appID: appID) }
+    }
+
+    // MARK: - Foreground source detection
+
+    /// Long-running poll loop driving ``foregroundSource``. Call once from the view's `.task`;
+    /// it runs until that task is cancelled (the view disappears). Each tick asks the TV which
+    /// of ``foregroundCandidates`` is on screen.
+    func monitorForegroundSource() async {
+        while !Task.isCancelled {
+            await refreshForegroundSource()
+            try? await Task.sleep(for: foregroundPollInterval)
+        }
+    }
+
+    /// One foreground poll. Internal (not private) so tests can step it deterministically.
+    func refreshForegroundSource() async {
+        guard service.state == .connected else { return }
+        let visibleID = await service.foregroundApp(among: foregroundCandidates.map(\.appID))
+        if let visibleID, let app = foregroundCandidates.first(where: { $0.appID == visibleID }) {
+            liveTVMissStreak = 0
+            noteForeground(.app(app))
+        } else {
+            // No known app visible. Debounce the downgrade so a transient miss — or the gap
+            // right after launching an app — doesn't flicker the pill back to Live TV.
+            liveTVMissStreak += 1
+            if liveTVMissStreak >= liveTVConfirmCount {
+                noteForeground(.liveTV)
+            }
+        }
+    }
+
+    /// Sets ``foregroundSource`` only when it actually changes (avoids redundant observation
+    /// churn). Switching to an app clears the live-TV miss streak so the debounce restarts.
+    private func noteForeground(_ source: TVForegroundSource) {
+        if case .app = source { liveTVMissStreak = 0 }
+        if foregroundSource != source { foregroundSource = source }
     }
 
     /// A YouTube "radio" link to cast as a demo target. Carries a video id, an auto-radio
@@ -333,6 +401,8 @@ final class RemoteViewModel {
     /// stale socket first, since that's what makes commands intermittently "stop working".
     /// Each step waits for the TV to settle so the next key isn't eaten by the transition.
     func goLive() async {
+        // Heading back to the tuner — flip the pill to Live TV immediately; the poll confirms.
+        noteForeground(.liveTV)
         await reconnectIfNeeded()
         await send(.home)
         try? await Task.sleep(for: guideHomeSettleDelay)
@@ -406,6 +476,8 @@ final class RemoteViewModel {
     private func setTrackedChannel(_ channel: Int) {
         lastTunedChannel = max(1, channel)
         onChannelEstimated?(lastTunedChannel)
+        // Any channel interaction (number pad, channel ▲/▼, tune) means we're on live TV.
+        noteForeground(.liveTV)
     }
 
     private func scheduleChannelEntryFinalize() {
@@ -425,6 +497,8 @@ final class RemoteViewModel {
         liveTuneTask = nil
         channelEntryFinalizeTask?.cancel()
         channelEntryFinalizeTask = nil
+        foregroundSource = .liveTV
+        liveTVMissStreak = 0
         isMuted = false
         await service.disconnect()
     }

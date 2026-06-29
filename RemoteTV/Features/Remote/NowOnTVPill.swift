@@ -1,8 +1,11 @@
+import RemoteTVCore
 import SwiftUI
 
 /// Compact horizontal strip floated above the remote canvas.
 ///
-/// Three states:
+/// Four states:
+///   * **Streaming app** (`appSource != nil`) — the TV is on Netflix / YouTube / etc.; shows
+///     the app name + "Now playing" in the app's brand tint. Overrides the channel content.
 ///   * **Pinned channel** (`channel != nil`, `isEstimated == false`) — a user-confirmed pin;
 ///     channel name + live programme + when it ends, in confident yellow. Tap opens its
 ///     schedule.
@@ -17,6 +20,15 @@ import SwiftUI
 /// outside the SmartThings cloud. See `EPGViewModel` `estimatedChannelID` / `pinnedChannelID`.
 @MainActor
 struct NowOnTVPill: View {
+    /// Brand badge for the pill when a streaming app is on screen.
+    struct AppBadge: Equatable {
+        let name: String
+        let systemImage: String
+        let tint: Color
+    }
+
+    /// The streaming app on screen, or `nil` to show the channel/guide content below.
+    var appSource: AppBadge? = nil
     /// The channel to show (pinned or estimated), or `nil` for the "Check out TV Guide" prompt.
     let channel: EPGChannel?
     let programme: EPGProgramme?
@@ -25,12 +37,25 @@ struct NowOnTVPill: View {
     var isEstimated: Bool = true
     let onTap: () -> Void
 
-    /// Tint for the leading icon + border: yellow for a user-pinned channel, app accent for
-    /// the estimate and the discovery prompt (both are "soft" states).
-    private var accent: Color { (channel != nil && !isEstimated) ? .yellow : RemoteTheme.accent }
+    /// Brand badge for a known streaming app — its icon + tint for the pill.
+    static func badge(for app: TVApp) -> AppBadge {
+        switch app {
+        case .netflix:    AppBadge(name: "Netflix", systemImage: "play.tv.fill", tint: Color(red: 0.90, green: 0.13, blue: 0.16))
+        case .youtube:    AppBadge(name: "YouTube", systemImage: "play.rectangle.fill", tint: Color(red: 1.0, green: 0.0, blue: 0.0))
+        case .disneyPlus: AppBadge(name: "Disney+", systemImage: "sparkles.tv.fill", tint: Color(red: 0.10, green: 0.40, blue: 0.95))
+        }
+    }
 
-    /// Leading glyph: pin for a confirmed pin, antenna for the estimate, sparkles for the prompt.
+    /// Tint for the leading icon + border: the app brand when on an app, yellow for a
+    /// user-pinned channel, app accent for the estimate and the discovery prompt.
+    private var accent: Color {
+        if let appSource { return appSource.tint }
+        return (channel != nil && !isEstimated) ? .yellow : RemoteTheme.accent
+    }
+
+    /// Leading glyph: the app icon, else pin (confirmed) / antenna (estimate) / sparkles (prompt).
     private var leadingIcon: String {
+        if let appSource { return appSource.systemImage }
         guard channel != nil else { return "sparkles.tv" }
         return isEstimated ? "antenna.radiowaves.left.and.right" : "pin.fill"
     }
@@ -43,7 +68,16 @@ struct NowOnTVPill: View {
                     .foregroundStyle(accent)
 
                 VStack(alignment: .leading, spacing: 1) {
-                    if let channel {
+                    if let appSource {
+                        Text(appSource.name)
+                            .font(.caption.bold())
+                            .foregroundStyle(.white)
+                            .lineLimit(1)
+                        Text("Now playing")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                    } else if let channel {
                         HStack(spacing: 4) {
                             Text(channel.primaryName)
                                 .font(.caption.bold())
@@ -107,10 +141,16 @@ struct NowOnTVPill: View {
         .buttonStyle(.plain)
         .accessibilityElement(children: .combine)
         .accessibilityLabel(accessibilityLabel)
-        .accessibilityHint(channel == nil ? "Opens the TV guide." : "Opens the TV guide for this channel.")
+        .accessibilityHint(accessibilityHint)
+    }
+
+    private var accessibilityHint: String {
+        if appSource != nil { return "Reopens the app on the TV." }
+        return channel == nil ? "Opens the TV guide." : "Opens the TV guide for this channel."
     }
 
     private var accessibilityLabel: String {
+        if let appSource { return "Now on TV: \(appSource.name), now playing" }
         guard let channel else { return "Check out TV Guide. See what's on now and next." }
         let prefix = isEstimated ? "Estimated channel" : "Now on TV"
         if let programme {

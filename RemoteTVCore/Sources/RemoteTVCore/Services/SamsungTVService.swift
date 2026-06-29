@@ -377,6 +377,52 @@ public final class SamsungTVService: TVService {
         return unique.sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
     }
 
+    /// Probes `appIDs` in parallel via `GET /api/v2/applications/<id>` and returns the first
+    /// (in input order) the TV reports `visible == true` — i.e. the app currently on screen.
+    /// `nil` means none are visible (live TV / a menu) or the TV is unreachable. Requiring
+    /// `visible` rather than `running` avoids a false positive from a suspended-but-backgrounded
+    /// app; a TV firmware that omits `visible` simply never matches (detection degrades to "live
+    /// TV"), which is the safe default.
+    public func foregroundApp(among appIDs: [String]) async -> String? {
+        guard state == .connected, let device = currentDevice else { return nil }
+        let ip = device.ip
+
+        let visibleIDs = await withTaskGroup(of: String?.self) { group in
+            for appID in appIDs {
+                group.addTask {
+                    await Self.isAppVisible(ip: ip, appID: appID) ? appID : nil
+                }
+            }
+            var found: Set<String> = []
+            for await id in group {
+                if let id { found.insert(id) }
+            }
+            return found
+        }
+
+        // Preserve the caller's priority order (the task group finishes out of order).
+        return appIDs.first(where: visibleIDs.contains)
+    }
+
+    private static func isAppVisible(ip: String, appID: String) async -> Bool {
+        guard let url = URL(string: "http://\(ip):8001/api/v2/applications/\(appID)") else {
+            return false
+        }
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.timeoutInterval = 3
+
+        guard
+            let (data, response) = try? await URLSession.shared.data(for: request),
+            let http = response as? HTTPURLResponse,
+            (200..<300).contains(http.statusCode),
+            let info = try? JSONDecoder().decode(AppInfo.self, from: data)
+        else {
+            return false
+        }
+        return info.visible == true
+    }
+
     private static func probe(ip: String, appID: String, fallbackName: String) async -> InstalledApp? {
         guard let url = URL(string: "http://\(ip):8001/api/v2/applications/\(appID)") else {
             return nil
@@ -843,5 +889,11 @@ public final class SamsungTVService: TVService {
 
     private struct AppInfo: Decodable {
         let name: String?
+        /// `true` when the app is the one currently on screen (foreground). Absent on some
+        /// firmwares, in which case foreground detection for that app stays unknown.
+        let visible: Bool?
+        /// `true` when the app is loaded (possibly backgrounded/suspended). Not used for
+        /// foreground detection — see ``foregroundApp(among:)`` — but decoded for completeness.
+        let running: Bool?
     }
 }

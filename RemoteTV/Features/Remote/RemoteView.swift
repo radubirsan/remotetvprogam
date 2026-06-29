@@ -98,6 +98,34 @@ struct RemoteView: View {
         self.onDisconnect = onDisconnect
     }
 
+    /// The "Now on TV" pill. When the TV is on a streaming app (detected by the foreground
+    /// monitor) it shows that app's brand badge and a tap reopens it; otherwise it shows the
+    /// live channel / guide content and a tap opens the TV Guide.
+    @ViewBuilder
+    private var nowOnTVPill: some View {
+        switch viewModel.foregroundSource {
+        case .app(let app):
+            NowOnTVPill(
+                appSource: NowOnTVPill.badge(for: app),
+                channel: nil,
+                programme: nil,
+                isEstimated: false,
+                onTap: { Task { await viewModel.launchApp(appID: app.appID) } }
+            )
+        case .liveTV:
+            NowOnTVPill(
+                channel: epgViewModel.nowOnTVChannel,
+                programme: epgViewModel.nowOnTVNowPlaying,
+                isEstimated: epgViewModel.nowOnTVIsEstimated,
+                onTap: {
+                    // Pinned/estimated → open that channel's schedule; otherwise the list.
+                    epgViewModel.selectedChannelID = epgViewModel.nowOnTVChannel?.id
+                    showTVGuide = true
+                }
+            )
+        }
+    }
+
     /// The Settings menu — moved out of the (now hidden) navigation bar into the top pill
     /// strip. Styled as a compact circular icon button matching the pill's dark glass look.
     private var settingsMenu: some View {
@@ -264,16 +292,7 @@ struct RemoteView: View {
             // the remote) so it doesn't shrink the height-constrained remote canvas.
             .overlay(alignment: .top) {
                 HStack(spacing: 0) {
-                    NowOnTVPill(
-                        channel: epgViewModel.nowOnTVChannel,
-                        programme: epgViewModel.nowOnTVNowPlaying,
-                        isEstimated: epgViewModel.nowOnTVIsEstimated,
-                        onTap: {
-                            // Pinned/estimated → open that channel's schedule; otherwise the list.
-                            epgViewModel.selectedChannelID = epgViewModel.nowOnTVChannel?.id
-                            showTVGuide = true
-                        }
-                    )
+                    nowOnTVPill
                     settingsMenu
                         .padding(.trailing, 12)
                 }
@@ -281,6 +300,13 @@ struct RemoteView: View {
             }
             }  // close outer VStack added for the NowOnTVPill
             .animation(.snappy, value: epgViewModel.nowOnTVChannelID)
+            .animation(.snappy, value: viewModel.foregroundSource)
+            .task {
+                // Detect what the TV is showing (live TV vs Netflix/YouTube/Disney+) by polling
+                // the REST app-status endpoint, and reflect it in the pill. Runs until the view
+                // disappears.
+                await viewModel.monitorForegroundSource()
+            }
             .task {
                 // Keep the "Now on TV" pill's best-effort estimate in sync with whatever the
                 // remote tunes to (number-pad, tune macro, channel ▲/▼). Reassigned on each
