@@ -7,11 +7,17 @@
 // capture the XHR response payload (an HTML table) directly, which is far more robust than
 // scraping the rendered DOM. We still fall back to DOM scraping if no XHR is captured.
 //
+// The page has three native <select>s (confirmed from the page source):
+//   #services-tv-list-county   — county; values like "Bucuresti", "Cluj" (or "Toate")
+//   #services-tv-list-signal   — "digital" | "analogic" | "satelit"
+//   #services-tv-list-category — genre; left at its default ("Toate")
+// Selecting a county fires the page's change handler, which POSTs to /api-get-grila.
+//
 // Output shape (digi-raw.json):
-//   { "scrapedAt": "...", "counties": { "Cluj": [ { "post": 59, "name": "Digi 24 HD" }, ... ], ... } }
+//   { "scrapedAt": "...", "counties": { "Cluj": [ { "post": 59, "name": "Digi 24 HD" }, ... ] } }
 //
 // Usage:
-//   node scrape.mjs                 # all counties, headless
+//   node scrape.mjs                 # all counties, headless, signal=digital
 //   node scrape.mjs --county Cluj   # single county (debug)
 //   node scrape.mjs --headed        # show the browser (local debugging)
 
@@ -21,6 +27,8 @@ import { readFile, writeFile } from "node:fs/promises";
 
 const GRILA_URL = "https://www.digi.ro/grila";
 const API_PATH = "/api-get-grila";
+const COUNTY_SEL = "#services-tv-list-county";
+const SIGNAL_SEL = "#services-tv-list-signal";
 
 const args = process.argv.slice(2);
 const headed = args.includes("--headed");
@@ -48,7 +56,6 @@ function parseGrilaHTML(html) {
       .filter((t) => t.length);
     if (!cells.length) return;
     const post = cells.map((c) => parseInt(c, 10)).find((n) => Number.isFinite(n));
-    // Channel name: the longest non-numeric cell (logos sometimes leave an empty cell).
     const name = cells
       .filter((c) => !/^\d+$/.test(c))
       .sort((a, b) => b.length - a.length)[0];
@@ -59,10 +66,10 @@ function parseGrilaHTML(html) {
 
 async function dismissCookieBanner(page) {
   for (const sel of [
+    "#onetrust-accept-btn-handler",
     'button:has-text("Accept")',
     'button:has-text("De acord")',
     'button:has-text("Sunt de acord")',
-    "#onetrust-accept-btn-handler",
   ]) {
     const btn = page.locator(sel).first();
     if (await btn.count().catch(() => 0)) {
@@ -72,24 +79,12 @@ async function dismissCookieBanner(page) {
   }
 }
 
-/** Select a county in the region control. The page uses a `.regions` widget; we try a native
- *  <select> first, then a custom dropdown (click to open, click the matching option). */
+/** Select a county and re-dispatch change (belt-and-braces for custom event delegates). */
 async function selectCounty(page, county) {
-  // 1) native <select>
-  const select = page.locator("select.regions, select[name*=region], select[name*=judet]").first();
-  if (await select.count().catch(() => 0)) {
-    await select.selectOption({ label: county }).catch(async () => {
-      await select.selectOption(county).catch(() => {});
-    });
-    return;
-  }
-  // 2) custom dropdown widget
-  const opener = page.locator(".regions, [class*=region]").first();
-  if (await opener.count().catch(() => 0)) {
-    await opener.click({ timeout: 3000 }).catch(() => {});
-    const option = page.locator(`text="${county}"`).first();
-    await option.click({ timeout: 3000 }).catch(() => {});
-  }
+  await page.selectOption(COUNTY_SEL, county);
+  await page.evaluate((sel) => {
+    document.querySelector(sel)?.dispatchEvent(new Event("change", { bubbles: true }));
+  }, COUNTY_SEL);
 }
 
 const browser = await chromium.launch({ headless: !headed });
@@ -98,10 +93,13 @@ const page = await browser.newPage({
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36",
 });
 
-// Capture every /api-get-grila payload as it arrives.
+// Capture every /api-get-grila payload + count them (lets us tell "handler never fired"
+// from "parser is wrong" in a single run).
 let lastPayload = null;
+let apiResponseCount = 0;
 page.on("response", async (res) => {
   if (res.url().includes(API_PATH)) {
+    apiResponseCount++;
     try {
       lastPayload = await res.text();
     } catch {
@@ -113,24 +111,44 @@ page.on("response", async (res) => {
 await page.goto(GRILA_URL, { waitUntil: "networkidle", timeout: 60000 });
 await dismissCookieBanner(page);
 
+// Confirm the controls exist — a clear early failure beats 42 silent timeouts.
+const haveCounty = await page.locator(COUNTY_SEL).count().catch(() => 0);
+console.log(`control check: ${COUNTY_SEL} present=${haveCounty > 0}`);
+await page.selectOption(SIGNAL_SEL, "digital").catch((e) => console.log(`signal select: ${e.message}`));
+await page.waitForTimeout(800);
+
 const result = { scrapedAt: new Date().toISOString(), counties: {} };
+let firstDiag = true;
 
 for (const county of counties) {
   lastPayload = null;
   try {
-    await selectCounty(page, county);
-    // Wait for the XHR triggered by the selection (or a DOM update).
-    await page
-      .waitForResponse((r) => r.url().includes(API_PATH), { timeout: 15000 })
-      .catch(() => {});
-    await page.waitForTimeout(1200);
+    // Coordinate the selection with the XHR it triggers.
+    const [resp] = await Promise.all([
+      page.waitForResponse((r) => r.url().includes(API_PATH), { timeout: 20000 }).catch(() => null),
+      selectCounty(page, county),
+    ]);
+    if (resp) {
+      try {
+        lastPayload = await resp.text();
+      } catch {
+        /* ignore */
+      }
+    }
+    await page.waitForTimeout(400);
 
     let rows = lastPayload ? parseGrilaHTML(lastPayload) : [];
-    if (!rows.length) {
-      // Fallback: scrape the rendered DOM.
-      const html = await page.content();
-      rows = parseGrilaHTML(html);
+    if (!rows.length) rows = parseGrilaHTML(await page.content()); // DOM fallback
+
+    // One-shot diagnostics on the first county: tells us exactly what to fix next.
+    if (firstDiag) {
+      firstDiag = false;
+      console.log(`[diag] xhr captured for first county: ${resp ? "yes" : "no"}`);
+      console.log(`[diag] payload length: ${lastPayload ? lastPayload.length : 0}`);
+      if (lastPayload) console.log(`[diag] payload head: ${lastPayload.slice(0, 400).replace(/\s+/g, " ")}`);
+      console.log(`[diag] parsed rows: ${rows.length}`);
     }
+
     result.counties[county] = rows;
     console.log(`${county}: ${rows.length} channels`);
   } catch (err) {
@@ -145,4 +163,11 @@ await writeFile(new URL("./digi-raw.json", import.meta.url), JSON.stringify(resu
 const total = Object.values(result.counties).reduce((n, r) => n + r.length, 0);
 const empty = Object.entries(result.counties).filter(([, r]) => !r.length).map(([c]) => c);
 console.log(`\nwrote digi-raw.json — ${total} rows across ${counties.length} counties`);
-if (empty.length) console.warn(`EMPTY counties (selector/param needs review): ${empty.join(", ")}`);
+console.log(`/api-get-grila responses seen total: ${apiResponseCount}`);
+if (empty.length) {
+  console.warn(`EMPTY counties: ${empty.join(", ")}`);
+  if (apiResponseCount === 0)
+    console.warn("→ no XHR ever fired: the county <select> change isn't triggering the request (needs a submit click).");
+  else
+    console.warn("→ XHR fired but parsed 0 rows: parseGrilaHTML selectors need adjusting (see [diag] payload head).");
+}
