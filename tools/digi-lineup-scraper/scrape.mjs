@@ -41,30 +41,18 @@ const allCounties = JSON.parse(await readFile(new URL("./counties.json", import.
 const counties = onlyCounty ? [onlyCounty] : allCounties;
 
 /** Parse an `/api-get-grila` HTML fragment into [{post, name}] where `post` is the DIGITAL
- *  channel number. The table (`table-new table-tv-list`) has columns:
- *    Post (station name/logo) | Digital | Analogic | Satelit
- *  The header cells carry data-signal="digital|analogic|satelit"; we target the digital
- *  number per row by that attribute when present, else fall back to the 2nd column. The
- *  station name is the first column (text, or a logo's alt). Rows with no digital number
- *  (channel not carried on digital) are skipped. */
+ *  channel number. Each data row carries everything we need as attributes (no text parsing):
+ *    <div class="table-row" data-channel-name="Digi Sport 1" data-position-digital="1"
+ *         data-position-analogic="1" data-position-satelit="1"> … </div>
+ *  We select rows that have a channel name (skips the empty spacer rows) and read the digital
+ *  position. Channels not carried on digital have no data-position-digital → skipped. */
 function parseGrilaHTML(html) {
   const $ = cheerioLoad(html);
   const rows = [];
-  // Data rows = any .table-row that isn't the header (use children() so we don't depend on
-  // the data-cell class name).
-  $(".table-tv-list .table-row").each((_, el) => {
+  $(".table-tv-list .table-row[data-channel-name]").each((_, el) => {
     const $el = $(el);
-    if ($el.hasClass("table-header")) return;
-    const cells = $el.children();
-    if (cells.length < 2) return;
-
-    const nameCell = cells.eq(0);
-    const name = (nameCell.text().trim() || nameCell.find("img").attr("alt") || "").trim();
-
-    let numText = $el.find('[data-signal="digital"]').first().text().trim();
-    if (!numText) numText = cells.eq(1).text().trim(); // 2nd column = Digital
-    const post = parseInt(numText, 10);
-
+    const name = ($el.attr("data-channel-name") || "").trim();
+    const post = parseInt($el.attr("data-position-digital") ?? "", 10);
     if (name && Number.isFinite(post)) rows.push({ post, name });
   });
   return rows;
