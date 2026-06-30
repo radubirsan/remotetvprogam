@@ -40,26 +40,32 @@ const onlyCounty = (() => {
 const allCounties = JSON.parse(await readFile(new URL("./counties.json", import.meta.url)));
 const counties = onlyCounty ? [onlyCounty] : allCounties;
 
-/** Parse an `/api-get-grila` HTML fragment into [{post, name}]. The table uses the
- *  `table-new table-tv-list` structure with a leading "Post" (position) column. We read the
- *  first numeric cell as the position and the longest text cell as the channel name, so we
- *  don't depend on an exact column count that may drift. */
+/** Parse an `/api-get-grila` HTML fragment into [{post, name}] where `post` is the DIGITAL
+ *  channel number. The table (`table-new table-tv-list`) has columns:
+ *    Post (station name/logo) | Digital | Analogic | Satelit
+ *  The header cells carry data-signal="digital|analogic|satelit"; we target the digital
+ *  number per row by that attribute when present, else fall back to the 2nd column. The
+ *  station name is the first column (text, or a logo's alt). Rows with no digital number
+ *  (channel not carried on digital) are skipped. */
 function parseGrilaHTML(html) {
   const $ = cheerioLoad(html);
   const rows = [];
-  $(".table-tv-list .table-row, table tr").each((_, el) => {
-    if ($(el).hasClass("table-header") || $(el).find("th").length) return;
-    const cells = $(el)
-      .find(".table-cell, .table-head, td")
-      .map((__, c) => $(c).text().trim())
-      .get()
-      .filter((t) => t.length);
-    if (!cells.length) return;
-    const post = cells.map((c) => parseInt(c, 10)).find((n) => Number.isFinite(n));
-    const name = cells
-      .filter((c) => !/^\d+$/.test(c))
-      .sort((a, b) => b.length - a.length)[0];
-    if (Number.isFinite(post) && name) rows.push({ post, name });
+  // Data rows = any .table-row that isn't the header (use children() so we don't depend on
+  // the data-cell class name).
+  $(".table-tv-list .table-row").each((_, el) => {
+    const $el = $(el);
+    if ($el.hasClass("table-header")) return;
+    const cells = $el.children();
+    if (cells.length < 2) return;
+
+    const nameCell = cells.eq(0);
+    const name = (nameCell.text().trim() || nameCell.find("img").attr("alt") || "").trim();
+
+    let numText = $el.find('[data-signal="digital"]').first().text().trim();
+    if (!numText) numText = cells.eq(1).text().trim(); // 2nd column = Digital
+    const post = parseInt(numText, 10);
+
+    if (name && Number.isFinite(post)) rows.push({ post, name });
   });
   return rows;
 }
@@ -79,12 +85,10 @@ async function dismissCookieBanner(page) {
   }
 }
 
-/** Select a county and re-dispatch change (belt-and-braces for custom event delegates). */
+/** Select a county. Playwright's selectOption fires native input+change, which triggers the
+ *  page's /api-get-grila request — confirmed by the first run (85 responses seen). */
 async function selectCounty(page, county) {
   await page.selectOption(COUNTY_SEL, county);
-  await page.evaluate((sel) => {
-    document.querySelector(sel)?.dispatchEvent(new Event("change", { bubbles: true }));
-  }, COUNTY_SEL);
 }
 
 const browser = await chromium.launch({ headless: !headed });
@@ -145,7 +149,10 @@ for (const county of counties) {
       firstDiag = false;
       console.log(`[diag] xhr captured for first county: ${resp ? "yes" : "no"}`);
       console.log(`[diag] payload length: ${lastPayload ? lastPayload.length : 0}`);
-      if (lastPayload) console.log(`[diag] payload head: ${lastPayload.slice(0, 400).replace(/\s+/g, " ")}`);
+      if (lastPayload) {
+        // A data-row slice (past the ~370-char header) so we can see the real row/cell markup.
+        console.log(`[diag] data-row slice: ${lastPayload.slice(360, 2400).replace(/\s+/g, " ")}`);
+      }
       console.log(`[diag] parsed rows: ${rows.length}`);
     }
 
