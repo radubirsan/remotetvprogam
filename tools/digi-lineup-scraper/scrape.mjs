@@ -112,36 +112,46 @@ await page.waitForTimeout(800);
 const result = { scrapedAt: new Date().toISOString(), counties: {} };
 let firstDiag = true;
 
-for (const county of counties) {
+/** Select one county and return its parsed rows (XHR payload preferred, DOM fallback). */
+async function fetchCounty(county) {
   lastPayload = null;
-  try {
-    // Coordinate the selection with the XHR it triggers.
-    const [resp] = await Promise.all([
-      page.waitForResponse((r) => r.url().includes(API_PATH), { timeout: 20000 }).catch(() => null),
-      selectCounty(page, county),
-    ]);
-    if (resp) {
-      try {
-        lastPayload = await resp.text();
-      } catch {
-        /* ignore */
-      }
+  const [resp] = await Promise.all([
+    page.waitForResponse((r) => r.url().includes(API_PATH), { timeout: 20000 }).catch(() => null),
+    selectCounty(page, county),
+  ]);
+  if (resp) {
+    try {
+      lastPayload = await resp.text();
+    } catch {
+      /* ignore */
     }
-    await page.waitForTimeout(400);
+  }
+  await page.waitForTimeout(400);
+  let rows = lastPayload ? parseGrilaHTML(lastPayload) : [];
+  if (!rows.length) rows = parseGrilaHTML(await page.content());
+  return { rows, resp };
+}
 
-    let rows = lastPayload ? parseGrilaHTML(lastPayload) : [];
-    if (!rows.length) rows = parseGrilaHTML(await page.content()); // DOM fallback
+for (const county of counties) {
+  try {
+    let { rows, resp } = await fetchCounty(county);
 
-    // One-shot diagnostics on the first county: tells us exactly what to fix next.
     if (firstDiag) {
       firstDiag = false;
       console.log(`[diag] xhr captured for first county: ${resp ? "yes" : "no"}`);
       console.log(`[diag] payload length: ${lastPayload ? lastPayload.length : 0}`);
-      if (lastPayload) {
-        // A data-row slice (past the ~370-char header) so we can see the real row/cell markup.
+      if (lastPayload)
         console.log(`[diag] data-row slice: ${lastPayload.slice(360, 2400).replace(/\s+/g, " ")}`);
-      }
       console.log(`[diag] parsed rows: ${rows.length}`);
+    }
+
+    // Retry once for a transiently-empty county (e.g. the XHR didn't fire in time): reset to
+    // "Toate" so re-selecting the county is a real change event, then try again.
+    if (!rows.length) {
+      await page.selectOption(COUNTY_SEL, "Toate").catch(() => {});
+      await page.waitForTimeout(600);
+      ({ rows } = await fetchCounty(county));
+      if (rows.length) console.log(`${county}: recovered on retry`);
     }
 
     result.counties[county] = rows;

@@ -26,20 +26,45 @@ export function nameFromID(id) {
   return parts.join(" ");
 }
 
+// The live EPG feed — its channels (id + every <display-name>) are the universe that matters:
+// a number is only useful for a channel the app can show a guide for. Same URL as
+// EPGClient.Configuration.defaultSourceURL in the app.
+const GUIDE_URL =
+  "https://raw.githubusercontent.com/radubirsan/remotetvprogam/epg-data/guide.json";
+
 export async function buildMatcher() {
-  // Canonical id universe = the union of ids across the seed lineups.json.
+  const index = new Map(); // normalized name -> id
+  const ids = new Set();
+  const add = (name, id) => {
+    const k = normalize(name);
+    if (k && !index.has(k)) index.set(k, id); // first writer wins (guide > seed > alias order below)
+    ids.add(id);
+  };
+
+  // 1) Primary universe: the live guide.json — index every channel by its id-derived name AND
+  //    each published display name. This is what converts most scraped names into matches.
+  try {
+    const res = await fetch(GUIDE_URL, { signal: AbortSignal.timeout(30000) });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const guide = await res.json();
+    for (const c of guide.channels ?? []) {
+      add(nameFromID(c.id), c.id);
+      for (const dn of c.displayNames ?? []) add(dn, c.id);
+    }
+    console.log(`matcher: indexed ${guide.channels?.length ?? 0} guide.json channels`);
+  } catch (e) {
+    console.warn(`matcher: guide.json unavailable (${e.message}) — falling back to seed only`);
+  }
+
+  // 2) Seed ids (curated lineup) — fills in channels not present in today's feed.
   const seed = JSON.parse(
     await readFile(new URL("../../RemoteTV/Resources/lineups.json", import.meta.url))
   );
-  const ids = new Set();
-  for (const l of seed.lineups) for (const id of Object.keys(l.numbers)) ids.add(id);
+  for (const l of seed.lineups) for (const id of Object.keys(l.numbers)) add(nameFromID(id), id);
 
+  // 3) Rebrand/alias overrides ("Pro Arena" -> PRO.X.ro, "Eurosport RO" -> Eurosport.1.ro).
   const aliases = JSON.parse(await readFile(new URL("./aliases.json", import.meta.url)));
-
-  // normalized name -> id
-  const index = new Map();
-  for (const id of ids) index.set(normalize(nameFromID(id)), id);
-  for (const [name, id] of Object.entries(aliases)) index.set(normalize(name), id);
+  for (const [name, id] of Object.entries(aliases)) index.set(normalize(name), id); // aliases win
 
   return {
     ids,
