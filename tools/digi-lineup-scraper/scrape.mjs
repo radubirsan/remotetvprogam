@@ -104,7 +104,12 @@ page.on("response", async (res) => {
   }
 });
 
-await page.goto(GRILA_URL, { waitUntil: "networkidle", timeout: 60000 });
+// Use "load", NOT "networkidle": digi.ro holds persistent background connections
+// (Firebase/analytics/map tiles) so the network never goes idle and "networkidle" flakily
+// times out. We only need the DOM + the select's change handler wired up.
+await page.goto(GRILA_URL, { waitUntil: "load", timeout: 60000 });
+await page.waitForSelector(COUNTY_SEL, { timeout: 30000 });
+await page.waitForTimeout(1500); // let the page's JS attach the select → api-get-grila handler
 await dismissCookieBanner(page);
 
 // Confirm the controls exist — a clear early failure beats 42 silent timeouts.
