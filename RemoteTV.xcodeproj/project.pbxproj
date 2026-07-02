@@ -54,6 +54,8 @@
 		B2000000000000000000F057 /* EPGProgramme.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F057 /* EPGProgramme.swift */; };
 		B2000000000000000000F058 /* EPGGuide.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F058 /* EPGGuide.swift */; };
 		B2000000000000000000F059 /* EPGClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F059 /* EPGClient.swift */; };
+		B2000000000000000000F07E /* ChannelLineups.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F07E /* ChannelLineups.swift */; };
+		B2000000000000000000F07F /* LineupPickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F07F /* LineupPickerView.swift */; };
 		B2000000000000000000F05A /* EPGViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F05A /* EPGViewModel.swift */; };
 		B2000000000000000000F05B /* RemoteSidePanelEPG.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F05B /* RemoteSidePanelEPG.swift */; };
 		B2000000000000000000F05C /* NowOnTVPill.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F05C /* NowOnTVPill.swift */; };
@@ -90,6 +92,7 @@
 		D2000000000000000000F035 /* DiscoveryViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F035 /* DiscoveryViewModelTests.swift */; };
 		D2000000000000000000F048 /* TrackpadGestureMapperTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F048 /* TrackpadGestureMapperTests.swift */; };
 		D2000000000000000000F06E /* EPGViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F06E /* EPGViewModelTests.swift */; };
+		D2000000000000000000F080 /* ChannelLineupTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F080 /* ChannelLineupTests.swift */; };
 		D2000000000000000000F06F /* OnboardingViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F06F /* OnboardingViewModelTests.swift */; };
 		D2000000000000000000F070 /* SamsungTVServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F070 /* SamsungTVServiceTests.swift */; };
 		D2000000000000000000F071 /* EPGClientTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000F071 /* EPGClientTests.swift */; };
@@ -186,6 +189,8 @@
 		A2000000000000000000F057 /* EPGProgramme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EPGProgramme.swift; sourceTree = "<group>"; };
 		A2000000000000000000F058 /* EPGGuide.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EPGGuide.swift; sourceTree = "<group>"; };
 		A2000000000000000000F059 /* EPGClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EPGClient.swift; sourceTree = "<group>"; };
+		A2000000000000000000F07E /* ChannelLineups.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChannelLineups.swift; sourceTree = "<group>"; };
+		A2000000000000000000F07F /* LineupPickerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LineupPickerView.swift; sourceTree = "<group>"; };
 		A2000000000000000000F05A /* EPGViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EPGViewModel.swift; sourceTree = "<group>"; };
 		A2000000000000000000F05B /* RemoteSidePanelEPG.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteSidePanelEPG.swift; sourceTree = "<group>"; };
 		A2000000000000000000F05C /* NowOnTVPill.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NowOnTVPill.swift; sourceTree = "<group>"; };
@@ -206,6 +211,7 @@
 		A2000000000000000000F06C /* OnboardingTestStep.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingTestStep.swift; sourceTree = "<group>"; };
 		A2000000000000000000F06D /* OnboardingOptimizeStep.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingOptimizeStep.swift; sourceTree = "<group>"; };
 		A2000000000000000000F06E /* EPGViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EPGViewModelTests.swift; sourceTree = "<group>"; };
+		A2000000000000000000F080 /* ChannelLineupTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChannelLineupTests.swift; sourceTree = "<group>"; };
 		A2000000000000000000F06F /* OnboardingViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingViewModelTests.swift; sourceTree = "<group>"; };
 		A2000000000000000000F070 /* SamsungTVServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SamsungTVServiceTests.swift; sourceTree = "<group>"; };
 		A2000000000000000000F071 /* EPGClientTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EPGClientTests.swift; sourceTree = "<group>"; };
@@ -321,6 +327,7 @@
 				A2000000000000000000F035 /* DiscoveryViewModelTests.swift */,
 				A2000000000000000000F048 /* TrackpadGestureMapperTests.swift */,
 				A2000000000000000000F06E /* EPGViewModelTests.swift */,
+				A2000000000000000000F080 /* ChannelLineupTests.swift */,
 				A2000000000000000000F06F /* OnboardingViewModelTests.swift */,
 				A2000000000000000000F070 /* SamsungTVServiceTests.swift */,
 				A2000000000000000000F071 /* EPGClientTests.swift */,
@@ -355,6 +362,7 @@
 			isa = PBXGroup;
 			children = (
 				A2000000000000000000F059 /* EPGClient.swift */,
+				A2000000000000000000F07E /* ChannelLineups.swift */,
 				A2000000000000000000F05E /* MicrophoneCaptureService.swift */,
 				A2000000000000000000F05F /* NetworkMonitor.swift */,
 			);
@@ -406,6 +414,7 @@
 				A2000000000000000000F05A /* EPGViewModel.swift */,
 				A2000000000000000000F05B /* RemoteSidePanelEPG.swift */,
 				A2000000000000000000F05C /* NowOnTVPill.swift */,
+				A2000000000000000000F07F /* LineupPickerView.swift */,
 				A2000000000000000000F062 /* MediaCastView.swift */,
 				A2000000000000000000F063 /* KeyboardInputView.swift */,
 			);
@@ -654,6 +663,8 @@
 				B2000000000000000000F057 /* EPGProgramme.swift in Sources */,
 				B2000000000000000000F058 /* EPGGuide.swift in Sources */,
 				B2000000000000000000F059 /* EPGClient.swift in Sources */,
+				B2000000000000000000F07E /* ChannelLineups.swift in Sources */,
+				B2000000000000000000F07F /* LineupPickerView.swift in Sources */,
 				B2000000000000000000F05E /* MicrophoneCaptureService.swift in Sources */,
 				B2000000000000000000F05F /* NetworkMonitor.swift in Sources */,
 				B2000000000000000000F060 /* OnboardingViewModel.swift in Sources */,
@@ -698,6 +709,7 @@
 				D2000000000000000000F035 /* DiscoveryViewModelTests.swift in Sources */,
 				D2000000000000000000F048 /* TrackpadGestureMapperTests.swift in Sources */,
 				D2000000000000000000F06E /* EPGViewModelTests.swift in Sources */,
+				D2000000000000000000F080 /* ChannelLineupTests.swift in Sources */,
 				D2000000000000000000F06F /* OnboardingViewModelTests.swift in Sources */,
 				D2000000000000000000F070 /* SamsungTVServiceTests.swift in Sources */,
 				D2000000000000000000F071 /* EPGClientTests.swift in Sources */,

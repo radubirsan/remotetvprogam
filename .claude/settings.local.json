@@ -51,7 +51,20 @@
       "Bash(git fetch *)",
       "Bash(git merge *)",
       "Bash(sips *)",
-      "Bash(python3 -c \"import PIL; print\\('PIL', PIL.__version__\\)\")"
+      "Bash(python3 -c \"import PIL; print\\('PIL', PIL.__version__\\)\")",
+      "WebFetch(domain:www.digi.ro)",
+      "WebFetch(domain:www.orange.ro)",
+      "WebFetch(domain:www.tvchannellists.com)",
+      "Bash(grep -oE 'table-\\(row|cell|head\\)[^\"]*\"[^>]*>[^<]{0,40}' digi_grila.html)",
+      "Bash(npm -v)",
+      "Bash(echo \"npm: $\\(npm -v || echo MISSING\\)\")",
+      "Bash(deno --version)",
+      "Bash(echo \"deno: $\\(deno --version)",
+      "Bash(gh run *)",
+      "Bash(echo \"=== run finished, status $? ===\")",
+      "Bash(echo \"=== finished exit $? ===\")",
+      "Bash(DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcodebuild build -project RemoteTV.xcodeproj -scheme RemoteTV -destination 'platform=iOS Simulator,name=iPhone 17')",
+      "Bash(DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcodebuild test -project RemoteTV.xcodeproj -scheme RemoteTV -destination 'platform=iOS Simulator,name=iPhone 17')"
     ]
   }
 }

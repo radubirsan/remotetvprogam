@@ -773,21 +773,14 @@ private struct FrozenColumn: View {
         }
 
         private func cell(_ channel: EPGChannel) -> some View {
-            let tint = GuidePalette.tint(for: vm.tvChannelNumber(for: channel.id))
+            let number = vm.tvChannelNumber(for: channel.id)
+            let tint = GuidePalette.tint(for: number)
             let pinned = vm.isPinned(channel.id)
             // Tap = tune the TV to this channel (digits + ENTER). Long-press → menu (pin, etc.).
             return Button { onTune(channel.id) } label: {
                 VStack(spacing: 3) {
                     ZStack(alignment: .topTrailing) {
-                        RoundedRectangle(cornerRadius: 10, style: .continuous)
-                            .fill(LinearGradient(colors: [tint, tint.opacity(0.6)],
-                                                 startPoint: .topLeading, endPoint: .bottomTrailing))
-                            .frame(width: 40, height: 28)
-                            .overlay {
-                                Text(vm.tvChannelNumber(for: channel.id).map(String.init) ?? "–")
-                                    .font(.system(size: 13, weight: .heavy).monospacedDigit())
-                                    .foregroundStyle(.white)
-                            }
+                        logoChip(url: channel.iconURL, number: number, tint: tint)
                         if pinned {
                             Image(systemName: "pin.fill")
                                 .font(.system(size: 8))
@@ -808,6 +801,51 @@ private struct FrozenColumn: View {
             }
             .buttonStyle(.plain)
             .contextMenu { rowMenu(channel) }
+        }
+
+        /// The channel logo on a light chip with the channel-number badge overlaid. Falls back to
+        /// the tinted number box while the logo loads or when there's no logo URL — so every row
+        /// always shows its number, logo or not.
+        @ViewBuilder
+        private func logoChip(url: URL?, number: Int?, tint: Color) -> some View {
+            Group {
+                if let url {
+                    AsyncImage(url: url) { phase in
+                        if case .success(let image) = phase {
+                            ZStack(alignment: .bottomLeading) {
+                                image.resizable().scaledToFit().padding(3)
+                                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                                    .background(Color.white)
+                                if let number {
+                                    Text(String(number))
+                                        .font(.system(size: 8.5, weight: .heavy).monospacedDigit())
+                                        .foregroundStyle(.white)
+                                        .padding(.horizontal, 3).padding(.vertical, 0.5)
+                                        .background(Capsule().fill(.black.opacity(0.7)))
+                                        .padding(2)
+                                }
+                            }
+                        } else {
+                            numberBox(number, tint: tint)
+                        }
+                    }
+                } else {
+                    numberBox(number, tint: tint)
+                }
+            }
+            .frame(width: 44, height: 30)
+            .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+        }
+
+        private func numberBox(_ number: Int?, tint: Color) -> some View {
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .fill(LinearGradient(colors: [tint, tint.opacity(0.6)],
+                                     startPoint: .topLeading, endPoint: .bottomTrailing))
+                .overlay {
+                    Text(number.map(String.init) ?? "–")
+                        .font(.system(size: 13, weight: .heavy).monospacedDigit())
+                        .foregroundStyle(.white)
+                }
         }
     }
 }

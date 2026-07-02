@@ -63,6 +63,17 @@ final class EPGViewModel {
     /// pill (see ``nowOnTVIsEstimated``) so it never masquerades as confirmed.
     var estimatedChannelID: String?
 
+    /// The user's selected provider/county lineup (pushed in from `RemoteView`). When set, the
+    /// guide lists ALL its channels — each with its Digi logo + position — not just EPG-matched
+    /// ones, and number/tune lookups use its positions. Nil ⇒ fall back to `KnownChannelNumbers`.
+    var lineup: ChannelLineup? {
+        didSet { rebuildLineupCaches() }
+    }
+    private var lineupEPGChannels: [EPGChannel] = []
+    private var lineupChannelByID: [String: EPGChannel] = [:]
+    private var lineupPositionByID: [String: Int] = [:]
+    private var lineupIDByPosition: [Int: String] = [:]
+
     private static let userDefaults: UserDefaults = .standard
     private static let pinnedKey = "pinnedTVChannelID"
 
@@ -134,7 +145,37 @@ final class EPGViewModel {
     /// number. Each id resolves to the feed's channel when today's dump includes it,
     /// or a synthesized placeholder when it doesn't.
     private var allKnownChannels: [EPGChannel] {
-        KnownChannelNumbers.orderedIDs.compactMap(channel(for:))
+        if lineup != nil { return lineupEPGChannels }
+        return KnownChannelNumbers.orderedIDs.compactMap(channel(for:))
+    }
+
+    /// Rebuilds the lineup-derived channel list + lookup maps (called when `lineup` is set). Ids
+    /// are made unique even if two Digi channels matched the same EPG id — the duplicate falls
+    /// back to a position-based synthetic id so both still appear (the second just loses the
+    /// programme schedule, which the first already claims).
+    private func rebuildLineupCaches() {
+        guard let lineup else {
+            lineupEPGChannels = []; lineupChannelByID = [:]
+            lineupPositionByID = [:]; lineupIDByPosition = [:]
+            return
+        }
+        var seen = Set<String>()
+        var chans: [EPGChannel] = []
+        var byID: [String: EPGChannel] = [:]
+        var posByID: [String: Int] = [:]
+        var idByPos: [Int: String] = [:]
+        for lc in lineup.channels.sorted(by: { $0.position < $1.position }) {
+            let cid = seen.contains(lc.id) ? "digi:\(lc.position)" : lc.id
+            seen.insert(cid)
+            let ch = EPGChannel(id: cid, displayNames: [lc.name], iconURL: lc.logo)
+            chans.append(ch); byID[cid] = ch
+            posByID[cid] = lc.position
+            if idByPos[lc.position] == nil { idByPos[lc.position] = cid }
+        }
+        lineupEPGChannels = chans
+        lineupChannelByID = byID
+        lineupPositionByID = posByID
+        lineupIDByPosition = idByPos
     }
 
     /// Resolves an id to an ``EPGChannel``: the feed's entry if present (real
@@ -145,6 +186,7 @@ final class EPGViewModel {
     func channel(withID id: String) -> EPGChannel? { channel(for: id) }
 
     private func channel(for id: String) -> EPGChannel? {
+        if let fromLineup = lineupChannelByID[id] { return fromLineup }
         if let inFeed = guide?.channels.first(where: { $0.id == id }) { return inFeed }
         guard KnownChannelNumbers.number(for: id) != nil else { return nil }
         return EPGChannel(id: id, displayNames: [KnownChannelNumbers.displayName(for: id)], iconURL: nil)
@@ -220,7 +262,7 @@ final class EPGViewModel {
     /// estimate — we'd rather show nothing than the wrong channel. Kicks a guide load when one
     /// hasn't happened yet so the pill can fill in the live programme.
     func noteTunedChannel(_ number: Int) {
-        estimatedChannelID = KnownChannelNumbers.channelID(forNumber: number)
+        estimatedChannelID = lineupIDByPosition[number] ?? KnownChannelNumbers.channelID(forNumber: number)
         if estimatedChannelID != nil, guide == nil {
             Task { await loadIfNeeded() }
         }
@@ -250,7 +292,7 @@ final class EPGViewModel {
     /// "Tune" button (we hide it when no number is known rather than fire a macro that
     /// would do the wrong thing).
     func tvChannelNumber(for channelID: String) -> Int? {
-        KnownChannelNumbers.number(for: channelID)
+        lineupPositionByID[channelID] ?? KnownChannelNumbers.number(for: channelID)
     }
 
     /// `true` when we know the TV channel number for this id and can fire a tune macro.

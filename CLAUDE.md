@@ -469,8 +469,12 @@ owner/name changes, update that constant.
 
 A channel **number** is a `(provider, zone, channel)` property — `Digi.24.HD.ro` is 59 on one
 Digi county, different on another, different on Orange — so it can't live as a single field in
-the daily-rewritten `guide.json`. Instead it's a **separate `lineups.json`**:
-`{schemaVersion, generatedAt, lineups:[{id, provider, region, regionCode, type, numbers:{xmltvID:Int}}]}`.
+the daily-rewritten `guide.json`. Instead it's a **separate `lineups.json`** (schema v2):
+`{schemaVersion:2, generatedAt, lineups:[{id, provider, region, regionCode, type, channels:[{position, name, logo, guideID}]}]}`.
+Every digital channel is kept — `guideID` (the matched EPG id) is **nullable metadata, not a
+filter**: channels the EPG feed doesn't carry still appear (logo + number, just an empty
+schedule). Each channel carries its Digi `logo` URL. (The app derives a matched-only
+`[guideID:position]` map from `channels` for `KnownChannelNumbers`.)
 
 - **Producer:** `tools/digi-lineup-scraper/` — Node + Playwright. A real browser is required:
   digi.ro/grila serves the grid from a CSRF/cookie-protected `POST /api-get-grila` that plain
@@ -484,13 +488,22 @@ the daily-rewritten `guide.json`. Instead it's a **separate `lineups.json`**:
   the orphan **`lineup-data`** branch — a *separate* branch from `epg-data` on purpose, because
   `epg-update.yml` rewrites `epg-data` as orphan daily and would delete it. Has a sanity gate
   (won't publish a degenerate <50-number scrape over a good one).
-- **Seed/fallback:** `RemoteTV/Resources/lineups.json` — one `digi-national-digital` lineup
-  (129 numbers transcribed from the old `KnownChannelNumbers.mapping`); bundled as the offline
-  default.
-- **PENDING (not yet built):** the Swift consumer — `ChannelLineup` model + `LineupClient`
-  (fetch/cache like `EPGClient`) and a refactor of `KnownChannelNumbers` to prefer a selected
-  fetched lineup with the compiled table as fallback, plus a provider/county picker. Until then
-  `KnownChannelNumbers` is still the live source and `lineups.json` is unconsumed.
+- **App consumer:** `ChannelLineups.swift` (Services) holds the `ChannelLineupCatalog`/`ChannelLineup`
+  model, `LineupClient` (actor — fetch/cache mirroring `EPGClient`, from the `lineup-data` raw URL),
+  and `ChannelLineupStore` (`@MainActor @Observable`). The store persists the user's pick
+  (`selectedChannelLineupID` in UserDefaults) and pushes the selected lineup's numbers into
+  `KnownChannelNumbers.setActiveMapping(_:)`. `KnownChannelNumbers` now has a compiled
+  `defaultMapping` (the 129-row table = offline fallback) and a thread-safe override
+  (`OSAllocatedUnfairLock`, nonisolated because the Siri `TVChannelEntity` reads it off-main);
+  `mapping`/`idByNumber`/`orderedIDs`/`number(for:)` all derive from the active override-or-default,
+  so every consumer becomes lineup-aware with no call-site changes. `RemoteView` owns the store,
+  calls `load()` on appear (before the EPG pre-warm), and the **gear menu → "Channel lineup"** item
+  opens `LineupPickerView` (a searchable per-county sheet; "Built-in default" reverts to the table).
+- **Not bundled:** `RemoteTV/Resources/lineups.json` is the scraper's seed/matcher input and the
+  initial `lineup-data` content — it is NOT in the app bundle; the compiled `defaultMapping` is the
+  offline fallback, so no app resource is needed.
+- **Not yet wired:** the App Intents path (Siri "tune to channel") still uses the default table in
+  background/extension launches — the store only applies the override in the running app UI.
 
 ## Info.plist requirements
 

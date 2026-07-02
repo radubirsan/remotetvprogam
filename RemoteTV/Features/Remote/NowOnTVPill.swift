@@ -4,13 +4,14 @@ import SwiftUI
 ///
 /// Three states:
 ///   * **Pinned channel** (`channel != nil`, `isEstimated == false`) — a user-confirmed pin;
-///     channel name + live programme + when it ends, in confident yellow. Tap opens its
-///     schedule.
+///     channel name + live programme + when it ends, in confident yellow.
 ///   * **Estimated channel** (`channel != nil`, `isEstimated == true`) — a best-effort guess
 ///     inferred from the remote's own tuning, rendered with a distinct "≈ auto" treatment so
 ///     it never looks confirmed (the TV never reports its channel back, so this can drift).
-///   * **Prompt** (`channel == nil`) — a "Check out TV Guide" call-to-action; tap opens the
-///     main guide.
+///   * **Prompt** (`channel == nil`) — a "Check out TV Guide" call-to-action.
+///
+/// In every state, tapping opens the guide's channel-list screen (the grid auto-scrolls to
+/// the pinned/estimated channel); it never drills straight into a channel's schedule.
 ///
 /// Why the channel isn't truly synced: this generation of Tizen is silent on broadcast state
 /// changes over the WebSocket and Samsung doesn't expose a current-channel REST endpoint
@@ -107,7 +108,7 @@ struct NowOnTVPill: View {
         .buttonStyle(.plain)
         .accessibilityElement(children: .combine)
         .accessibilityLabel(accessibilityLabel)
-        .accessibilityHint(channel == nil ? "Opens the TV guide." : "Opens the TV guide for this channel.")
+        .accessibilityHint("Opens the TV guide.")
     }
 
     private var accessibilityLabel: String {

@@ -1,4 +1,5 @@
 import Foundation
+import os
 
 /// Maps EPG channel ids (as published in the daily Romanian XMLTV dump on the
 /// `epg-data` branch) to the corresponding channel numbers on the user's TV.
@@ -28,9 +29,10 @@ import Foundation
 /// it just can't be auto-tuned.
 enum KnownChannelNumbers {
 
-    /// EPG channel id → TV channel number.
-    ///
-    static let mapping: [String: Int] = [
+    /// Compiled fallback: EPG channel id → TV channel number. Used when no fetched lineup is
+    /// selected (or the lineup feed is unavailable). The active numbering is ``mapping`` below,
+    /// which prefers the user's selected ``ChannelLineup`` and falls back to this.
+    static let defaultMapping: [String: Int] = [
      
         "Digi.Sport.1.ro":               1,
         "Digi.Sport.1.HD.ro":            2,
@@ -357,20 +359,42 @@ enum KnownChannelNumbers {
         "Cinemax.2.ro":             111     // HD only on grid
     ]
 
+    // MARK: - Active mapping (compiled default ⇄ fetched lineup override)
+
+    /// Override set from the user's selected fetched lineup (``ChannelLineupStore``). Lives
+    /// behind a lock because the lookups here are read from non-MainActor contexts too — the
+    /// Siri ``TVChannelEntity`` catalog resolves off the main actor. `nil` ⇒ use the compiled
+    /// ``defaultMapping``.
+    private static let _activeOverride = OSAllocatedUnfairLock<[String: Int]?>(initialState: nil)
+
+    /// Replace the active numbering with a fetched lineup's numbers, or `nil` to revert to the
+    /// built-in default. An empty map is treated as `nil`.
+    static func setActiveMapping(_ numbers: [String: Int]?) {
+        _activeOverride.withLock { $0 = (numbers?.isEmpty == false) ? numbers : nil }
+    }
+
+    /// The numbering in effect: the selected fetched lineup if set, else ``defaultMapping``.
+    /// Everything below derives from this, so switching lineup updates all lookups at once.
+    static var mapping: [String: Int] {
+        _activeOverride.withLock { $0 } ?? defaultMapping
+    }
+
     /// Lookup the TV channel number for an EPG channel id. Nil when the id isn't in
-    /// the table — the UI hides the Tune button in that case rather than guessing.
+    /// the active mapping — the UI hides the Tune button in that case rather than guessing.
     static func number(for channelID: String) -> Int? {
         mapping[channelID]
     }
 
-    /// TV channel number → EPG channel id — the inverse of ``mapping``, built once. Lets the
-    /// remote turn a tuned channel *number* (all it can know from the digits it sent) back
-    /// into a channel id so the "Now on TV" pill can show what's playing. Numbers are unique
-    /// in the table, so the inverse is unambiguous; the `uniquingKeysWith` is belt-and-braces.
-    static let idByNumber: [Int: String] = Dictionary(
-        mapping.map { ($0.value, $0.key) },
-        uniquingKeysWith: { existing, _ in existing }
-    )
+    /// TV channel number → EPG channel id — the inverse of ``mapping``. Recomputed per access
+    /// (the active mapping can change when the user switches lineup). Lets the remote turn a
+    /// tuned channel *number* back into a channel id so the "Now on TV" pill can show what's
+    /// playing. Numbers are unique within a lineup; the `uniquingKeysWith` is belt-and-braces.
+    static var idByNumber: [Int: String] {
+        Dictionary(
+            mapping.map { ($0.value, $0.key) },
+            uniquingKeysWith: { existing, _ in existing }
+        )
+    }
 
     /// The EPG channel id at TV channel `number`, or nil when that number isn't in the
     /// lineup — in which case the caller shows nothing rather than guessing a wrong channel.

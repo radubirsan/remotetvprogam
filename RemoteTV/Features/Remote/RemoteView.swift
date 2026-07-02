@@ -22,6 +22,10 @@ struct RemoteView: View {
     /// the TV-guide side panel on and off — `EPGViewModel` owns the `EPGClient` whose
     /// in-memory cache would otherwise be lost on every panel close.
     @State private var epgViewModel = EPGViewModel()
+    /// Supplies channel numbers from the user's selected provider/county lineup (fetched from
+    /// the `lineup-data` branch), pushing them into `KnownChannelNumbers`. Held here so the
+    /// selection survives panel toggles. The gear-menu "Channel lineup" item edits it.
+    @State private var lineupStore = ChannelLineupStore()
     /// Hand-off to the parent ``RootView`` when the user picks *Disconnect & switch
     /// mode* or *Forget this TV* from the gear menu — clearing the active-device
     /// slot is the only way the app surfaces Discovery again, since there is no
@@ -47,6 +51,8 @@ struct RemoteView: View {
     @State private var centralOverlay: RemoteCentralOverlay = .none
     /// Presents the on-screen keyboard relay from the gear menu.
     @State private var showKeyboard: Bool = false
+    /// Presents the provider/county lineup picker from the gear menu.
+    @State private var showLineupPicker: Bool = false
     /// Lets us auto-recover the WebSocket when the user unlocks the phone or returns
     /// from the app switcher — iOS suspends URLSession traffic in the background and
     /// the TV closes idle sockets, so the remote screen on resume needs an explicit
@@ -120,6 +126,13 @@ struct RemoteView: View {
 
             Button("Keyboard", systemImage: "keyboard") {
                 showKeyboard = true
+            }
+            Button {
+                showLineupPicker = true
+            } label: {
+                // Show the active choice inline so the user sees what's set without opening it.
+                Label(lineupStore.selectedLineup.map { "Channel lineup: \($0.region)" } ?? "Channel lineup",
+                      systemImage: "list.number")
             }
             Button("Setup guide", systemImage: "sparkles") {
                 onboardingReplayRequested = true
@@ -285,6 +298,13 @@ struct RemoteView: View {
             }  // close outer VStack added for the NowOnTVPill
             .animation(.snappy, value: epgViewModel.nowOnTVChannelID)
             .task {
+                // Apply the user's selected provider/county lineup first, so KnownChannelNumbers
+                // reflects the right numbers before the EPG list / tune macros read them. Falls
+                // back to the compiled default if the feed is unavailable.
+                await lineupStore.load()
+                // Feed the full lineup (all channels + logos) to the guide so it lists every
+                // channel — including ones the EPG feed doesn't carry.
+                epgViewModel.lineup = lineupStore.selectedLineup
                 // Keep the "Now on TV" pill's best-effort estimate in sync with whatever the
                 // remote tunes to (number-pad, tune macro, channel ▲/▼). Reassigned on each
                 // appear — idempotent. Weak so the closure can't retain the EPG view model.
@@ -297,6 +317,10 @@ struct RemoteView: View {
                 if epgViewModel.pinnedChannelID != nil {
                     await epgViewModel.loadIfNeeded()
                 }
+            }
+            .onChange(of: lineupStore.selectedLineupID) {
+                // User picked a different county/provider in the gear menu → re-feed the guide.
+                epgViewModel.lineup = lineupStore.selectedLineup
             }
         }
         .preferredColorScheme(.dark)
@@ -320,6 +344,9 @@ struct RemoteView: View {
                 onType: { await viewModel.sendKeyboardText($0) },
                 onSubmit: { await viewModel.send(.enter) }
             )
+        }
+        .sheet(isPresented: $showLineupPicker) {
+            LineupPickerView(store: lineupStore)
         }
         .navigationDestination(isPresented: $showTVGuide) {
             // The guide's channel list and a channel's schedule are each real navigation
