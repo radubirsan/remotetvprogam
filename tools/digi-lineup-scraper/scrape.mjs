@@ -40,12 +40,15 @@ const onlyCounty = (() => {
 const allCounties = JSON.parse(await readFile(new URL("./counties.json", import.meta.url)));
 const counties = onlyCounty ? [onlyCounty] : allCounties;
 
-/** Parse an `/api-get-grila` HTML fragment into [{post, name}] where `post` is the DIGITAL
- *  channel number. Each data row carries everything we need as attributes (no text parsing):
- *    <div class="table-row" data-channel-name="Digi Sport 1" data-position-digital="1"
- *         data-position-analogic="1" data-position-satelit="1"> … </div>
- *  We select rows that have a channel name (skips the empty spacer rows) and read the digital
- *  position. Channels not carried on digital have no data-position-digital → skipped. */
+/** Parse an `/api-get-grila` HTML fragment into [{post, name, logo}] where `post` is the
+ *  DIGITAL channel number. Each data row carries everything as attributes (no text parsing):
+ *    <div class="table-row" data-channel-name="Digi Sport 1" data-position-digital="1" …>
+ *      <div class="table-col"><img class="img" src="https://s.digi.ro/…png" alt="Digi Sport 1"></div>
+ *      …
+ *    </div>
+ *  We select rows that have a channel name (skips the empty spacer rows), read the digital
+ *  position, and grab the logo <img src>. Channels not carried on digital have no
+ *  data-position-digital → skipped (they can't be tuned on a digital box anyway). */
 function parseGrilaHTML(html) {
   const $ = cheerioLoad(html);
   const rows = [];
@@ -53,7 +56,8 @@ function parseGrilaHTML(html) {
     const $el = $(el);
     const name = ($el.attr("data-channel-name") || "").trim();
     const post = parseInt($el.attr("data-position-digital") ?? "", 10);
-    if (name && Number.isFinite(post)) rows.push({ post, name });
+    const logo = $el.find("img").first().attr("src") || null;
+    if (name && Number.isFinite(post)) rows.push({ post, name, logo });
   });
   return rows;
 }

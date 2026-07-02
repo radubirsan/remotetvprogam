@@ -56,11 +56,17 @@ export async function buildMatcher() {
     console.warn(`matcher: guide.json unavailable (${e.message}) — falling back to seed only`);
   }
 
-  // 2) Seed ids (curated lineup) — fills in channels not present in today's feed.
+  // 2) Seed ids (curated lineup) — fills in channels not present in today's feed. Handles both
+  //    the v2 `channels` shape and the older `numbers` map.
   const seed = JSON.parse(
     await readFile(new URL("../../RemoteTV/Resources/lineups.json", import.meta.url))
   );
-  for (const l of seed.lineups) for (const id of Object.keys(l.numbers)) add(nameFromID(id), id);
+  for (const l of seed.lineups) {
+    const ids = l.channels
+      ? l.channels.map((c) => c.guideID).filter(Boolean)
+      : Object.keys(l.numbers ?? {});
+    for (const id of ids) add(nameFromID(id), id);
+  }
 
   // 3) Rebrand/alias overrides ("Pro Arena" -> PRO.X.ro, "Eurosport RO" -> Eurosport.1.ro).
   const aliases = JSON.parse(await readFile(new URL("./aliases.json", import.meta.url)));

@@ -1,7 +1,7 @@
 {
-  "schemaVersion": 1,
-  "generatedAt": "2026-06-29T18:29:24Z",
-  "source": "seed: transcribed Digi printed channel guide (KnownChannelNumbers.mapping)",
+  "schemaVersion": 2,
+  "generatedAt": "2026-07-02T16:51:58Z",
+  "source": "seed: transcribed Digi printed channel guide (KnownChannelNumbers.defaultMapping)",
   "lineups": [
     {
       "id": "digi-national-digital",
@@ -9,137 +9,782 @@
       "region": "Național",
       "regionCode": "national",
       "type": "digital",
-      "numbers": {
-        "Digi.Sport.1.ro": 1,
-        "Digi.Sport.1.HD.ro": 2,
-        "Digi.Sport.2.HD.ro": 3,
-        "Digi.Sport.2.ro": 4,
-        "Digi.Sport.3.HD.ro": 5,
-        "Digi.Sport.3.ro": 6,
-        "Digi.Sport.4.HD.ro": 7,
-        "Eurosport.1.HD.ro": 8,
-        "Eurosport.1.ro": 9,
-        "Eurosport.2.HD.ro": 10,
-        "Eurosport.2.ro": 11,
-        "PRIMA.SPORT.1.HD.ro": 12,
-        "PRIMA.SPORT.1.ro": 13,
-        "PRIMA.SPORT.2.HD.ro": 14,
-        "PRIMA.SPORT.2.ro": 15,
-        "PRIMA.SPORT.3.HD.ro": 16,
-        "PRIMA.SPORT.3.ro": 17,
-        "PRO.X.HD.ro": 19,
-        "PRO.X.ro": 20,
-        "TVR.HD.ro": 22,
-        "TVR.1.ro": 23,
-        "TVR.2.ro": 25,
-        "TVR.3.ro": 26,
-        "PRO.TV.HD.ro": 27,
-        "PRO.TV.ro": 28,
-        "Antena.1.HD.ro": 29,
-        "Antena.1.ro": 30,
-        "Kanal.D.HD.ro": 31,
-        "Kanal.D.ro": 32,
-        "Prima.TV.ro": 34,
-        "Happy.Channel.HD.ro": 35,
-        "Happy.Channel.ro": 36,
-        "Antena.Stars.HD.ro": 37,
-        "Antena.Stars.ro": 38,
-        "National.TV.ro": 39,
-        "National.24.Plus.ro": 40,
-        "Etno.TV.ro": 43,
-        "Inedit.TV.ro": 47,
-        "Favorit.TV.ro": 49,
-        "Travel.Mix.ro": 50,
-        "PRO.2.HD.ro": 51,
-        "PRO.2.ro": 52,
-        "B1.TV.ro": 56,
-        "Romania.TV.ro": 58,
-        "Digi.24.HD.ro": 59,
-        "Digi.24.ro": 60,
-        "Antena.3.CNN.HD.ro": 61,
-        "Antena.3.CNN.ro": 62,
-        "Realitatea.Plus.ro": 64,
-        "CNN.International.us": 69,
-        "BBC.World.News.uk": 71,
-        "Pro.Gold.ro": 79,
-        "Film.Now.HD.ro": 80,
-        "Film.Now.ro": 81,
-        "Pro.Cinema.ro": 83,
-        "Diva.ro": 85,
-        "AXN.HD.ro": 89,
-        "AXN.ro": 90,
-        "AXN.White.ro": 91,
-        "AXN.Black.ro": 92,
-        "AXN.Spin.ro": 93,
-        "Epic.Drama.ro": 95,
-        "Film.Cafe.ro": 99,
-        "Comedy.Central.ro": 100,
-        "HBO.HD.ro": 103,
-        "HBO.ro": 104,
-        "HBO.2.HD.ro": 105,
-        "HBO.2.ro": 106,
-        "HBO.3.HD.ro": 107,
-        "HBO.3.ro": 108,
-        "Cinemax.HD.ro": 109,
-        "Cinemax.ro": 110,
-        "Cinemax.2.ro": 111,
-        "Bollywood.TV.ro": 115,
-        "Nickelodeon.ro": 120,
-        "Minimax.ro": 121,
-        "Cartoon.Network.ro": 122,
-        "Disney.Channel.ro": 123,
-        "Disney.Junior.ro": 124,
-        "Duck.TV.ro": 126,
-        "Nick.Jr.ro": 129,
-        "DaVinci.Learning.ro": 131,
-        "Digi.World.HD.ro": 133,
-        "Digi.World.ro": 134,
-        "Digi.Life.HD.ro": 135,
-        "Digi.Life.ro": 136,
-        "Digi.Animal.World.HD.ro": 137,
-        "Digi.Animal.World.ro": 138,
-        "Discovery.Channel.ro": 140,
-        "TLC.ro": 141,
-        "History.HD.ro": 142,
-        "History.ro": 143,
-        "National.Geographic.HD.ro": 144,
-        "National.Geographic.ro": 145,
-        "Viasat.Nature.History.HD.ro": 146,
-        "Viasat.Nature.ro": 147,
-        "TV.Paprika.ro": 148,
-        "BBC.Earth.ro": 152,
-        "Nat.Geo.Wild.HD.ro": 153,
-        "Nat.Geo.Wild.ro": 154,
-        "Viasat.Explore.ro": 156,
-        "Viasat.History.ro": 158,
-        "Fashion.TV.fr": 162,
-        "E.Entertainment.HD.ro": 163,
-        "E.Entertainment.ro": 164,
-        "Trinitas.TV.ro": 166,
-        "Credo.TV.ro": 169,
-        "Alfa.Omega.TV.ro": 170,
-        "Speranta.TV.ro": 172,
-        "U.TV.HD.ro": 174,
-        "U.TV.ro": 175,
-        "Kiss.TV.ro": 176,
-        "Hit.Music.Channel.ro": 177,
-        "Music.Channel.ro": 179,
-        "ZU.TV.HD.ro": 180,
-        "ZU.TV.ro": 181,
-        "Mezzo.ro": 183,
-        "Hora.TV.ro": 189,
-        "Taraf.TV.ro": 192,
-        "Nasul.TV.ro": 193,
-        "Agro.TV.ro": 194,
-        "Fishing.and.Hunting.ro": 195,
-        "TV5.Monde.fr": 197,
-        "Super.RTL.de": 198,
-        "RTL.Television.de": 199,
-        "Rai.1.it": 200,
-        "M1.Europa.hu": 206,
-        "SuperOne.HD.ro": 212,
-        "SuperOne.ro": 213
-      }
+      "channels": [
+        {
+          "position": 1,
+          "name": "Digi Sport 1",
+          "logo": null,
+          "guideID": "Digi.Sport.1.ro"
+        },
+        {
+          "position": 2,
+          "name": "Digi Sport 1 HD",
+          "logo": null,
+          "guideID": "Digi.Sport.1.HD.ro"
+        },
+        {
+          "position": 3,
+          "name": "Digi Sport 2 HD",
+          "logo": null,
+          "guideID": "Digi.Sport.2.HD.ro"
+        },
+        {
+          "position": 4,
+          "name": "Digi Sport 2",
+          "logo": null,
+          "guideID": "Digi.Sport.2.ro"
+        },
+        {
+          "position": 5,
+          "name": "Digi Sport 3 HD",
+          "logo": null,
+          "guideID": "Digi.Sport.3.HD.ro"
+        },
+        {
+          "position": 6,
+          "name": "Digi Sport 3",
+          "logo": null,
+          "guideID": "Digi.Sport.3.ro"
+        },
+        {
+          "position": 7,
+          "name": "Digi Sport 4 HD",
+          "logo": null,
+          "guideID": "Digi.Sport.4.HD.ro"
+        },
+        {
+          "position": 8,
+          "name": "Eurosport 1 HD",
+          "logo": null,
+          "guideID": "Eurosport.1.HD.ro"
+        },
+        {
+          "position": 9,
+          "name": "Eurosport 1",
+          "logo": null,
+          "guideID": "Eurosport.1.ro"
+        },
+        {
+          "position": 10,
+          "name": "Eurosport 2 HD",
+          "logo": null,
+          "guideID": "Eurosport.2.HD.ro"
+        },
+        {
+          "position": 11,
+          "name": "Eurosport 2",
+          "logo": null,
+          "guideID": "Eurosport.2.ro"
+        },
+        {
+          "position": 12,
+          "name": "PRIMA SPORT 1 HD",
+          "logo": null,
+          "guideID": "PRIMA.SPORT.1.HD.ro"
+        },
+        {
+          "position": 13,
+          "name": "PRIMA SPORT 1",
+          "logo": null,
+          "guideID": "PRIMA.SPORT.1.ro"
+        },
+        {
+          "position": 14,
+          "name": "PRIMA SPORT 2 HD",
+          "logo": null,
+          "guideID": "PRIMA.SPORT.2.HD.ro"
+        },
+        {
+          "position": 15,
+          "name": "PRIMA SPORT 2",
+          "logo": null,
+          "guideID": "PRIMA.SPORT.2.ro"
+        },
+        {
+          "position": 16,
+          "name": "PRIMA SPORT 3 HD",
+          "logo": null,
+          "guideID": "PRIMA.SPORT.3.HD.ro"
+        },
+        {
+          "position": 17,
+          "name": "PRIMA SPORT 3",
+          "logo": null,
+          "guideID": "PRIMA.SPORT.3.ro"
+        },
+        {
+          "position": 19,
+          "name": "PRO X HD",
+          "logo": null,
+          "guideID": "PRO.X.HD.ro"
+        },
+        {
+          "position": 20,
+          "name": "PRO X",
+          "logo": null,
+          "guideID": "PRO.X.ro"
+        },
+        {
+          "position": 22,
+          "name": "TVR HD",
+          "logo": null,
+          "guideID": "TVR.HD.ro"
+        },
+        {
+          "position": 23,
+          "name": "TVR 1",
+          "logo": null,
+          "guideID": "TVR.1.ro"
+        },
+        {
+          "position": 25,
+          "name": "TVR 2",
+          "logo": null,
+          "guideID": "TVR.2.ro"
+        },
+        {
+          "position": 26,
+          "name": "TVR 3",
+          "logo": null,
+          "guideID": "TVR.3.ro"
+        },
+        {
+          "position": 27,
+          "name": "PRO TV HD",
+          "logo": null,
+          "guideID": "PRO.TV.HD.ro"
+        },
+        {
+          "position": 28,
+          "name": "PRO TV",
+          "logo": null,
+          "guideID": "PRO.TV.ro"
+        },
+        {
+          "position": 29,
+          "name": "Antena 1 HD",
+          "logo": null,
+          "guideID": "Antena.1.HD.ro"
+        },
+        {
+          "position": 30,
+          "name": "Antena 1",
+          "logo": null,
+          "guideID": "Antena.1.ro"
+        },
+        {
+          "position": 31,
+          "name": "Kanal D HD",
+          "logo": null,
+          "guideID": "Kanal.D.HD.ro"
+        },
+        {
+          "position": 32,
+          "name": "Kanal D",
+          "logo": null,
+          "guideID": "Kanal.D.ro"
+        },
+        {
+          "position": 34,
+          "name": "Prima TV",
+          "logo": null,
+          "guideID": "Prima.TV.ro"
+        },
+        {
+          "position": 35,
+          "name": "Happy Channel HD",
+          "logo": null,
+          "guideID": "Happy.Channel.HD.ro"
+        },
+        {
+          "position": 36,
+          "name": "Happy Channel",
+          "logo": null,
+          "guideID": "Happy.Channel.ro"
+        },
+        {
+          "position": 37,
+          "name": "Antena Stars HD",
+          "logo": null,
+          "guideID": "Antena.Stars.HD.ro"
+        },
+        {
+          "position": 38,
+          "name": "Antena Stars",
+          "logo": null,
+          "guideID": "Antena.Stars.ro"
+        },
+        {
+          "position": 39,
+          "name": "National TV",
+          "logo": null,
+          "guideID": "National.TV.ro"
+        },
+        {
+          "position": 40,
+          "name": "National 24 Plus",
+          "logo": null,
+          "guideID": "National.24.Plus.ro"
+        },
+        {
+          "position": 43,
+          "name": "Etno TV",
+          "logo": null,
+          "guideID": "Etno.TV.ro"
+        },
+        {
+          "position": 47,
+          "name": "Inedit TV",
+          "logo": null,
+          "guideID": "Inedit.TV.ro"
+        },
+        {
+          "position": 49,
+          "name": "Favorit TV",
+          "logo": null,
+          "guideID": "Favorit.TV.ro"
+        },
+        {
+          "position": 50,
+          "name": "Travel Mix",
+          "logo": null,
+          "guideID": "Travel.Mix.ro"
+        },
+        {
+          "position": 51,
+          "name": "PRO 2 HD",
+          "logo": null,
+          "guideID": "PRO.2.HD.ro"
+        },
+        {
+          "position": 52,
+          "name": "PRO 2",
+          "logo": null,
+          "guideID": "PRO.2.ro"
+        },
+        {
+          "position": 56,
+          "name": "B1 TV",
+          "logo": null,
+          "guideID": "B1.TV.ro"
+        },
+        {
+          "position": 58,
+          "name": "Romania TV",
+          "logo": null,
+          "guideID": "Romania.TV.ro"
+        },
+        {
+          "position": 59,
+          "name": "Digi 24 HD",
+          "logo": null,
+          "guideID": "Digi.24.HD.ro"
+        },
+        {
+          "position": 60,
+          "name": "Digi 24",
+          "logo": null,
+          "guideID": "Digi.24.ro"
+        },
+        {
+          "position": 61,
+          "name": "Antena 3 CNN HD",
+          "logo": null,
+          "guideID": "Antena.3.CNN.HD.ro"
+        },
+        {
+          "position": 62,
+          "name": "Antena 3 CNN",
+          "logo": null,
+          "guideID": "Antena.3.CNN.ro"
+        },
+        {
+          "position": 64,
+          "name": "Realitatea Plus",
+          "logo": null,
+          "guideID": "Realitatea.Plus.ro"
+        },
+        {
+          "position": 69,
+          "name": "CNN International",
+          "logo": null,
+          "guideID": "CNN.International.us"
+        },
+        {
+          "position": 71,
+          "name": "BBC World News",
+          "logo": null,
+          "guideID": "BBC.World.News.uk"
+        },
+        {
+          "position": 79,
+          "name": "Pro Gold",
+          "logo": null,
+          "guideID": "Pro.Gold.ro"
+        },
+        {
+          "position": 80,
+          "name": "Film Now HD",
+          "logo": null,
+          "guideID": "Film.Now.HD.ro"
+        },
+        {
+          "position": 81,
+          "name": "Film Now",
+          "logo": null,
+          "guideID": "Film.Now.ro"
+        },
+        {
+          "position": 83,
+          "name": "Pro Cinema",
+          "logo": null,
+          "guideID": "Pro.Cinema.ro"
+        },
+        {
+          "position": 85,
+          "name": "Diva",
+          "logo": null,
+          "guideID": "Diva.ro"
+        },
+        {
+          "position": 89,
+          "name": "AXN HD",
+          "logo": null,
+          "guideID": "AXN.HD.ro"
+        },
+        {
+          "position": 90,
+          "name": "AXN",
+          "logo": null,
+          "guideID": "AXN.ro"
+        },
+        {
+          "position": 91,
+          "name": "AXN White",
+          "logo": null,
+          "guideID": "AXN.White.ro"
+        },
+        {
+          "position": 92,
+          "name": "AXN Black",
+          "logo": null,
+          "guideID": "AXN.Black.ro"
+        },
+        {
+          "position": 93,
+          "name": "AXN Spin",
+          "logo": null,
+          "guideID": "AXN.Spin.ro"
+        },
+        {
+          "position": 95,
+          "name": "Epic Drama",
+          "logo": null,
+          "guideID": "Epic.Drama.ro"
+        },
+        {
+          "position": 99,
+          "name": "Film Cafe",
+          "logo": null,
+          "guideID": "Film.Cafe.ro"
+        },
+        {
+          "position": 100,
+          "name": "Comedy Central",
+          "logo": null,
+          "guideID": "Comedy.Central.ro"
+        },
+        {
+          "position": 103,
+          "name": "HBO HD",
+          "logo": null,
+          "guideID": "HBO.HD.ro"
+        },
+        {
+          "position": 104,
+          "name": "HBO",
+          "logo": null,
+          "guideID": "HBO.ro"
+        },
+        {
+          "position": 105,
+          "name": "HBO 2 HD",
+          "logo": null,
+          "guideID": "HBO.2.HD.ro"
+        },
+        {
+          "position": 106,
+          "name": "HBO 2",
+          "logo": null,
+          "guideID": "HBO.2.ro"
+        },
+        {
+          "position": 107,
+          "name": "HBO 3 HD",
+          "logo": null,
+          "guideID": "HBO.3.HD.ro"
+        },
+        {
+          "position": 108,
+          "name": "HBO 3",
+          "logo": null,
+          "guideID": "HBO.3.ro"
+        },
+        {
+          "position": 109,
+          "name": "Cinemax HD",
+          "logo": null,
+          "guideID": "Cinemax.HD.ro"
+        },
+        {
+          "position": 110,
+          "name": "Cinemax",
+          "logo": null,
+          "guideID": "Cinemax.ro"
+        },
+        {
+          "position": 111,
+          "name": "Cinemax 2",
+          "logo": null,
+          "guideID": "Cinemax.2.ro"
+        },
+        {
+          "position": 115,
+          "name": "Bollywood TV",
+          "logo": null,
+          "guideID": "Bollywood.TV.ro"
+        },
+        {
+          "position": 120,
+          "name": "Nickelodeon",
+          "logo": null,
+          "guideID": "Nickelodeon.ro"
+        },
+        {
+          "position": 121,
+          "name": "Minimax",
+          "logo": null,
+          "guideID": "Minimax.ro"
+        },
+        {
+          "position": 122,
+          "name": "Cartoon Network",
+          "logo": null,
+          "guideID": "Cartoon.Network.ro"
+        },
+        {
+          "position": 123,
+          "name": "Disney Channel",
+          "logo": null,
+          "guideID": "Disney.Channel.ro"
+        },
+        {
+          "position": 124,
+          "name": "Disney Junior",
+          "logo": null,
+          "guideID": "Disney.Junior.ro"
+        },
+        {
+          "position": 126,
+          "name": "Duck TV",
+          "logo": null,
+          "guideID": "Duck.TV.ro"
+        },
+        {
+          "position": 129,
+          "name": "Nick Jr",
+          "logo": null,
+          "guideID": "Nick.Jr.ro"
+        },
+        {
+          "position": 131,
+          "name": "DaVinci Learning",
+          "logo": null,
+          "guideID": "DaVinci.Learning.ro"
+        },
+        {
+          "position": 133,
+          "name": "Digi World HD",
+          "logo": null,
+          "guideID": "Digi.World.HD.ro"
+        },
+        {
+          "position": 134,
+          "name": "Digi World",
+          "logo": null,
+          "guideID": "Digi.World.ro"
+        },
+        {
+          "position": 135,
+          "name": "Digi Life HD",
+          "logo": null,
+          "guideID": "Digi.Life.HD.ro"
+        },
+        {
+          "position": 136,
+          "name": "Digi Life",
+          "logo": null,
+          "guideID": "Digi.Life.ro"
+        },
+        {
+          "position": 137,
+          "name": "Digi Animal World HD",
+          "logo": null,
+          "guideID": "Digi.Animal.World.HD.ro"
+        },
+        {
+          "position": 138,
+          "name": "Digi Animal World",
+          "logo": null,
+          "guideID": "Digi.Animal.World.ro"
+        },
+        {
+          "position": 140,
+          "name": "Discovery Channel",
+          "logo": null,
+          "guideID": "Discovery.Channel.ro"
+        },
+        {
+          "position": 141,
+          "name": "TLC",
+          "logo": null,
+          "guideID": "TLC.ro"
+        },
+        {
+          "position": 142,
+          "name": "History HD",
+          "logo": null,
+          "guideID": "History.HD.ro"
+        },
+        {
+          "position": 143,
+          "name": "History",
+          "logo": null,
+          "guideID": "History.ro"
+        },
+        {
+          "position": 144,
+          "name": "National Geographic HD",
+          "logo": null,
+          "guideID": "National.Geographic.HD.ro"
+        },
+        {
+          "position": 145,
+          "name": "National Geographic",
+          "logo": null,
+          "guideID": "National.Geographic.ro"
+        },
+        {
+          "position": 146,
+          "name": "Viasat Nature History HD",
+          "logo": null,
+          "guideID": "Viasat.Nature.History.HD.ro"
+        },
+        {
+          "position": 147,
+          "name": "Viasat Nature",
+          "logo": null,
+          "guideID": "Viasat.Nature.ro"
+        },
+        {
+          "position": 148,
+          "name": "TV Paprika",
+          "logo": null,
+          "guideID": "TV.Paprika.ro"
+        },
+        {
+          "position": 152,
+          "name": "BBC Earth",
+          "logo": null,
+          "guideID": "BBC.Earth.ro"
+        },
+        {
+          "position": 153,
+          "name": "Nat Geo Wild HD",
+          "logo": null,
+          "guideID": "Nat.Geo.Wild.HD.ro"
+        },
+        {
+          "position": 154,
+          "name": "Nat Geo Wild",
+          "logo": null,
+          "guideID": "Nat.Geo.Wild.ro"
+        },
+        {
+          "position": 156,
+          "name": "Viasat Explore",
+          "logo": null,
+          "guideID": "Viasat.Explore.ro"
+        },
+        {
+          "position": 158,
+          "name": "Viasat History",
+          "logo": null,
+          "guideID": "Viasat.History.ro"
+        },
+        {
+          "position": 162,
+          "name": "Fashion TV",
+          "logo": null,
+          "guideID": "Fashion.TV.fr"
+        },
+        {
+          "position": 163,
+          "name": "E Entertainment HD",
+          "logo": null,
+          "guideID": "E.Entertainment.HD.ro"
+        },
+        {
+          "position": 164,
+          "name": "E Entertainment",
+          "logo": null,
+          "guideID": "E.Entertainment.ro"
+        },
+        {
+          "position": 166,
+          "name": "Trinitas TV",
+          "logo": null,
+          "guideID": "Trinitas.TV.ro"
+        },
+        {
+          "position": 169,
+          "name": "Credo TV",
+          "logo": null,
+          "guideID": "Credo.TV.ro"
+        },
+        {
+          "position": 170,
+          "name": "Alfa Omega TV",
+          "logo": null,
+          "guideID": "Alfa.Omega.TV.ro"
+        },
+        {
+          "position": 172,
+          "name": "Speranta TV",
+          "logo": null,
+          "guideID": "Speranta.TV.ro"
+        },
+        {
+          "position": 174,
+          "name": "U TV HD",
+          "logo": null,
+          "guideID": "U.TV.HD.ro"
+        },
+        {
+          "position": 175,
+          "name": "U TV",
+          "logo": null,
+          "guideID": "U.TV.ro"
+        },
+        {
+          "position": 176,
+          "name": "Kiss TV",
+          "logo": null,
+          "guideID": "Kiss.TV.ro"
+        },
+        {
+          "position": 177,
+          "name": "Hit Music Channel",
+          "logo": null,
+          "guideID": "Hit.Music.Channel.ro"
+        },
+        {
+          "position": 179,
+          "name": "Music Channel",
+          "logo": null,
+          "guideID": "Music.Channel.ro"
+        },
+        {
+          "position": 180,
+          "name": "ZU TV HD",
+          "logo": null,
+          "guideID": "ZU.TV.HD.ro"
+        },
+        {
+          "position": 181,
+          "name": "ZU TV",
+          "logo": null,
+          "guideID": "ZU.TV.ro"
+        },
+        {
+          "position": 183,
+          "name": "Mezzo",
+          "logo": null,
+          "guideID": "Mezzo.ro"
+        },
+        {
+          "position": 189,
+          "name": "Hora TV",
+          "logo": null,
+          "guideID": "Hora.TV.ro"
+        },
+        {
+          "position": 192,
+          "name": "Taraf TV",
+          "logo": null,
+          "guideID": "Taraf.TV.ro"
+        },
+        {
+          "position": 193,
+          "name": "Nasul TV",
+          "logo": null,
+          "guideID": "Nasul.TV.ro"
+        },
+        {
+          "position": 194,
+          "name": "Agro TV",
+          "logo": null,
+          "guideID": "Agro.TV.ro"
+        },
+        {
+          "position": 195,
+          "name": "Fishing and Hunting",
+          "logo": null,
+          "guideID": "Fishing.and.Hunting.ro"
+        },
+        {
+          "position": 197,
+          "name": "TV5 Monde",
+          "logo": null,
+          "guideID": "TV5.Monde.fr"
+        },
+        {
+          "position": 198,
+          "name": "Super RTL",
+          "logo": null,
+          "guideID": "Super.RTL.de"
+        },
+        {
+          "position": 199,
+          "name": "RTL Television",
+          "logo": null,
+          "guideID": "RTL.Television.de"
+        },
+        {
+          "position": 200,
+          "name": "Rai 1",
+          "logo": null,
+          "guideID": "Rai.1.it"
+        },
+        {
+          "position": 206,
+          "name": "M1 Europa",
+          "logo": null,
+          "guideID": "M1.Europa.hu"
+        },
+        {
+          "position": 212,
+          "name": "SuperOne HD",
+          "logo": null,
+          "guideID": "SuperOne.HD.ro"
+        },
+        {
+          "position": 213,
+          "name": "SuperOne",
+          "logo": null,
+          "guideID": "SuperOne.ro"
+        }
+      ]
     }
   ]
 }

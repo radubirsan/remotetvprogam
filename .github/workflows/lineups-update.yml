@@ -66,8 +66,9 @@ jobs:
           import json, pathlib
           cat = json.loads(pathlib.Path("lineups.json").read_text())
           print(f"lineups: {len(cat['lineups'])}")
-          tot = sum(len(l['numbers']) for l in cat['lineups'])
-          print(f"matched numbers: {tot}")
+          tot = sum(len(l['channels']) for l in cat['lineups'])
+          matched = sum(1 for l in cat['lineups'] for c in l['channels'] if c.get('guideID'))
+          print(f"channels: {tot} ({matched} with EPG match)")
           PY
 
       # Guard: don't publish an empty/degenerate scrape over a good one (e.g. if the site
@@ -79,9 +80,9 @@ jobs:
           python3 - <<'PY'
           import json, pathlib, sys
           cat = json.loads(pathlib.Path("lineups.json").read_text())
-          tot = sum(len(l['numbers']) for l in cat['lineups'])
+          tot = sum(len(l['channels']) for l in cat['lineups'])
           if len(cat['lineups']) < 1 or tot < 50:
-              print(f"::error::scrape looks degenerate ({len(cat['lineups'])} lineups, {tot} numbers) — not publishing")
+              print(f"::error::scrape looks degenerate ({len(cat['lineups'])} lineups, {tot} channels) — not publishing")
               sys.exit(1)
           PY
 
